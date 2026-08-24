@@ -6,7 +6,6 @@ import com.primevalworks.PrimevalWorks;
 import com.primevalworks.client.model.entity.DinosaurVisualProfile;
 import com.primevalworks.network.payload.FeedDodoPayload;
 import com.primevalworks.registry.ModEntities;
-import com.primevalworks.registry.ModSounds;
 import com.primevalworks.world.entity.FieldDodoEntity;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -18,7 +17,6 @@ import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
-import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -135,6 +133,12 @@ public final class CompanionScreen extends Screen {
     }
 
     @Override
+    protected void init() {
+        super.init();
+        PrimevalUiSounds.open(this);
+    }
+
+    @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         renderNowNanos = Util.getNanos();
         renderDeltaSeconds = Mth.clamp((renderNowNanos - lastRenderNanos) / 1_000_000_000.0F, 0.001F, 0.05F);
@@ -231,6 +235,12 @@ public final class CompanionScreen extends Screen {
     @Override
     public boolean isPauseScreen() {
         return false;
+    }
+
+    @Override
+    public void onClose() {
+        PrimevalUiSounds.close(this);
+        super.onClose();
     }
 
     @Override
@@ -1031,9 +1041,7 @@ public final class CompanionScreen extends Screen {
     }
 
     private void playUiClick(float pitch) {
-        if (ModSounds.areAssetsReady()) {
-            minecraft.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.UI_CLICK.get(), pitch));
-        }
+        PrimevalUiSounds.click(pitch);
     }
 
     private Layout layout() {

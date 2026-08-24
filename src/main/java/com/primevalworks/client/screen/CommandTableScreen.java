@@ -92,11 +92,11 @@ public final class CommandTableScreen extends Screen {
             new Rect(208, 90, 44, 24),
             new Rect(254, 90, 45, 24)
     };
-    static final float STORE_ALL_TEXT_OFFSET_X = -4.0F;
-    static final float RECALL_TEXT_OFFSET_X = -2.0F;
-    static final float ENERGY_TEXT_OFFSET_X = -1.0F;
-    static final float DEPOT_TEXT_OFFSET_X = 1.5F;
-    static final float ACTION_TEXT_OFFSET_Y = 1.0F;
+    static final float STORE_ALL_TEXT_OFFSET_X = 4.0F;
+    static final float RECALL_TEXT_OFFSET_X = 2.0F;
+    static final float ENERGY_TEXT_OFFSET_X = 1.0F;
+    static final float DEPOT_TEXT_OFFSET_X = -1.5F;
+    static final float ACTION_TEXT_OFFSET_Y = -1.0F;
     private static final Rect DEPOT_SORT = new Rect(310, 49, 51, 14);
     private static final Rect DEPOT_PAGE = new Rect(360, 49, 53, 14);
     private static final String[] ACTION_LABELS = {"STORE ALL", "RECALL", "ENERGY", "DEPOT"};
@@ -197,12 +197,13 @@ public final class CommandTableScreen extends Screen {
             active.lastUpgradedId = upgraded;
             for (BaseUpgrade candidate : BaseUpgrade.values()) {
                 if (candidate.prerequisiteId() != upgraded) continue;
-                boolean newlyVisible = !isDiscovered(candidate, previousLevels)
-                        && isDiscovered(candidate, active.upgradeLevels);
-                boolean newlyUnlocked = !prerequisiteMet(candidate, previousLevels)
-                        && prerequisiteMet(candidate, active.upgradeLevels);
-                if (newlyVisible || newlyUnlocked) active.upgradeRevealNanos.put(candidate.id(), now);
+                boolean wasVisible = isDiscovered(candidate, previousLevels);
+                boolean isVisible = isDiscovered(candidate, active.upgradeLevels);
+                if (CommandTableUpgradeRevealRules.startsReveal(wasVisible, isVisible)) {
+                    active.upgradeRevealNanos.put(candidate.id(), now);
+                }
             }
+            PrimevalUiSounds.upgrade();
         }
         active.receivedBaseState = true;
         active.activePage = Math.min(active.activePage, active.activePageCount() - 1);
@@ -238,6 +239,7 @@ public final class CommandTableScreen extends Screen {
         active = this;
         openedNanos = Util.getNanos();
         lastRenderNanos = openedNanos;
+        PrimevalUiSounds.open(this);
         requestBaseState();
     }
 
@@ -321,6 +323,7 @@ public final class CommandTableScreen extends Screen {
         graphics.pose().pushMatrix();
         graphics.pose().translate(treeParallaxX, treeParallaxY);
         drawConnections(graphics, layout);
+        drawUpgradeGlow(graphics, layout);
         drawUpgradeNodes(graphics, layout, Math.round(mouseX - treeParallaxX),
                 Math.round(mouseY - treeParallaxY), time);
         graphics.pose().popMatrix();
@@ -722,6 +725,25 @@ public final class CommandTableScreen extends Screen {
         }
     }
 
+    private void drawUpgradeGlow(GuiGraphicsExtractor graphics, Layout layout) {
+        if (lastUpgradedId < 0 || lastPurchaseNanos == 0L) return;
+        float progress = (renderNowNanos - lastPurchaseNanos) / 620_000_000.0F;
+        if (progress < 0.0F || progress >= 1.0F) return;
+        BaseUpgrade upgraded = BaseUpgrade.byId(lastUpgradedId).orElse(null);
+        if (upgraded == null || !isDiscovered(upgraded)) return;
+        NodePoint point = upgradePoint(layout, upgraded, false);
+        float eased = smoothStep(progress);
+        float fade = 1.0F - eased;
+        float radiusX = (10.0F + eased * 12.0F) * treeZoom;
+        float radiusY = radiusX * 0.62F;
+        int softAlpha = Math.round(48.0F * fade);
+        int ringAlpha = Math.round(190.0F * fade);
+        drawFilledEllipse(graphics, point.x, point.y, radiusX * 0.78F, radiusY * 0.78F,
+                (softAlpha << 24) | 0x00FFD986);
+        drawEllipseRing(graphics, point.x, point.y, radiusX, radiusY,
+                Math.max(0.8F, 1.4F * treeZoom), (ringAlpha << 24) | 0x00FFE7A1);
+    }
+
     private void drawUpgradeNodes(GuiGraphicsExtractor graphics, Layout layout, int mouseX, int mouseY, float time) {
         for (BaseUpgrade upgrade : BaseUpgrade.values()) {
             if (!isDiscovered(upgrade)) continue;
@@ -819,6 +841,7 @@ public final class CommandTableScreen extends Screen {
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         if (event.button() != 0) return super.mouseClicked(event, doubleClick);
+        PrimevalUiSounds.click();
         Layout layout = layout();
         UiMotion motion = currentMotion(layout);
         double uiMouseX = motion.inverseX((float)event.x());
@@ -952,10 +975,12 @@ public final class CommandTableScreen extends Screen {
 
     private void purchase(BaseUpgrade upgrade) {
         if (upgrade == BaseUpgrade.HEARTHSTONE || level(upgrade) >= upgrade.maxLevel()) {
+            PrimevalUiSounds.denied();
             notice = upgrade == BaseUpgrade.HEARTHSTONE ? "The Hearthstone is already awake." : upgrade.title() + " is mastered.";
             return;
         }
         if (!prerequisiteMet(upgrade)) {
+            PrimevalUiSounds.denied();
             notice = prerequisiteText(upgrade);
             return;
         }
@@ -1063,6 +1088,12 @@ public final class CommandTableScreen extends Screen {
     @Override
     public boolean isPauseScreen() {
         return false;
+    }
+
+    @Override
+    public void onClose() {
+        PrimevalUiSounds.close(this);
+        super.onClose();
     }
 
     @Override
@@ -1491,6 +1522,43 @@ public final class CommandTableScreen extends Screen {
         }
         if (!current.isEmpty()) lines.add(current.toString());
         return lines;
+    }
+
+    private void drawEllipseRing(GuiGraphicsExtractor graphics, float centerX, float centerY,
+                                 float radiusX, float radiusY, float thickness, int color) {
+        int top = Math.round(centerY - radiusY);
+        int bottom = Math.round(centerY + radiusY);
+        float innerX = Math.max(0.0F, radiusX - thickness);
+        float innerY = Math.max(0.0F, radiusY - thickness);
+        for (int y = top; y <= bottom; y++) {
+            float dy = y + 0.5F - centerY;
+            float outerTerm = 1.0F - dy * dy / Math.max(1.0F, radiusY * radiusY);
+            if (outerTerm < 0.0F) continue;
+            float outer = radiusX * Mth.sqrt(outerTerm);
+            float inner = 0.0F;
+            if (innerX > 0.0F && innerY > 0.0F && Math.abs(dy) < innerY) {
+                inner = innerX * Mth.sqrt(Math.max(0.0F, 1.0F - dy * dy / (innerY * innerY)));
+            }
+            int leftOuter = Mth.floor(centerX - outer);
+            int rightOuter = Mth.ceil(centerX + outer);
+            int leftInner = Mth.floor(centerX - inner);
+            int rightInner = Mth.ceil(centerX + inner);
+            graphics.fill(leftOuter, y, Math.max(leftOuter + 1, leftInner), y + 1, color);
+            graphics.fill(Math.min(rightOuter - 1, rightInner), y, rightOuter, y + 1, color);
+        }
+    }
+
+    private void drawFilledEllipse(GuiGraphicsExtractor graphics, float centerX, float centerY,
+                                   float radiusX, float radiusY, int color) {
+        int top = Math.round(centerY - radiusY);
+        int bottom = Math.round(centerY + radiusY);
+        for (int y = top; y <= bottom; y++) {
+            float dy = y + 0.5F - centerY;
+            float term = 1.0F - dy * dy / Math.max(1.0F, radiusY * radiusY);
+            if (term < 0.0F) continue;
+            float extent = radiusX * Mth.sqrt(term);
+            graphics.fill(Mth.floor(centerX - extent), y, Mth.ceil(centerX + extent), y + 1, color);
+        }
     }
 
     private void drawItemInRect(GuiGraphicsExtractor graphics, net.minecraft.world.item.ItemStack stack, Rect rect) {

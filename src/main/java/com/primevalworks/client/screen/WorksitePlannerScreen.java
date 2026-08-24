@@ -288,6 +288,7 @@ public final class WorksitePlannerScreen extends Screen {
         boolean resumeDraft = resumingFromMachineMenu;
         resumingFromMachineMenu = false;
         active = this;
+        PrimevalUiSounds.open(this);
         plannerStartedNanos = Util.getNanos();
         lastInterfaceFrameNanos = plannerStartedNanos;
         topDrawerReveal = 1.0F;
@@ -475,6 +476,7 @@ public final class WorksitePlannerScreen extends Screen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (event.button() == 0 || event.button() == 1) PrimevalUiSounds.click();
         if (event.button() == 1 && worldViewport().contains(event.x(), event.y())) {
             if (hoveredPos != null && minecraft.level != null
                     && minecraft.level.getBlockEntity(hoveredPos) instanceof Container) {
@@ -802,6 +804,7 @@ public final class WorksitePlannerScreen extends Screen {
 
     @Override
     public void onClose() {
+        PrimevalUiSounds.close(this);
         restoreCamera();
         minecraft.setScreen(parent);
     }

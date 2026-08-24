@@ -57,6 +57,7 @@ public final class ProcessorScreen extends AbstractContainerScreen<ProcessorMenu
     @Override
     protected void init() {
         super.init();
+        PrimevalUiSounds.open(this);
         openedNanos = 0L;
         frameNanos = 0L;
         renderScale = 0.86F;
@@ -250,6 +251,7 @@ public final class ProcessorScreen extends AbstractContainerScreen<ProcessorMenu
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (event.button() == 0) PrimevalUiSounds.click();
         return super.mouseClicked(mapped(event), doubleClick);
     }
 
@@ -293,6 +295,7 @@ public final class ProcessorScreen extends AbstractContainerScreen<ProcessorMenu
 
     @Override
     public void onClose() {
+        PrimevalUiSounds.close(this);
         super.onClose();
         if (plannerParent != null && minecraft != null) {
             minecraft.setScreen(plannerParent);

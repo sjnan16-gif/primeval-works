@@ -72,6 +72,7 @@ public final class AncientFurnaceScreen extends AbstractContainerScreen<AncientF
     @Override
     protected void init() {
         super.init();
+        PrimevalUiSounds.open(this);
         openedNanos = 0L;
         frameNanos = 0L;
         renderScale = 0.86F;
@@ -268,6 +269,7 @@ public final class AncientFurnaceScreen extends AbstractContainerScreen<AncientF
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (event.button() == 0) PrimevalUiSounds.click();
         MouseButtonEvent mapped = mapped(event);
         int sliderX = leftPos + SLIDER_X;
         int sliderY = topPos - AncientFurnaceMenu.MACHINE_LIFT + SLIDER_Y;
@@ -380,6 +382,7 @@ public final class AncientFurnaceScreen extends AbstractContainerScreen<AncientF
 
     @Override
     public void onClose() {
+        PrimevalUiSounds.close(this);
         super.onClose();
         if (plannerParent != null && minecraft != null) minecraft.setScreen(plannerParent);
     }

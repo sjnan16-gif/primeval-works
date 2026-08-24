@@ -28,6 +28,12 @@ public final class MachineStatusScreen extends Screen {
     }
 
     @Override
+    protected void init() {
+        super.init();
+        PrimevalUiSounds.open(this);
+    }
+
+    @Override
     public void tick() {
         ticks++;
     }
@@ -87,7 +93,14 @@ public final class MachineStatusScreen extends Screen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (event.button() == 0) PrimevalUiSounds.click();
         return super.mouseClicked(event, doubleClick);
+    }
+
+    @Override
+    public void onClose() {
+        PrimevalUiSounds.close(this);
+        super.onClose();
     }
 
     @Override

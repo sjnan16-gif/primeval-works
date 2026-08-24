@@ -129,6 +129,7 @@ public final class EnergyNetworkScreen extends Screen {
     protected void init() {
         active = this;
         openedNanos = Util.getNanos();
+        PrimevalUiSounds.open(this);
         Entity currentCamera = minecraft.getCameraEntity();
         if (previousCamera == null && currentCamera != cameraAnchor) previousCamera = currentCamera;
         if (previousCameraType == null) previousCameraType = minecraft.options.getCameraType();
@@ -320,6 +321,7 @@ public final class EnergyNetworkScreen extends Screen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (event.button() == 0 || event.button() == 1) PrimevalUiSounds.click();
         if (event.button() == 1) {
             draggingCamera = true;
             return true;
@@ -383,6 +385,7 @@ public final class EnergyNetworkScreen extends Screen {
 
     @Override
     public void onClose() {
+        PrimevalUiSounds.close(this);
         restoreCamera();
         minecraft.setScreen(parent);
     }

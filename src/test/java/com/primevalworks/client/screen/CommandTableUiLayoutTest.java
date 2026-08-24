@@ -13,10 +13,16 @@ final class CommandTableUiLayoutTest {
 
     @Test
     void authoredControlButtonLabelsKeepTheirIndividualOffsets() {
-        assertEquals(-4.0F, CommandTableScreen.STORE_ALL_TEXT_OFFSET_X);
-        assertEquals(-2.0F, CommandTableScreen.RECALL_TEXT_OFFSET_X);
-        assertEquals(-1.0F, CommandTableScreen.ENERGY_TEXT_OFFSET_X);
-        assertEquals(1.5F, CommandTableScreen.DEPOT_TEXT_OFFSET_X);
-        assertEquals(1.0F, CommandTableScreen.ACTION_TEXT_OFFSET_Y);
+        assertEquals(4.0F, CommandTableScreen.STORE_ALL_TEXT_OFFSET_X);
+        assertEquals(2.0F, CommandTableScreen.RECALL_TEXT_OFFSET_X);
+        assertEquals(1.0F, CommandTableScreen.ENERGY_TEXT_OFFSET_X);
+        assertEquals(-1.5F, CommandTableScreen.DEPOT_TEXT_OFFSET_X);
+        assertEquals(-1.0F, CommandTableScreen.ACTION_TEXT_OFFSET_Y);
+    }
+
+    @Test
+    void repeatRanksDoNotReplayAnExistingBranchReveal() {
+        assertEquals(true, CommandTableUpgradeRevealRules.startsReveal(false, true));
+        assertEquals(false, CommandTableUpgradeRevealRules.startsReveal(true, true));
     }
 }

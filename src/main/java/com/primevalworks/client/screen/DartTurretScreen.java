@@ -35,6 +35,7 @@ public final class DartTurretScreen extends AbstractContainerScreen<DartTurretMe
     @Override
     protected void init() {
         super.init();
+        PrimevalUiSounds.open(this);
         openedNanos = 0L;
         renderScale = 0.82F;
         renderOffsetY = 26.0F;
@@ -120,6 +121,7 @@ public final class DartTurretScreen extends AbstractContainerScreen<DartTurretMe
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (event.button() == 0) PrimevalUiSounds.click();
         return super.mouseClicked(mapped(event), doubleClick);
     }
 
@@ -135,6 +137,7 @@ public final class DartTurretScreen extends AbstractContainerScreen<DartTurretMe
 
     @Override
     public void onClose() {
+        PrimevalUiSounds.close(this);
         super.onClose();
         if (plannerParent != null && minecraft != null) minecraft.setScreen(plannerParent);
     }

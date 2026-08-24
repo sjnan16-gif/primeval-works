@@ -54,6 +54,7 @@ public final class FoodBoxScreen extends AbstractContainerScreen<FoodBoxMenu> {
     @Override
     protected void init() {
         super.init();
+        PrimevalUiSounds.open(this);
         openedNanos = 0L;
         renderNowNanos = 0L;
     }
@@ -194,6 +195,7 @@ public final class FoodBoxScreen extends AbstractContainerScreen<FoodBoxMenu> {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (event.button() == 0) PrimevalUiSounds.click();
         return super.mouseClicked(mapped(event), doubleClick);
     }
 
@@ -215,6 +217,7 @@ public final class FoodBoxScreen extends AbstractContainerScreen<FoodBoxMenu> {
 
     @Override
     public void onClose() {
+        PrimevalUiSounds.close(this);
         super.onClose();
         if (plannerParent != null && minecraft != null) {
             minecraft.setScreen(plannerParent);
