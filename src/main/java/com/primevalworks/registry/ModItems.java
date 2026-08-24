@@ -2,15 +2,11 @@ package com.primevalworks.registry;
 
 import com.primevalworks.PrimevalWorks;
 import net.minecraft.world.food.FoodProperties;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.item.ToolMaterial;
-import net.minecraft.world.item.SwingAnimationType;
-import net.minecraft.world.item.component.AttackRange;
-import net.minecraft.world.item.component.SwingAnimation;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -116,15 +112,6 @@ public final class ModItems {
             ITEMS.registerSimpleBlockItem("magic_turret", ModBlocks.MAGIC_TURRET);
     public static final DeferredItem<BlockItem> PREMIUM_EGG_INCUBATOR =
             ITEMS.registerSimpleBlockItem("premium_egg_incubator", ModBlocks.PREMIUM_EGG_INCUBATOR);
-    public static final DeferredItem<Item> ANCIENT_REFORGED_BAYONET = ITEMS.registerItem(
-            "ancient_reforged_bayonet",
-            properties -> new Item(ToolMaterial.NETHERITE.applySwordProperties(properties, 5.0F, -2.35F)
-                    .component(DataComponents.ATTACK_RANGE,
-                            new AttackRange(1.2F, 2.2F, 1.2F, 2.2F, 0.0F, 1.0F))
-                    .component(DataComponents.SWING_ANIMATION,
-                            new SwingAnimation(SwingAnimationType.NONE, 16))
-                    .fireResistant())
-    );
     public static final DeferredItem<Item> PTERANODON_SADDLE = ITEMS.registerItem(
             "pteranodon_saddle", properties -> new Item(properties.stacksTo(1).fireResistant())
     );
@@ -213,6 +200,10 @@ public final class ModItems {
         ITEMS.addAlias(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "enhanced_rail"),
                 Identifier.fromNamespaceAndPath("minecraft", "powered_rail")
+        );
+        ITEMS.addAlias(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "ancient_reforged_bayonet"),
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "primordial_sword")
         );
         ITEMS.register(modBus);
     }

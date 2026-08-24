@@ -25,8 +25,8 @@ final class WorkSpecialtyRulesTest {
     }
 
     @Test
-    void expeditionTiersScaleFromTenToThirtyMinutes() {
-        assertArrayEquals(new int[]{10, 15, 20, 25, 30}, new int[]{
+    void fourStarExpeditionsScaleFromTenToThirtyFourMinutes() {
+        assertArrayEquals(new int[]{10, 14, 19, 26, 34}, new int[]{
                 WorkSpecialtyRules.expeditionDurationMinutes(0),
                 WorkSpecialtyRules.expeditionDurationMinutes(1),
                 WorkSpecialtyRules.expeditionDurationMinutes(2),
@@ -34,7 +34,7 @@ final class WorkSpecialtyRulesTest {
                 WorkSpecialtyRules.expeditionDurationMinutes(4)
         });
         assertEquals(12_000L, WorkSpecialtyRules.expeditionDurationTicks(0));
-        assertEquals(36_000L, WorkSpecialtyRules.expeditionDurationTicks(4));
+        assertEquals(40_800L, WorkSpecialtyRules.expeditionDurationTicks(4));
     }
 
     @Test
@@ -82,11 +82,20 @@ final class WorkSpecialtyRulesTest {
     }
 
     @Test
-    void finalExpeditionRequiresMaximumGatheringAndPenultimateTierIsBrutal() {
-        assertTrue(!WorkSpecialtyRules.canAttemptExpedition(4, 3));
+    void finalExpeditionUsesTheAuthoredStarRiskAndDurationCurve() {
+        assertTrue(!WorkSpecialtyRules.canAttemptExpedition(4, 1));
+        assertTrue(WorkSpecialtyRules.canAttemptExpedition(4, 2));
+        assertTrue(WorkSpecialtyRules.canAttemptExpedition(4, 3));
         assertTrue(WorkSpecialtyRules.canAttemptExpedition(4, 4));
-        assertEquals(94, WorkSpecialtyRules.expeditionRiskPercent(3, 4, 1));
-        assertTrue(WorkSpecialtyRules.expeditionRiskPercent(3, 4, 100) >= 86);
+        assertEquals(92, WorkSpecialtyRules.expeditionRiskPercent(4, 2, 1));
+        assertEquals(64, WorkSpecialtyRules.expeditionRiskPercent(4, 3, 1));
+        assertEquals(12, WorkSpecialtyRules.expeditionRiskPercent(4, 4, 1));
+        assertEquals(120, WorkSpecialtyRules.expeditionDurationMinutes(4, 2));
+        assertEquals(64, WorkSpecialtyRules.expeditionDurationMinutes(4, 3));
+        assertEquals(34, WorkSpecialtyRules.expeditionDurationMinutes(4, 4));
+        assertTrue(WorkSpecialtyRules.expeditionDurationMinutes(4, 4, 1.68F) >= 18);
+        assertTrue(WorkSpecialtyRules.expeditionDurationMinutes(4, 4, 1.68F) <= 22);
+        assertTrue(WorkSpecialtyRules.expeditionRiskPercent(4, 4, 1, 1.68F) < 12);
     }
 
     @Test

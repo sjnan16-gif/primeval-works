@@ -50,7 +50,7 @@ Authored entity assets are currently wired for Tyrannosaurus, Field Dodo, Pteran
 - Fire: vanilla furnaces, Ancient Furnaces, and the Processor. Fire workers accelerate valid active recipes but never silently teleport their inputs or outputs.
 - Energy: one Energy dinosaur per valid Wind or Water Turbine, continuous generation, environment validation, stored base energy, consumer assignment, persistence, and per-block demand.
 - Crafting: a Crafting dinosaur uses a selected vanilla Crafting Table, checks the loaded base containers for real recipe ingredients, consumes them transactionally, and leaves the result for a Transport worker.
-- Expeditions: five authored 10-30 minute tiers with fixed weighted pools, risk, persistence, and Transport-compatible return cargo.
+- Expeditions: five authored skill-scaled tiers with fixed weighted pools, risk, persistence, and Transport-compatible return cargo.
 - Feeding: Food Boxes automatically serve compatible food at the authored hunger threshold.
 - Recovery/depot: active work orders, needs, genetics, cooldowns, expeditions, and carried cargo survive depot storage and world saves. Storing a carrier returns its held stack as base cargo instead of deleting or duplicating it.
 

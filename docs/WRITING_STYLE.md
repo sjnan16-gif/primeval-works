@@ -21,7 +21,7 @@ Examples:
 | “Insufficient nutritional resources detected.” | “No suitable food in the pantry.” |
 | “Click here to assign a work suitability.” | “Assign work” |
 | “Your prehistoric companion is in a negative mood state.” | “Juniper needs rest.” |
-| “Unleash the awesome power of the ancient bayonet!” | “Marked targets draw your guardians’ attention.” |
+| “Unleash the awesome power of this legendary weapon!” | “Marked targets draw your guardians’ attention.” |
 
 ## Information order
 

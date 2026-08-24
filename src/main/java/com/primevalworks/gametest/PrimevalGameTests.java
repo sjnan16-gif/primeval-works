@@ -89,8 +89,6 @@ public final class PrimevalGameTests {
             TEST_FUNCTIONS.register("tyrannosaurus_hunts_from_mouth_range", () -> PrimevalGameTests::tyrannosaurusHuntsFromMouthRange);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> SPINOSAURUS_CLEARS_CLOSE_TARGET =
             TEST_FUNCTIONS.register("spinosaurus_clears_close_target", () -> PrimevalGameTests::spinosaurusClearsCloseTarget);
-    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> BAYONET_REQUIRES_SWEET_SPOT =
-            TEST_FUNCTIONS.register("bayonet_requires_sweet_spot", () -> PrimevalGameTests::bayonetRequiresSweetSpot);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> NIGHT_SHIFT_DRAINS_MOOD =
             TEST_FUNCTIONS.register("night_shift_drains_mood", () -> PrimevalGameTests::nightShiftDrainsMood);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> DINOSAUR_SLEEPS_AT_NIGHT =
@@ -211,10 +209,6 @@ public final class PrimevalGameTests {
         event.registerTest(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "spinosaurus_clears_close_target"),
                 new FunctionGameTestInstance(SPINOSAURUS_CLEARS_CLOSE_TARGET.getKey(), isolatedTestData(event, "spino_close_combat"))
-        );
-        event.registerTest(
-                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "bayonet_requires_sweet_spot"),
-                new FunctionGameTestInstance(BAYONET_REQUIRES_SWEET_SPOT.getKey(), isolatedTestData(event, "bayonet_range"))
         );
         event.registerTest(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "night_shift_drains_mood"),
@@ -429,6 +423,11 @@ public final class PrimevalGameTests {
         helper.assertTrue(BuiltInRegistries.ITEM.get(retiredRailId).map(Holder::value).orElse(null)
                         == Items.POWERED_RAIL,
                 "Saved Enhanced Rail items do not migrate to vanilla Powered Rails");
+        Identifier retiredBayonetId = Identifier.fromNamespaceAndPath(
+                PrimevalWorks.MOD_ID, "ancient_reforged_bayonet");
+        helper.assertTrue(BuiltInRegistries.ITEM.get(retiredBayonetId).map(Holder::value).orElse(null)
+                        == ModItems.PRIMORDIAL_SWORD.get(),
+                "Saved Bayonet items do not migrate to the Primordial Sword");
         for (int x = 0; x <= 4; x++) {
             for (int z = 0; z <= 4; z++) {
                 helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
@@ -2036,7 +2035,6 @@ public final class PrimevalGameTests {
                 ModItems.ANCIENT_METAL_INGOT.get(),
                 ModItems.ANCIENT_SPELL_INGOT.get(),
                 ModItems.COMPRESSED_ANCIENT_METAL_INGOT.get(),
-                ModItems.ANCIENT_REFORGED_BAYONET.get(),
                 ModItems.PRIMORDIAL_SWORD.get(),
                 ModItems.PTERANODON_SADDLE.get(),
                 ModItems.SPINOSAURUS_SADDLE.get()
@@ -2699,80 +2697,6 @@ public final class PrimevalGameTests {
                         threat.position().subtract(initialThreatPosition).horizontalDistanceSqr() > 0.01D
                                 || threat.getDeltaMovement().horizontalDistanceSqr() > 0.01D,
                         "The Spinosaurus did not apply a clearing impulse to a crowding target"))
-                .thenSucceed();
-    }
-
-    private static void bayonetRequiresSweetSpot(GameTestHelper helper) {
-        for (int x = 0; x <= 7; x++) for (int z = 0; z <= 4; z++) {
-            helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
-        }
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
-        BlockPos playerPos = helper.absolutePos(new BlockPos(2, 1, 2));
-        player.setPos(playerPos.getX() + 0.5D, playerPos.getY(), playerPos.getZ() + 0.5D);
-        player.setYRot(-90.0F);
-        player.setYHeadRot(-90.0F);
-        player.setItemInHand(InteractionHand.MAIN_HAND,
-                new ItemStack(ModItems.ANCIENT_REFORGED_BAYONET.get()));
-        var close = helper.spawn(EntityType.HUSK, new BlockPos(3, 1, 2));
-        var valid = helper.spawn(EntityType.HUSK, new BlockPos(4, 1, 2));
-        var pierced = helper.spawn(EntityType.HUSK, new BlockPos(4, 1, 3));
-        var outsideArc = helper.spawn(EntityType.HUSK, new BlockPos(3, 1, 4));
-        FieldDodoEntity ownedCompanion = helper.spawn(ModEntities.FIELD_DODO.get(), new BlockPos(4, 1, 1));
-        ownedCompanion.setDinosaurOwner(player.getUUID());
-        ownedCompanion.setNoAi(true);
-        var far = helper.spawn(EntityType.HUSK, new BlockPos(6, 1, 2));
-        close.setNoAi(true);
-        valid.setNoAi(true);
-        pierced.setNoAi(true);
-        outsideArc.setNoAi(true);
-        far.setNoAi(true);
-
-        helper.startSequence()
-                .thenExecuteAfter(25, () -> {
-                    Vec3 origin = player.position();
-                    close.setPos(origin.add(0.55D, 0.0D, 0.0D));
-                    far.setPos(origin.add(3.5D, 0.0D, 0.0D));
-                    player.setYRot(-90.0F);
-                    player.setYHeadRot(-90.0F);
-                    float health = close.getHealth();
-                    player.attack(close);
-                    helper.assertTrue(close.getHealth() == health,
-                            "The Bayonet hit inside its 1.2-block minimum range");
-                    close.discard();
-
-                    health = far.getHealth();
-                    player.attack(far);
-                    helper.assertTrue(far.getHealth() == health,
-                            "The Bayonet hit beyond its 2.2-block maximum range");
-                    far.discard();
-                })
-                .thenExecuteAfter(25, () -> {
-                    Vec3 origin = player.position();
-                    valid.setPos(origin.add(1.8D, 0.0D, 0.0D));
-                    pierced.setPos(origin.add(1.8D, 0.0D, 0.5D));
-                    ownedCompanion.setPos(origin.add(1.8D, 0.0D, -0.5D));
-                    outsideArc.setPos(origin.add(0.8D, 0.0D, 1.5D));
-                    player.setYRot(-90.0F);
-                    player.setYHeadRot(-90.0F);
-                    float health = valid.getHealth();
-                    float piercedHealth = pierced.getHealth();
-                    float outsideArcHealth = outsideArc.getHealth();
-                    float companionHealth = ownedCompanion.getHealth();
-                    player.attack(valid);
-                    helper.assertTrue(valid.getHealth() < health,
-                            "The Bayonet missed a target inside its precise range window");
-                    helper.assertTrue(pierced.getHealth() < piercedHealth,
-                            "The Bayonet did not pierce a second target in its narrow forward arc");
-                    helper.assertTrue(outsideArc.getHealth() == outsideArcHealth,
-                            "The Bayonet's narrow pierce caught a target outside its forward arc");
-                    helper.assertTrue(ownedCompanion.getHealth() == companionHealth,
-                            "The Bayonet's pierce struck the player's owned companion");
-                    valid.discard();
-                    pierced.discard();
-                    outsideArc.discard();
-                    ownedCompanion.discard();
-                    player.discard();
-                })
                 .thenSucceed();
     }
 

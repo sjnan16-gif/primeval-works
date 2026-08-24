@@ -235,7 +235,7 @@ public record AssignDodoWorkPayload(
         if (payload.jobIndex < 0 || payload.jobIndex > 4) return "That work specialty does not exist.";
         if (payload.jobIndex == 4 && !WorkSpecialtyRules.canAttemptExpedition(
                 payload.expeditionTier, dodo.getSpecialtyStars(4))) {
-            return "Primordial Frontier requires a four-star expedition dinosaur.";
+            return "Primordial Frontier requires at least a two-star expedition dinosaur.";
         }
         int baseRadius = table.baseRadius();
         if (!insideBase(payload.commandTablePos, payload.sourcePositions, baseRadius)

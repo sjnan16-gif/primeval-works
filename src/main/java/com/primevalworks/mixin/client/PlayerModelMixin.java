@@ -1,7 +1,5 @@
 package com.primevalworks.mixin.client;
 
-import com.primevalworks.client.effect.BayonetAnimationCurve;
-import com.primevalworks.registry.ModItems;
 import com.primevalworks.world.entity.DinosaurSpecies;
 import com.primevalworks.world.entity.FieldDodoEntity;
 import net.minecraft.client.Minecraft;
@@ -9,7 +7,6 @@ import net.minecraft.client.model.player.PlayerModel;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.HumanoidArm;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -20,8 +17,6 @@ public abstract class PlayerModelMixin {
     @Inject(method = "setupAnim", at = @At("TAIL"))
     private void primevalworks$poseDinosaurRider(AvatarRenderState state, CallbackInfo callback) {
         PlayerModel model = (PlayerModel)(Object)this;
-        primevalworks$poseBayonetAttack(model, state);
-
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null) return;
         Entity rendered = minecraft.level.getEntity(state.id);
@@ -101,24 +96,5 @@ public abstract class PlayerModelMixin {
             model.rightLeg.zRot = 0.08F;
             model.leftLeg.zRot = -0.08F;
         }
-    }
-
-    private static void primevalworks$poseBayonetAttack(PlayerModel model, AvatarRenderState state) {
-        var attackStack = state.attackArm == HumanoidArm.RIGHT
-                ? state.rightHandItemStack
-                : state.leftHandItemStack;
-        if (!attackStack.is(ModItems.ANCIENT_REFORGED_BAYONET.get()) || state.attackTime <= 0.0F) return;
-
-        int side = state.attackArm == HumanoidArm.RIGHT ? 1 : -1;
-        BayonetAnimationCurve.Sample animation = BayonetAnimationCurve.sample(state.attackTime);
-        float extension = Mth.clamp(animation.extension(), 0.0F, 1.0F);
-        float inspect = Mth.sin(animation.retract() * Mth.PI * 2.0F)
-                * (1.0F - animation.retract());
-        var arm = model.getArm(state.attackArm);
-        arm.xRot = Mth.lerp(extension, arm.xRot, -1.48F);
-        arm.yRot = Mth.lerp(extension, arm.yRot, side * -0.08F);
-        arm.zRot += side * inspect * 0.42F;
-        arm.z -= extension * 1.35F;
-        arm.y += extension * 0.35F;
     }
 }

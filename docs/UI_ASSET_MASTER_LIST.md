@@ -145,7 +145,7 @@ when dismounted. There is no permanent controls bubble competing with the vanill
 - Reinforced and Sticky Reinforced Pistons: redstone blocks controlled by the Energy Map.
 - Powered Observer: world/redstone block controlled by the Energy Map.
 - Berry Bush: behaves like a crop.
-- Bayonet and swords: item models/tooltips, not screens.
+- Swords: item models/tooltips, not screens.
 - Breeding: use a Nesting Treat on two identical species; no menu.
 - Expeditions: already live inside the Work Planner.
 - Deceased/recovery dinosaurs: already live inside the Command Table depot.

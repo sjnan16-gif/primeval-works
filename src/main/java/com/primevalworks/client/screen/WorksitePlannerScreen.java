@@ -533,7 +533,7 @@ public final class WorksitePlannerScreen extends Screen {
                 selection = available[index];
                 if (jobIndex == 4) {
                     if (!WorkSpecialtyRules.canAttemptExpedition(index, dodo.getSpecialtyStars(4))) {
-                        feedback("Primordial Frontier requires four-star expedition skill.");
+                        feedback("Primordial Frontier requires at least two-star expedition skill.");
                         return true;
                     }
                     expeditionTier = index;
@@ -933,7 +933,7 @@ public final class WorksitePlannerScreen extends Screen {
         String identityText = displayName() + "  /  ASSIGN";
         BlockPos selectedPosition = position(selection);
         String stepText = selectionLabel(selection) + "  /  "
-                + (jobIndex == 4 ? expeditionDurationMinutes(expeditionTier) + " MIN"
+                + (jobIndex == 4 ? expeditionStatusLabel(expeditionTier)
                 : selectedPosition == null ? "SELECT" : compactPosTight(selectedPosition));
         int identityColor = layout.identity.contains(mouseX, mouseY) ? CORAL : INK;
         int stepColor = layout.step.contains(mouseX, mouseY) ? selection.color : INK;
@@ -1492,10 +1492,14 @@ public final class WorksitePlannerScreen extends Screen {
                                              int tier, int mouseX, int mouseY, int alpha) {
         ExpeditionRewards.Tier expedition = ExpeditionRewards.tier(tier);
         int padding = Math.max(3, Math.round(3.0F * plannerScale()));
+        boolean availableToDinosaur = canAttemptExpedition(tier);
         boldLine(graphics,
-                expeditionDurationMinutes(tier) + " MIN  ·  " + expeditionRiskPercent(tier) + "% INJURY RISK",
+                availableToDinosaur
+                        ? expeditionDurationMinutes(tier) + " MIN  ·  " + expeditionRiskPercent(tier) + "% INJURY RISK"
+                        : "UNAVAILABLE  ·  REQUIRES 2-STAR EXPEDITION",
                 layout.body.x + padding, layout.body.y + padding, layout.body.width - padding * 2,
-                withAlpha(expeditionRiskPercent(tier) >= 16 ? CORAL : expeditionColor(tier), alpha), 0.76F);
+                withAlpha(!availableToDinosaur || expeditionRiskPercent(tier) >= 16
+                        ? CORAL : expeditionColor(tier), alpha), 0.76F);
         boldLine(graphics, "POSSIBLE REWARDS  ·  " + expedition.rolls() + " ROLLS",
                 layout.body.x + padding, layout.body.y + padding + 10, layout.body.width - padding * 2,
                 withAlpha(MUTED, alpha), 0.70F);
@@ -1855,6 +1859,13 @@ public final class WorksitePlannerScreen extends Screen {
     private HelpContent selectionHelp(Selection option) {
         if (isExpeditionSelection(option)) {
             int tier = expeditionIndex(option);
+            if (!canAttemptExpedition(tier)) {
+                return new HelpContent(expeditionName(tier) + "  ·  UNAVAILABLE", List.of(
+                        "THIS ROUTE REQUIRES AT LEAST TWO EXPEDITION STARS.",
+                        "RAISE A SPECIES WITH A STRONGER EXPEDITION SPECIALTY.",
+                        "NO DINOSAUR IS SENT AND NO TIMER STARTS WHILE LOCKED."
+                ), CORAL);
+            }
             return new HelpContent(expeditionName(tier) + "  ·  " + expeditionDurationMinutes(tier) + " MIN", List.of(
                     "SENDS THIS DINOSAUR AWAY UNTIL THE EXPEDITION TIMER ENDS.",
                     "POSSIBLE: " + ExpeditionRewards.shortPoolDescription(tier).toUpperCase() + ".",
@@ -2797,6 +2808,13 @@ public final class WorksitePlannerScreen extends Screen {
                 int tier = expeditionIndex(option);
                 textFit(graphics, expeditionName(tier), bubble.x + 7, bubble.y + 6, bubble.width - 14,
                         withAlpha(expeditionColor(tier), alpha));
+                if (!canAttemptExpedition(tier)) {
+                    textFit(graphics, "UNAVAILABLE  ·  NEEDS 2 STARS",
+                            bubble.x + 7, bubble.y + 22, bubble.width - 14, withAlpha(CORAL, alpha));
+                    textFit(graphics, "CHOOSE A STRONGER EXPEDITION DINOSAUR",
+                            bubble.x + 7, bubble.y + 39, bubble.width - 14, withAlpha(MUTED, alpha));
+                    return;
+                }
                 textFit(graphics, expeditionDurationMinutes(tier) + " MIN  ·  YIELD " + expeditionRewardMultiplier(tier) + "/5",
                         bubble.x + 7, bubble.y + 19, bubble.width - 14, withAlpha(INK, alpha));
                 textFit(graphics, expeditionRiskPercent(tier) + "% INCAPACITATION RISK",
@@ -3144,12 +3162,21 @@ public final class WorksitePlannerScreen extends Screen {
     }
 
     private int expeditionDurationMinutes(int tier) {
-        return WorkSpecialtyRules.expeditionDurationMinutes(tier, dodo.getSpecialtyStars(4));
+        return WorkSpecialtyRules.expeditionDurationMinutes(
+                tier, dodo.getSpecialtyStars(4), dodo.getMutationStatMultiplier());
+    }
+
+    private boolean canAttemptExpedition(int tier) {
+        return WorkSpecialtyRules.canAttemptExpedition(tier, dodo.getSpecialtyStars(4));
+    }
+
+    private String expeditionStatusLabel(int tier) {
+        return canAttemptExpedition(tier) ? expeditionDurationMinutes(tier) + " MIN" : "UNAVAILABLE";
     }
 
     private int expeditionRiskPercent(int tier) {
         return WorkSpecialtyRules.expeditionRiskPercent(
-                tier, dodo.getSpecialtyStars(4), dodo.getDinosaurLevel());
+                tier, dodo.getSpecialtyStars(4), dodo.getDinosaurLevel(), dodo.getMutationStatMultiplier());
     }
 
     private static int expeditionRewardMultiplier(int tier) {

@@ -438,6 +438,8 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     private boolean spinosaurusClientDescendInput;
     private boolean spinosaurusWasInWater;
     private int spinosaurusPredictedBreachTicks;
+    private int spinosaurusGroundDropGraceTicks;
+    private double spinosaurusGroundDropEntrySpeed;
     private final Set<UUID> spinosaurusBreachHits = new HashSet<>();
     private int spinosaurusMountedAttackCooldown;
     private int spinosaurusMountedAimTicks;
@@ -2937,7 +2939,8 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         }
         breedingPrimed = false;
         onExpedition = true;
-        long duration = WorkSpecialtyRules.expeditionDurationTicks(expeditionTier, getSpecialtyStars(4));
+        long duration = WorkSpecialtyRules.expeditionDurationTicks(
+                expeditionTier, getSpecialtyStars(4), getMutationStatMultiplier());
         CommandTableBlockEntity table = commandTableEntity();
         if (table != null) duration = Math.max(1L, Math.round(duration * table.expeditionDurationMultiplier()));
         expeditionEndTick = level().getGameTime() + duration;
@@ -2975,7 +2978,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                 .ifPresent(PrimevalAdvancements::awardFirstExpedition);
         awardWorkExperience(DinosaurProgression.expeditionExperience(expeditionTier));
         int risk = WorkSpecialtyRules.expeditionRiskPercent(
-                expeditionTier, getSpecialtyStars(4), dinosaurLevel);
+                expeditionTier, getSpecialtyStars(4), dinosaurLevel, getMutationStatMultiplier());
         if (random.nextInt(100) < risk) {
             incapacitatedUntilTick = level().getGameTime() + (60L + expeditionTier * 30L) * 20L;
         }
@@ -4249,7 +4252,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         entityData.set(SPINO_BANK, Mth.approach(getSpinosaurusBankDegrees(), 0.0F, 2.4F));
         float yaw = Mth.approachDegrees(getYRot(), controller.getYRot(), 7.5F);
         float terrainPitch = riddenInput.z > 0.02D ? spinosaurusTerrainPitch(yaw) : 0.0F;
-        setRot(yaw, Mth.approachDegrees(getXRot(), terrainPitch, 1.35F));
+        setRot(yaw, Mth.rotLerp(0.18F, getXRot(), terrainPitch));
         yBodyRot = Mth.approachDegrees(yBodyRot, yaw, 7.0F);
         yHeadRot = Mth.approachDegrees(yHeadRot, controller.getYRot(), 11.0F);
         getLookControl().setLookAt(position().add(
@@ -4335,11 +4338,8 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                 getZ() - forwardZ * distance
         );
         if (frontHeight == null || rearHeight == null) return 0.0F;
-        return Mth.clamp(
-                (float)-Math.toDegrees(Math.atan2(frontHeight - rearHeight, distance * 2.0D)),
-                -18.0F,
-                18.0F
-        );
+        return SpinosaurusGroundRideRules.terrainPitchDegrees(
+                frontHeight, rearHeight, distance * 2.0D);
     }
 
     private @Nullable Double spinosaurusGroundHeight(double sampleX, double sampleZ) {
@@ -4466,7 +4466,10 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                 resetFallDistance();
                 return;
             }
+            boolean wasGrounded = onGround();
+            double horizontalSpeedBefore = getDeltaMovement().horizontalDistance();
             super.travel(input);
+            preserveSpinosaurusStepDownMomentum(input, wasGrounded, horizontalSpeedBefore);
             return;
         }
         if (getSpecies() == DinosaurSpecies.PTERANODON && getControllingPassenger() != null) {
@@ -4528,6 +4531,42 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         }
         setNoGravity(false);
         super.travel(input);
+    }
+
+    private void preserveSpinosaurusStepDownMomentum(
+            Vec3 input,
+            boolean wasGrounded,
+            double horizontalSpeedBefore
+    ) {
+        Vec3 movement = getDeltaMovement();
+        if (SpinosaurusGroundRideRules.shouldPreserveDropMomentum(
+                wasGrounded,
+                onGround(),
+                input.z,
+                movement.y,
+                fallDistance,
+                horizontalSpeedBefore)) {
+            spinosaurusGroundDropGraceTicks = SpinosaurusGroundRideRules.dropMomentumGraceTicks();
+            spinosaurusGroundDropEntrySpeed = Math.max(horizontalSpeedBefore, movement.horizontalDistance());
+        }
+        if (onGround() || fallDistance > 1.35F || movement.y > 0.08D) {
+            spinosaurusGroundDropGraceTicks = 0;
+            spinosaurusGroundDropEntrySpeed = 0.0D;
+            return;
+        }
+        if (spinosaurusGroundDropGraceTicks <= 0 || input.z <= 0.05D) return;
+
+        double minimumSpeed = SpinosaurusGroundRideRules.preservedHorizontalSpeed(
+                spinosaurusGroundDropEntrySpeed, spinosaurusGroundDropGraceTicks);
+        Vec3 horizontal = new Vec3(movement.x, 0.0D, movement.z);
+        if (horizontal.horizontalDistanceSqr() < 1.0E-6D) {
+            horizontal = Vec3.directionFromRotation(0.0F, getYRot());
+        }
+        if (horizontal.horizontalDistance() < minimumSpeed) {
+            horizontal = horizontal.normalize().scale(minimumSpeed);
+            setDeltaMovement(horizontal.x, movement.y, horizontal.z);
+        }
+        spinosaurusGroundDropGraceTicks--;
     }
 
     private final class SpinosaurusSurfaceFloatGoal extends Goal {

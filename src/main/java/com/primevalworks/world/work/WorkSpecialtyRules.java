@@ -12,11 +12,18 @@ public final class WorkSpecialtyRules {
     private static final int[] EFFICIENCY_PERCENT = {20, 20, 45, 65, 100};
     private static final float[] ENERGY_PER_SECOND = {1.5F, 2.0F, 4.5F, 7.5F, 11.0F};
     private static final int[][] EXPEDITION_RISKS = {
-            {4, 2, 1, 0, 0},
-            {35, 35, 22, 12, 6},
-            {70, 70, 55, 35, 18},
-            {98, 97, 96, 95, 94},
-            {100, 100, 100, 100, 98}
+            {18, 15, 8, 4, 1},
+            {35, 30, 18, 8, 3},
+            {55, 48, 31, 15, 6},
+            {78, 72, 48, 28, 9},
+            {100, 100, 92, 64, 12}
+    };
+    private static final int[][] EXPEDITION_DURATION_MINUTES = {
+            {50, 38, 26, 16, 10},
+            {70, 55, 38, 24, 14},
+            {95, 75, 52, 33, 19},
+            {130, 105, 76, 48, 26},
+            {180, 180, 120, 64, 34}
     };
     private static final int[] EXPEDITION_REWARDS = {1, 2, 3, 4, 5};
 
@@ -38,7 +45,7 @@ public final class WorkSpecialtyRules {
     }
 
     public static int expeditionDurationMinutes(int tier) {
-        return 10 + clampTier(tier) * 5;
+        return expeditionDurationMinutes(tier, 4, 1.0F);
     }
 
     public static long expeditionDurationTicks(int tier) {
@@ -46,17 +53,22 @@ public final class WorkSpecialtyRules {
     }
 
     public static int expeditionRiskPercent(int tier) {
-        return expeditionRiskPercent(tier, 4, 1);
+        return expeditionRiskPercent(tier, 4, 1, 1.0F);
     }
 
     public static int expeditionRiskPercent(int tier, int stars, int level) {
+        return expeditionRiskPercent(tier, stars, level, 1.0F);
+    }
+
+    public static int expeditionRiskPercent(int tier, int stars, int level, float mutationMultiplier) {
         int risk = EXPEDITION_RISKS[clampTier(tier)][clampStars(stars)];
-        int levelReduction = Math.min(8, Math.max(0, level - 1) / 12);
-        return Math.max(0, risk - levelReduction);
+        if (!canAttemptExpedition(tier, stars)) return 100;
+        float mutationBenefit = Math.max(1.0F, mutationMultiplier);
+        return Math.max(0, Math.round(risk / mutationBenefit));
     }
 
     public static boolean canAttemptExpedition(int tier, int stars) {
-        return clampTier(tier) < 4 || clampStars(stars) == 4;
+        return clampTier(tier) < 4 || clampStars(stars) >= 2;
     }
 
     public static int expeditionRewardCount(int tier) {
@@ -102,11 +114,21 @@ public final class WorkSpecialtyRules {
     }
 
     public static long expeditionDurationTicks(int tier, int stars) {
-        return expeditionDurationTicks(tier);
+        return expeditionDurationTicks(tier, stars, 1.0F);
+    }
+
+    public static long expeditionDurationTicks(int tier, int stars, float mutationMultiplier) {
+        int minutes = EXPEDITION_DURATION_MINUTES[clampTier(tier)][clampStars(stars)];
+        float mutationBenefit = Math.max(1.0F, mutationMultiplier);
+        return Math.max(1L, Math.round(minutes * 60.0D * 20.0D / mutationBenefit));
     }
 
     public static int expeditionDurationMinutes(int tier, int stars) {
-        return (int) Math.ceil(expeditionDurationTicks(tier, stars) / 1200.0D);
+        return expeditionDurationMinutes(tier, stars, 1.0F);
+    }
+
+    public static int expeditionDurationMinutes(int tier, int stars, float mutationMultiplier) {
+        return (int) Math.ceil(expeditionDurationTicks(tier, stars, mutationMultiplier) / 1200.0D);
     }
 
     public static double transportMovementMultiplier(int stars, int carriedCount, int maximumStackSize) {

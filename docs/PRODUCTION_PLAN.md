@@ -99,7 +99,7 @@ Exit condition: every species is identifiable, useful, hatchable, animated, and 
 ### Day 10 — Progression, rewards, and spectacle
 
 - Add Ancient Barrel, Processor, premium incubator, and only the best-performing extra machines.
-- Add Ancient Spell Ingot, compressed materials, Ancient Reforged Bayonet, and Primordial Sword.
+- Add Ancient Spell Ingot, compressed materials, and the Primordial Sword.
 - Make endgame rewards solve real base problems or create memorable spectacle.
 - Cut anything that is only a recipe icon with no effect on the main loop.
 

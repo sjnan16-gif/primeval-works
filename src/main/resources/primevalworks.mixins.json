@@ -8,7 +8,6 @@
   "client": [
     "client.AvatarRendererMixin",
     "client.CameraMixin",
-    "client.ItemInHandLayerMixin",
     "client.PlayerModelMixin"
   ],
   "injectors": {
