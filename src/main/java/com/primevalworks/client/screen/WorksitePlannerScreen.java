@@ -21,6 +21,7 @@ import com.primevalworks.world.block.TurbineBlock;
 import com.primevalworks.world.block.TurbinePartBlock;
 import com.primevalworks.world.block.entity.FoodBoxBlockEntity;
 import com.primevalworks.world.block.entity.ProcessorBlockEntity;
+import com.primevalworks.world.block.entity.CommandTableBlockEntity;
 import com.primevalworks.world.entity.FieldDodoEntity;
 import com.primevalworks.world.work.BaseInventoryIndex;
 import com.primevalworks.world.work.ExpeditionRewards;
@@ -3162,8 +3163,13 @@ public final class WorksitePlannerScreen extends Screen {
     }
 
     private int expeditionDurationMinutes(int tier) {
-        return WorkSpecialtyRules.expeditionDurationMinutes(
+        long ticks = WorkSpecialtyRules.expeditionDurationTicks(
                 tier, dodo.getSpecialtyStars(4), dodo.getMutationStatMultiplier());
+        if (minecraft != null && minecraft.level != null
+                && minecraft.level.getBlockEntity(tablePos) instanceof CommandTableBlockEntity table) {
+            ticks = Math.max(1L, Math.round(ticks * table.expeditionDurationMultiplier()));
+        }
+        return (int)Math.ceil(ticks / 1200.0D);
     }
 
     private boolean canAttemptExpedition(int tier) {
