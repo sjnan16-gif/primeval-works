@@ -1,7 +1,7 @@
 package com.primevalworks.network.payload;
 
 import com.primevalworks.PrimevalWorks;
-import com.primevalworks.client.screen.CommandTableTestScreen;
+import com.primevalworks.client.screen.CommandTableScreen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -45,7 +45,7 @@ public record BaseUpgradesPayload(BlockPos tablePos, int insight, List<Integer> 
     }
 
     public static void handle(BaseUpgradesPayload payload, IPayloadContext context) {
-        context.enqueueWork(() -> CommandTableTestScreen.acceptBaseState(payload));
+        context.enqueueWork(() -> CommandTableScreen.acceptBaseState(payload));
     }
 
     @Override

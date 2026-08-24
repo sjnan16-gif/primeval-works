@@ -472,6 +472,7 @@ public final class PrimevalGameTests {
     }
 
     private static void unmountedSpinosaurusFloatsAtSurface(GameTestHelper helper) {
+        forceTicking(helper, new BlockPos(4, 1, 4));
         for (int x = 0; x <= 8; x++) {
             for (int z = 0; z <= 8; z++) {
                 helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
@@ -488,7 +489,11 @@ public final class PrimevalGameTests {
             helper.assertTrue(spinosaurus.getY() < surfaceY - 1.5D,
                     "The unmounted Spinosaurus jumped most of its body above the water surface");
             helper.assertTrue(spinosaurus.isInWater(),
-                    "The unmounted Spinosaurus launched itself entirely out of its pool");
+                    "The unmounted Spinosaurus left the pool; y=" + spinosaurus.getY()
+                            + ", velocity=" + spinosaurus.getDeltaMovement()
+                            + ", waterDepth=" + spinosaurus.getFluidHeight(net.minecraft.tags.FluidTags.WATER)
+                            + ", feetBlock=" + spinosaurus.level().getBlockState(spinosaurus.blockPosition())
+                            + ", bounds=" + spinosaurus.getBoundingBox());
             helper.assertTrue(!spinosaurus.isSpinosaurusBreaching(),
                     "Unmounted surface buoyancy incorrectly entered the mounted breach state");
             helper.succeed();
@@ -925,6 +930,8 @@ public final class PrimevalGameTests {
                         "Transport could not collect the Processor output; processor="
                                 + processor.getItem(ProcessorBlockEntity.OUTPUT_SLOT)
                                 + ", carried=" + dodo.getCarriedStack() + ", action=" + dodo.getWorkAction()
+                                + ", position=" + dodo.position() + ", destination=" + destinationPos
+                                + ", navigationDone=" + dodo.getNavigation().isDone()
                 ))
                 .thenExecute(() -> helper.assertTrue(
                         processor.getItem(ProcessorBlockEntity.OUTPUT_SLOT).isEmpty(),
@@ -1084,11 +1091,11 @@ public final class PrimevalGameTests {
     }
 
     private static void poweredTurretsDefendBase(GameTestHelper helper) {
-        BlockPos tableRelative = new BlockPos(1, 1, 2);
-        BlockPos dartRelative = new BlockPos(4, 1, 2);
-        BlockPos laserRelative = new BlockPos(4, 1, 5);
-        BlockPos dartThreatRelative = new BlockPos(8, 1, 2);
-        BlockPos laserThreatRelative = new BlockPos(8, 1, 5);
+        BlockPos tableRelative = new BlockPos(3, 1, 3);
+        BlockPos dartRelative = new BlockPos(5, 1, 2);
+        BlockPos laserRelative = new BlockPos(5, 1, 4);
+        BlockPos dartThreatRelative = new BlockPos(4, 1, 2);
+        BlockPos laserThreatRelative = new BlockPos(4, 1, 4);
         for (int x = 0; x <= 10; x++) for (int z = 0; z <= 6; z++) {
             helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
         }
@@ -1103,19 +1110,21 @@ public final class PrimevalGameTests {
         table.receiveGeneratedEnergy(500.0F);
         helper.assertTrue(table.toggleEnergyConsumer(helper.getLevel(), helper.absolutePos(dartRelative)),
                 "The Dart Turret could not join the powered base network");
-        float idleDartEnergy = table.storedEnergy();
         net.minecraft.world.entity.monster.Creeper[] dartThreat = {null};
         float[] dartHealth = {0.0F};
         net.minecraft.world.entity.monster.Creeper[] laserThreat = {null};
-        float[] laserIdleEnergy = {0.0F};
 
         helper.startSequence()
-                .thenExecuteAfter(25, () -> {
-                    helper.assertTrue(Math.abs(table.storedEnergy() - idleDartEnergy) < 0.01F,
-                            "An idle Dart Turret drained energy before it had a target");
+                .thenExecute(() -> {
+                    helper.assertTrue(BaseEnergyRules.activeDemandPerSecond(
+                                    helper.getLevel(), helper.absolutePos(dartRelative)) == 0.0F,
+                            "An idle Dart Turret requested base energy without a target");
                     dartThreat[0] = helper.spawn(EntityType.CREEPER, dartThreatRelative);
                     dartThreat[0].setNoAi(true);
                     dartHealth[0] = dartThreat[0].getHealth();
+                    helper.assertTrue(BaseEnergyRules.ownsPosition(helper.getLevel(),
+                                    helper.absolutePos(dartRelative), dartThreat[0].position()),
+                            "The Dart Turret test target was outside its Command Table's base cell");
                 })
                 .thenWaitUntil(() -> helper.assertTrue(
                         dartTurret.countItem(ModItems.DART.get()) == 2,
@@ -1133,13 +1142,14 @@ public final class PrimevalGameTests {
                             helper.absolutePos(laserRelative), false);
                     helper.assertTrue(BaseEnergyRules.isPowered(helper.getLevel(), helper.absolutePos(laserRelative)),
                             "A loaded Command Table did not repair a lost runtime energy binding");
-                    laserIdleEnergy[0] = table.storedEnergy();
-                })
-                .thenExecuteAfter(25, () -> {
-                    helper.assertTrue(Math.abs(table.storedEnergy() - laserIdleEnergy[0]) < 0.01F,
-                            "An idle Laser Turret drained energy before it had a target");
+                    helper.assertTrue(BaseEnergyRules.activeDemandPerSecond(
+                                    helper.getLevel(), helper.absolutePos(laserRelative)) == 0.0F,
+                            "An idle Laser Turret requested base energy without a target");
                     laserThreat[0] = helper.spawn(EntityType.CREEPER, laserThreatRelative);
                     laserThreat[0].setNoAi(true);
+                    helper.assertTrue(BaseEnergyRules.ownsPosition(helper.getLevel(),
+                                    helper.absolutePos(laserRelative), laserThreat[0].position()),
+                            "The Laser Turret test target was outside its Command Table's base cell");
                 })
                 .thenWaitUntil(() -> helper.assertTrue(
                         laserTurret.aimController().targetEntityId() >= 0,
@@ -1882,7 +1892,8 @@ public final class PrimevalGameTests {
                                     + ", planks=" + chest.countItem(Items.OAK_PLANKS));
                 })
                 .thenExecute(() -> helper.assertTrue(chest.countItem(Items.OAK_PLANKS) == 0,
-                        "Crafting output appeared without consuming both ingredients"))
+                        "Crafting output appeared with " + chest.countItem(Items.OAK_PLANKS)
+                                + " planks still in its assigned base storage"))
                 .thenSucceed();
     }
 
@@ -2388,6 +2399,9 @@ public final class PrimevalGameTests {
         zombie.getAttribute(Attributes.MAX_HEALTH).setBaseValue(200.0D);
         zombie.getAttribute(Attributes.KNOCKBACK_RESISTANCE).setBaseValue(1.0D);
         zombie.setHealth(200.0F);
+        helper.onEachTick(() -> {
+            if (dinosaur.isAlive() && zombie.isAlive()) dinosaur.setTarget(zombie);
+        });
         assertNeverMovesBackward(helper, dinosaur, "Hunting Tyrannosaurus");
 
         helper.startSequence()

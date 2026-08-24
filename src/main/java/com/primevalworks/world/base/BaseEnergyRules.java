@@ -10,6 +10,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -95,6 +96,28 @@ public final class BaseEnergyRules {
     public static boolean isConnected(net.minecraft.world.level.Level level, BlockPos consumerPos) {
         CommandTableBlockEntity table = boundTable(level, consumerPos);
         return table != null && table.isEnergyConsumerEnabled(consumerPos);
+    }
+
+    public static boolean ownsPosition(net.minecraft.world.level.Level level, BlockPos consumerPos, Vec3 position) {
+        CommandTableBlockEntity table = boundTable(level, consumerPos);
+        if (table == null) return false;
+        BlockPos ownPos = table.getBlockPos();
+        double ownDistance = position.distanceToSqr(Vec3.atCenterOf(ownPos));
+        if (ownDistance > (double)table.baseRadius() * table.baseRadius()) return false;
+
+        Set<BlockPos> loadedTables;
+        synchronized (LOADED_TABLES) {
+            loadedTables = Set.copyOf(LOADED_TABLES.getOrDefault(level, Set.of()));
+        }
+        long ownKey = ownPos.asLong();
+        for (BlockPos otherPos : loadedTables) {
+            if (otherPos.equals(ownPos)) continue;
+            double otherDistance = position.distanceToSqr(Vec3.atCenterOf(otherPos));
+            if (otherDistance < ownDistance || otherDistance == ownDistance && otherPos.asLong() < ownKey) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public static float activeDemandPerSecond(net.minecraft.world.level.Level level, BlockPos pos) {

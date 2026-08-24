@@ -74,6 +74,7 @@ public final class LaserTurretBlockEntity extends BlockEntity implements Targeti
                         LivingEntity.class,
                         new AABB(pos).inflate(RANGE),
                         entity -> entity.isAlive() && entity instanceof Enemy
+                                && BaseEnergyRules.ownsPosition(level, pos, entity.position())
                 ).stream()
                 .min(Comparator.comparingDouble(entity -> entity.distanceToSqr(origin)))
                 .orElse(null);
@@ -82,7 +83,8 @@ public final class LaserTurretBlockEntity extends BlockEntity implements Targeti
     private @Nullable LivingEntity currentTarget(ServerLevel level, BlockPos pos) {
         LivingEntity target = aim.target(level);
         return target != null && target.distanceToSqr(Vec3.atCenterOf(pos)) <= RANGE * RANGE
-                && target instanceof Enemy ? target : null;
+                && target instanceof Enemy
+                && BaseEnergyRules.ownsPosition(level, pos, target.position()) ? target : null;
     }
 
     private void setTarget(@Nullable LivingEntity target) {

@@ -1,7 +1,7 @@
 package com.primevalworks.network.payload;
 
 import com.primevalworks.PrimevalWorks;
-import com.primevalworks.client.screen.CommandTableTestScreen;
+import com.primevalworks.client.screen.CommandTableScreen;
 import com.primevalworks.client.screen.EnergyNetworkScreen;
 import com.primevalworks.world.block.entity.CommandTableBlockEntity;
 import net.minecraft.core.BlockPos;
@@ -76,7 +76,7 @@ public record BaseEnergyPayload(
 
     public static void handle(BaseEnergyPayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
-            CommandTableTestScreen.acceptEnergyState(payload);
+            CommandTableScreen.acceptEnergyState(payload);
             EnergyNetworkScreen.acceptEnergyState(payload);
         });
     }

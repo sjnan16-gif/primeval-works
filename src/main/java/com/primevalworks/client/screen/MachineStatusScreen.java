@@ -10,7 +10,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 
-public final class MachinePlaceholderScreen extends Screen {
+public final class MachineStatusScreen extends Screen {
     private static final Identifier PANEL = texture("ancient_companion_panel.png");
     private static final Identifier BUBBLE = texture("space.png");
     private static final Identifier SLOT = texture("ancient_slot.png");
@@ -21,7 +21,7 @@ public final class MachinePlaceholderScreen extends Screen {
     private final Descriptor descriptor;
     private int ticks;
 
-    public MachinePlaceholderScreen(BlockPos pos, Descriptor descriptor) {
+    public MachineStatusScreen(BlockPos pos, Descriptor descriptor) {
         super(Component.literal(descriptor.title()));
         this.pos = pos.immutable();
         this.descriptor = descriptor;

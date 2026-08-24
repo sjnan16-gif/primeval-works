@@ -34,7 +34,7 @@ import java.util.Map;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
-public final class CompanionTestScreen extends Screen {
+public final class CompanionScreen extends Screen {
     private static final int TEXTURE_WIDTH = 427;
     private static final int TEXTURE_HEIGHT = 240;
     private static final int ART_X = 110;
@@ -123,7 +123,7 @@ public final class CompanionTestScreen extends Screen {
     private float renderDeltaSeconds = 1.0F / 60.0F;
     private final Map<Rect, HoverDwell> textHoverDwells = new HashMap<>();
 
-    public CompanionTestScreen(FieldDodoEntity dodo, BlockPos commandTablePos) {
+    public CompanionScreen(FieldDodoEntity dodo, BlockPos commandTablePos) {
         super(Component.literal("Dinosaur Record"));
         this.dodo = dodo;
         this.commandTablePos = commandTablePos.immutable();

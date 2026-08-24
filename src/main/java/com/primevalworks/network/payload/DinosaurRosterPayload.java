@@ -1,7 +1,7 @@
 package com.primevalworks.network.payload;
 
 import com.primevalworks.PrimevalWorks;
-import com.primevalworks.client.screen.CommandTableTestScreen;
+import com.primevalworks.client.screen.CommandTableScreen;
 import com.primevalworks.world.entity.FieldDodoEntity;
 import com.primevalworks.world.ownership.DinosaurOwnership;
 import net.minecraft.core.BlockPos;
@@ -124,7 +124,7 @@ public record DinosaurRosterPayload(BlockPos tablePos, List<Entry> entries) impl
     }
 
     public static void handle(DinosaurRosterPayload payload, IPayloadContext context) {
-        context.enqueueWork(() -> CommandTableTestScreen.acceptDinosaurRoster(payload));
+        context.enqueueWork(() -> CommandTableScreen.acceptDinosaurRoster(payload));
     }
 
     @Override

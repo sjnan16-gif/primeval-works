@@ -46,7 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-public final class CommandTableTestScreen extends Screen {
+public final class CommandTableScreen extends Screen {
     private static final int TEXTURE_WIDTH = 427;
     private static final int TEXTURE_HEIGHT = 240;
     private static final int ART_X = 110;
@@ -112,7 +112,7 @@ public final class CommandTableTestScreen extends Screen {
     private static final int STAR_LINE = 0xFF66517F;
     private static final int STAR_LIGHT = 0xFFC7B0ED;
 
-    private static CommandTableTestScreen active;
+    private static CommandTableScreen active;
 
     private final BlockPos tablePos;
     private final List<FieldDodoEntity> activeDinos = new ArrayList<>();
@@ -167,7 +167,7 @@ public final class CommandTableTestScreen extends Screen {
     private long renderNowNanos = openedNanos;
     private String notice = "Choose a revealed branch to shape the base.";
 
-    public CommandTableTestScreen(BlockPos tablePos) {
+    public CommandTableScreen(BlockPos tablePos) {
         super(Component.translatable("screen.primevalworks.command_table"));
         this.tablePos = tablePos.immutable();
         upgradeLevels[BaseUpgrade.HEARTHSTONE.id()] = 1;
@@ -948,7 +948,7 @@ public final class CommandTableTestScreen extends Screen {
         }
         Entity loaded = entry.entityId() < 0 ? null : minecraft.level.getEntity(entry.entityId());
         if (loaded instanceof FieldDodoEntity dinosaur && dinosaur.isAlive()) {
-            minecraft.setScreen(new CompanionTestScreen(dinosaur, tablePos));
+            minecraft.setScreen(new CompanionScreen(dinosaur, tablePos));
         } else {
             notice = entry.name() + " is outside the loaded base area. Recall the crew first.";
         }

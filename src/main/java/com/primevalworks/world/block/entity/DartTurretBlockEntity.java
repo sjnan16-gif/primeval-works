@@ -68,6 +68,7 @@ public final class DartTurretBlockEntity extends BaseContainerBlockEntity implem
                         LivingEntity.class,
                         new AABB(pos).inflate(RANGE),
                         entity -> entity.isAlive() && entity instanceof Enemy
+                                && BaseEnergyRules.ownsPosition(level, pos, entity.position())
                 ).stream()
                 .min(Comparator.comparingDouble(entity -> entity.distanceToSqr(Vec3.atCenterOf(pos))))
                 .orElse(null);
@@ -105,7 +106,8 @@ public final class DartTurretBlockEntity extends BaseContainerBlockEntity implem
     private @Nullable LivingEntity currentTarget(ServerLevel level, BlockPos pos) {
         LivingEntity target = aim.target(level);
         return target != null && target instanceof Enemy
-                && target.distanceToSqr(Vec3.atCenterOf(pos)) <= RANGE * RANGE ? target : null;
+                && target.distanceToSqr(Vec3.atCenterOf(pos)) <= RANGE * RANGE
+                && BaseEnergyRules.ownsPosition(level, pos, target.position()) ? target : null;
     }
 
     private void setTarget(@Nullable LivingEntity target) {

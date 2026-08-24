@@ -1,5 +1,6 @@
 package com.primevalworks.world.work;
 
+import com.primevalworks.world.block.entity.CommandTableBlockEntity;
 import com.primevalworks.world.block.entity.FoodBoxBlockEntity;
 import com.primevalworks.world.inventory.AutomationConfigurableContainer;
 import net.minecraft.core.BlockPos;
@@ -32,11 +33,24 @@ public final class BaseInventoryIndex {
 
     public static List<IndexedContainer> scan(ServerLevel level, BlockPos tablePos, int radius) {
         Map<BlockPos, IndexedContainer> indexed = new LinkedHashMap<>();
+        List<BlockPos> nearbyTables = new ArrayList<>();
         int minimumChunkX = (tablePos.getX() - radius) >> 4;
         int maximumChunkX = (tablePos.getX() + radius) >> 4;
         int minimumChunkZ = (tablePos.getZ() - radius) >> 4;
         int maximumChunkZ = (tablePos.getZ() + radius) >> 4;
         double radiusSquared = (double) radius * radius;
+
+        for (int chunkX = minimumChunkX; chunkX <= maximumChunkX; chunkX++) {
+            for (int chunkZ = minimumChunkZ; chunkZ <= maximumChunkZ; chunkZ++) {
+                LevelChunk chunk = level.getChunkSource().getChunkNow(chunkX, chunkZ);
+                if (chunk == null) continue;
+                for (Map.Entry<BlockPos, BlockEntity> entry : chunk.getBlockEntities().entrySet()) {
+                    if (entry.getValue() instanceof CommandTableBlockEntity) {
+                        nearbyTables.add(entry.getKey().immutable());
+                    }
+                }
+            }
+        }
 
         outer:
         for (int chunkX = minimumChunkX; chunkX <= maximumChunkX; chunkX++) {
@@ -46,6 +60,7 @@ public final class BaseInventoryIndex {
                 for (BlockPos rawPos : chunk.getBlockEntities().keySet()) {
                     BlockPos pos = canonicalPosition(level, rawPos);
                     if (pos.distSqr(tablePos) > radiusSquared || indexed.containsKey(pos)) continue;
+                    if (!belongsToTable(pos, tablePos, nearbyTables)) continue;
                     Container container = containerAt(level, pos);
                     if (container == null) continue;
                     indexed.put(pos, inspect(pos, container));
@@ -54,6 +69,19 @@ public final class BaseInventoryIndex {
             }
         }
         return List.copyOf(indexed.values());
+    }
+
+    private static boolean belongsToTable(BlockPos containerPos, BlockPos tablePos, List<BlockPos> nearbyTables) {
+        double ownDistance = containerPos.distSqr(tablePos);
+        long ownKey = tablePos.asLong();
+        for (BlockPos otherTable : nearbyTables) {
+            if (otherTable.equals(tablePos)) continue;
+            double otherDistance = containerPos.distSqr(otherTable);
+            if (otherDistance < ownDistance || otherDistance == ownDistance && otherTable.asLong() < ownKey) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public static BlockPos canonicalPosition(ServerLevel level, BlockPos pos) {

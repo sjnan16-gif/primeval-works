@@ -3350,7 +3350,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         // The minimum includes the collision gap around a full block. Smaller
         // companions otherwise stop against a chest just outside interaction
         // range and can hold cargo forever.
-        return Math.max(1.55D, getSpecies().workReach() * getScale() * 0.88D);
+        return Math.max(2.05D, getSpecies().workReach() * getScale());
     }
 
     private Vec3 workApproachPoint(BlockPos pos) {
@@ -3362,7 +3362,8 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         } else {
             away = away.normalize();
         }
-        return center.add(away.scale(Math.max(0.82D, workInteractionDistance() * 0.82D)));
+        double collisionClearance = getBbWidth() * 0.5D + 0.60D;
+        return center.add(away.scale(Math.max(0.82D, collisionClearance)));
     }
 
     private void moveTo(BlockPos pos) {

@@ -12,10 +12,10 @@ import com.primevalworks.client.render.block.PremiumEggIncubatorRenderer;
 import com.primevalworks.client.render.block.TurbineRenderer;
 import com.primevalworks.client.render.block.DartTurretRenderer;
 import com.primevalworks.client.render.block.LaserTurretRenderer;
-import com.primevalworks.client.screen.CommandTableTestScreen;
-import com.primevalworks.client.screen.CompanionTestScreen;
+import com.primevalworks.client.screen.CommandTableScreen;
+import com.primevalworks.client.screen.CompanionScreen;
 import com.primevalworks.client.screen.WorksitePlannerScreen;
-import com.primevalworks.client.screen.MachinePlaceholderScreen;
+import com.primevalworks.client.screen.MachineStatusScreen;
 import com.primevalworks.client.screen.FoodBoxScreen;
 import com.primevalworks.client.screen.ProcessorScreen;
 import com.primevalworks.client.screen.EnergyNetworkScreen;
@@ -149,7 +149,7 @@ public final class PrimevalWorksClient {
                 minecraft.player.sendOverlayMessage(Component.literal("This companion needs a nearby Command Table to manage its base."));
                 return;
             }
-            minecraft.setScreen(new CompanionTestScreen(dodo, tablePos));
+            minecraft.setScreen(new CompanionScreen(dodo, tablePos));
             return;
         }
 
@@ -159,18 +159,18 @@ public final class PrimevalWorksClient {
                 event.setCanceled(true);
                 event.setSwingHand(false);
                 ClientPacketDistributor.sendToServer(new ClaimCommandTablePayload(commandTablePos));
-                minecraft.setScreen(new CommandTableTestScreen(commandTablePos));
+                minecraft.setScreen(new CommandTableScreen(commandTablePos));
                 return;
             }
         }
 
         if (minecraft.hitResult instanceof BlockHitResult blockHit && minecraft.level != null) {
             Block block = minecraft.level.getBlockState(blockHit.getBlockPos()).getBlock();
-            MachinePlaceholderScreen.Descriptor descriptor = machineDescriptor(block);
+            MachineStatusScreen.Descriptor descriptor = machineDescriptor(block);
             if (descriptor != null) {
                 event.setCanceled(true);
                 event.setSwingHand(false);
-                minecraft.setScreen(new MachinePlaceholderScreen(blockHit.getBlockPos(), descriptor));
+                minecraft.setScreen(new MachineStatusScreen(blockHit.getBlockPos(), descriptor));
             }
         }
     }
@@ -207,7 +207,7 @@ public final class PrimevalWorksClient {
         return null;
     }
 
-    private static MachinePlaceholderScreen.Descriptor machineDescriptor(Block block) {
+    private static MachineStatusScreen.Descriptor machineDescriptor(Block block) {
         if (block == ModBlocks.ANCIENT_SPELL_STONE.get()) {
             return machine("Ancient Spell Stone", "Defense", "48-block hostile ward",
                     "Prevents hostile spawn checks while powered.",
@@ -217,7 +217,7 @@ public final class PrimevalWorksClient {
         return null;
     }
 
-    private static MachinePlaceholderScreen.Descriptor machine(
+    private static MachineStatusScreen.Descriptor machine(
             String title,
             String specialty,
             String status,
@@ -226,7 +226,7 @@ public final class PrimevalWorksClient {
             net.minecraft.world.item.Item input,
             net.minecraft.world.item.Item output
     ) {
-        return new MachinePlaceholderScreen.Descriptor(
+        return new MachineStatusScreen.Descriptor(
                 title, specialty, status, detail, assignment,
                 input.getDefaultInstance(), output.getDefaultInstance()
         );
