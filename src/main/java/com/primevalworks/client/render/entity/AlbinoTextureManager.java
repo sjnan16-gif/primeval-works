@@ -51,17 +51,24 @@ public final class AlbinoTextureManager {
             NativeImage blink = readBlinkReference(source, original.getWidth(), original.getHeight()).orElse(null);
             try {
                 NativeImage result = new NativeImage(original.getWidth(), original.getHeight(), false);
+                boolean[][] equipmentMask = readEquipmentMask(
+                        source,
+                        original.getWidth(),
+                        original.getHeight()
+                ).orElse(null);
                 boolean[][] eyeMask = blink == null
                         ? buildManualEyeMask(source, original.getWidth(), original.getHeight())
                         : buildEyeMask(source, original, blink);
                 for (int y = 0; y < original.getHeight(); y++) {
                     for (int x = 0; x < original.getWidth(); x++) {
                         int color = original.getPixel(x, y);
-                        result.setPixel(x, y, albinoPixel(
-                                color,
-                                blink == null ? color : blink.getPixel(x, y),
-                                eyeMask != null && eyeMask[x][y]
-                        ));
+                        result.setPixel(x, y, equipmentMask != null && equipmentMask[x][y]
+                                ? color
+                                : albinoPixel(
+                                        color,
+                                        blink == null ? color : blink.getPixel(x, y),
+                                        eyeMask != null && eyeMask[x][y]
+                                ));
                     }
                 }
                 return result;
@@ -140,6 +147,44 @@ public final class AlbinoTextureManager {
                 return Optional.empty();
             }
             return Optional.of(image);
+        }
+    }
+
+    private static Optional<boolean[][]> readEquipmentMask(Identifier source, int width, int height) throws IOException {
+        String path = source.getPath();
+        Identifier plain;
+        Identifier equipped;
+        if (path.contains("/pteranodon_saddled")) {
+            plain = source.withPath("textures/entity/pteranodon.png");
+            equipped = source.withPath("textures/entity/pteranodon_saddled.png");
+        } else if (path.contains("/spino_saddled")) {
+            plain = source.withPath("textures/entity/spino.png");
+            equipped = source.withPath("textures/entity/spino_saddled.png");
+        } else {
+            return Optional.empty();
+        }
+
+        Optional<Resource> plainResource = Minecraft.getInstance().getResourceManager().getResource(plain);
+        Optional<Resource> equippedResource = Minecraft.getInstance().getResourceManager().getResource(equipped);
+        if (plainResource.isEmpty() || equippedResource.isEmpty()) return Optional.empty();
+        try (InputStream plainStream = plainResource.get().open();
+             InputStream equippedStream = equippedResource.get().open();
+             NativeImage plainImage = NativeImage.read(plainStream);
+             NativeImage equippedImage = NativeImage.read(equippedStream)) {
+            if (plainImage.getWidth() != width || plainImage.getHeight() != height
+                    || equippedImage.getWidth() != width || equippedImage.getHeight() != height) {
+                return Optional.empty();
+            }
+            boolean[][] mask = new boolean[width][height];
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    mask[x][y] = AlbinoEquipmentMask.contains(
+                            plainImage.getPixel(x, y),
+                            equippedImage.getPixel(x, y)
+                    );
+                }
+            }
+            return Optional.of(mask);
         }
     }
 

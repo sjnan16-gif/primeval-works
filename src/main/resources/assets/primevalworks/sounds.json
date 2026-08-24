@@ -578,9 +578,6 @@
   "block.magic_turret.fire": {
     "sounds": []
   },
-  "block.enhanced_rail.boost": {
-    "sounds": []
-  },
   "work.pickup": {
     "sounds": []
   },

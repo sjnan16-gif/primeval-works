@@ -11,26 +11,32 @@ import net.minecraft.world.level.block.Block;
 import java.util.Optional;
 
 public enum DinosaurEggSize {
-    SMALL(400, new DinosaurSpecies[]{
+    SMALL(400, EggFragmentRules.SMALL, new DinosaurSpecies[]{
             DinosaurSpecies.DODO,
             DinosaurSpecies.VELOCIRAPTOR,
             DinosaurSpecies.PTERANODON
     }),
-    BIG(800, new DinosaurSpecies[]{
+    BIG(800, EggFragmentRules.BIG, new DinosaurSpecies[]{
             DinosaurSpecies.PARASAUROLOPHUS,
             DinosaurSpecies.STEGOSAURUS,
             DinosaurSpecies.TRICERATOPS
     }),
-    LARGE(1200, new DinosaurSpecies[]{
+    LARGE(1200, EggFragmentRules.LARGE, new DinosaurSpecies[]{
             DinosaurSpecies.TYRANNOSAURUS,
             DinosaurSpecies.SPINOSAURUS
     });
 
     private final int baseIncubationTicks;
+    private final EggFragmentRules fragmentRules;
     private final DinosaurSpecies[] species;
 
-    DinosaurEggSize(int baseIncubationTicks, DinosaurSpecies[] species) {
+    DinosaurEggSize(
+            int baseIncubationTicks,
+            EggFragmentRules fragmentRules,
+            DinosaurSpecies[] species
+    ) {
         this.baseIncubationTicks = baseIncubationTicks;
+        this.fragmentRules = fragmentRules;
         this.species = species;
     }
 
@@ -40,6 +46,10 @@ public enum DinosaurEggSize {
 
     public DinosaurSpecies randomSpecies(RandomSource random) {
         return species[random.nextInt(species.length)];
+    }
+
+    public int fossilFragmentCount(RandomSource random) {
+        return fragmentRules.count(random.nextFloat(), random.nextFloat());
     }
 
     public boolean contains(DinosaurSpecies candidate) {

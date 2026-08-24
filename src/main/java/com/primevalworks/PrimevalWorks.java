@@ -15,11 +15,13 @@ import com.primevalworks.world.block.CommandTableBlock;
 import com.primevalworks.world.entity.DinosaurThreatTargeting;
 import com.primevalworks.world.entity.FieldDodoEntity;
 import com.primevalworks.world.ownership.DinosaurOwnership;
+import com.primevalworks.world.item.BayonetCombat;
 import com.primevalworks.client.PrimevalItemTooltips;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.MobSpawnEvent;
@@ -45,6 +47,7 @@ public final class PrimevalWorks {
         PrimevalGameTests.register(modBus);
         ModNetworking.register(modBus);
         NeoForge.EVENT_BUS.addListener(PrimevalCommands::register);
+        NeoForge.EVENT_BUS.addListener(AttackEntityEvent.class, BayonetCombat::onAttack);
         NeoForge.EVENT_BUS.addListener(PlayerEvent.Clone.class, event -> {
             CommandTableBlock.copyClaim(event.getOriginal(), event.getEntity());
             if (event.getOriginal() instanceof ServerPlayer original && event.getEntity() instanceof ServerPlayer replacement) {

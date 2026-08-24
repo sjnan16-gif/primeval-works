@@ -41,6 +41,6 @@ Use mono, 48 kHz Vorbis `.ogg` files. Keep ordinary calls and steps short, remov
 
 ## Global event groups
 
-The registry also reserves events for eggs, the incubator, Command Table feedback, Food Box, Ancient Furnace, both turbines, energy pulses, the Processor, both turrets, Enhanced Rail, transport/crafting work actions, and UI open/close/hover/click/warning feedback.
+The registry also reserves events for eggs, the incubator, Command Table feedback, Food Box, Ancient Furnace, both turbines, energy pulses, the Processor, both turrets, transport/crafting work actions, and UI open/close/hover/click/warning feedback.
 
 When the audio files arrive, place them in `src/main/resources/assets/primevalworks/sounds/` and update `sounds.json` so each existing event lists its matching file variants. The Java hooks and event IDs do not need to change.

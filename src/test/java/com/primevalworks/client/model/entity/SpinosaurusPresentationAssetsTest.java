@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 final class SpinosaurusPresentationAssetsTest {
     @Test
@@ -41,5 +42,24 @@ final class SpinosaurusPresentationAssetsTest {
             assertTrue(stateImage != null && stateImage.getWidth() == 512 && stateImage.getHeight() == 512,
                     "Spinosaurus state texture must match the base UV atlas: " + state);
         }
+        assertMatchingBlinkPixels(root, "spino_saddled.png", "spino_saddled_blink.png");
+        assertMatchingBlinkPixels(root, "spino_saddled_aquatic.png", "spino_saddled_aquatic_blink.png");
+    }
+
+    private static void assertMatchingBlinkPixels(Path root, String saddledOpen, String saddledBlink) throws Exception {
+        var open = ImageIO.read(root.resolve("textures/entity/spino.png").toFile());
+        var blink = ImageIO.read(root.resolve("textures/entity/spino_blink.png").toFile());
+        var saddle = ImageIO.read(root.resolve("textures/entity/" + saddledOpen).toFile());
+        var saddleBlink = ImageIO.read(root.resolve("textures/entity/" + saddledBlink).toFile());
+        int changed = 0;
+        for (int y = 0; y < open.getHeight(); y++) {
+            for (int x = 0; x < open.getWidth(); x++) {
+                boolean plainChanged = open.getRGB(x, y) != blink.getRGB(x, y);
+                assertEquals(plainChanged, saddle.getRGB(x, y) != saddleBlink.getRGB(x, y),
+                        saddledOpen + " lost a blink pixel at " + x + "," + y);
+                if (plainChanged) changed++;
+            }
+        }
+        assertTrue(changed > 0, "Spinosaurus open and blink atlases are identical");
     }
 }

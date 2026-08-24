@@ -370,6 +370,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     private int turnAnimationCooldownTicks;
     private int sleepVisualTicks;
     private int hungerIndicatorCooldown;
+    private long nextHungerDrainTick;
     private int calmingCallCacheTicks;
     private boolean calmingCallCached;
     private float lastPresentationYaw = Float.NaN;
@@ -1606,6 +1607,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         super.addAdditionalSaveData(output);
         output.putInt("PrimevalWorkStateSchema", WORK_STATE_SCHEMA);
         output.putInt("PrimevalHunger", getHunger());
+        output.putLong("PrimevalNextHungerDrain", nextHungerDrainTick);
         output.putInt("PrimevalMood", getMood());
         output.putInt("PrimevalGeneticQuality", entityData.get(GENETIC_QUALITY));
         output.putInt("PrimevalMutationSchema", MUTATION_SCHEMA);
@@ -1681,6 +1683,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     protected void readAdditionalSaveData(ValueInput input) {
         super.readAdditionalSaveData(input);
         entityData.set(HUNGER, Mth.clamp(input.getIntOr("PrimevalHunger", 64), 0, 100));
+        nextHungerDrainTick = Math.max(0L, input.getLongOr("PrimevalNextHungerDrain", 0L));
         entityData.set(MOOD, Mth.clamp(input.getIntOr("PrimevalMood", 68), 0, 100));
         entityData.set(GENETIC_QUALITY, Mth.clamp(input.getIntOr("PrimevalGeneticQuality", -1), -1, 100));
         int savedMutationMask = input.getIntOr("PrimevalMutationSchema", 0) >= MUTATION_SCHEMA
@@ -2250,15 +2253,22 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         entityData.set(INDICATOR_TICKS, Math.max(entityData.get(INDICATOR_TICKS), Math.max(1, ticks)));
     }
 
-    private void runAssignedWork() {
-        int hungerInterval = getSpecies().hungerDrainIntervalTicks();
+    private void requestCappedHungerDrain() {
+        float multiplier = 1.0F;
         CommandTableBlockEntity table = commandTableEntity();
-        if (table != null) {
-            hungerInterval = Math.max(1, Math.round(hungerInterval * table.hungerIntervalMultiplier()));
-        }
-        if (tickCount % hungerInterval == 0) {
-            feed(-1);
-        }
+        if (table != null) multiplier = table.hungerIntervalMultiplier();
+        DinosaurNeedsRules.DrainResult result = DinosaurNeedsRules.hungerDrain(
+                level().getGameTime(),
+                nextHungerDrainTick,
+                getSpecies().hungerDrainIntervalTicks(),
+                multiplier
+        );
+        nextHungerDrainTick = result.nextDrainTick();
+        if (result.drain()) feed(-1);
+    }
+
+    private void runAssignedWork() {
+        requestCappedHungerDrain();
         if (isVehicle()) {
             cancelWorkAction();
             navigation.stop();
@@ -2367,7 +2377,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             serverLevel.sendParticles(ParticleTypes.FLAME,
                     stationPos.getX() + 0.5D, stationPos.getY() + 1.08D, stationPos.getZ() + 0.5D,
                     5, 0.22D, 0.10D, 0.22D, 0.01D);
-            feed(-1);
+            requestCappedHungerDrain();
             workerCooldown = 4;
         }
     }
@@ -2402,7 +2412,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                 level().playSound(null, stationPos, ModSounds.PROCESS_COMPLETE.get(),
                         SoundSource.BLOCKS, 0.9F, 0.94F);
             }
-            feed(-1);
+            requestCappedHungerDrain();
             workerCooldown = 4;
         }
     }
@@ -2449,7 +2459,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                         turbinePos.getX() + 0.5D, turbinePos.getY() + 1.15D, turbinePos.getZ() + 0.5D,
                         7, 0.3D, 0.18D, 0.3D, 0.015D);
             }
-            if (generated) feed(-1);
+            if (generated) requestCappedHungerDrain();
             workerCooldown = generated ? 0 : 20;
         }
     }
@@ -2677,7 +2687,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         ItemStack remainder = getCarriedStack().copy();
         remainder.shrink(inserted);
         entityData.set(CARRIED_STACK, remainder);
-        feed(-1);
+        requestCappedHungerDrain();
         workerCooldown = 4;
         if (remainder.isEmpty() && workRepeatMode == 2) {
             workEnabled = false;
@@ -2789,7 +2799,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             spawnWorkOutput(serverLevel, stationPos, order.output.copyWithCount(count));
             remaining -= count;
         }
-        feed(-Math.max(1, order.crafts / 8));
+        requestCappedHungerDrain();
         workerCooldown = 4;
         if (workRepeatMode == 2) {
             workEnabled = false;
@@ -3350,7 +3360,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         // The minimum includes the collision gap around a full block. Smaller
         // companions otherwise stop against a chest just outside interaction
         // range and can hold cargo forever.
-        return Math.max(2.05D, getSpecies().workReach() * getScale());
+        return Math.max(2.35D, getSpecies().workReach() * getScale());
     }
 
     private Vec3 workApproachPoint(BlockPos pos) {
@@ -4745,6 +4755,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         private final double speedModifier;
         private int pathRefreshTicks;
         private int attackCooldownTicks;
+        private int closeShoveCooldownTicks;
         private double lastTargetX;
         private double lastTargetY;
         private double lastTargetZ;
@@ -4796,6 +4807,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             }
 
             attackCooldownTicks = Math.max(0, attackCooldownTicks - 1);
+            closeShoveCooldownTicks = Math.max(0, closeShoveCooldownTicks - 1);
             if (getSpecies() == DinosaurSpecies.TYRANNOSAURUS
                     || getSpecies() == DinosaurSpecies.SPINOSAURUS) {
                 tickLargePredatorHunt(target);
@@ -4835,6 +4847,10 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             if (distance < closeDistance) {
                 haltHorizontalMovement(0.42D);
                 setYRot(Mth.approachDegrees(getYRot(), yawTo(target), getSpecies().turnDegreesPerTick()));
+                if (spinosaurus && closeShoveCooldownTicks == 0 && distance < closeDistance - 0.22D) {
+                    pushCrowdingTarget(target);
+                    closeShoveCooldownTicks = 18 + random.nextInt(9);
+                }
             } else if (distance > approachDistance) {
                 if (Math.abs(yawError) > 46.0F) {
                     haltHorizontalMovement(0.38D);
@@ -4852,13 +4868,23 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             }
 
             if (attackCooldownTicks == 0
-                    && distance >= closeDistance - 0.35D
                     && isWithinMeleeAttackRange(target)
                     && getSensing().hasLineOfSight(target)
                     && beginLargePredatorAttack(target)) {
                 attackCooldownTicks = adjustedTickDelay(spinosaurus ? 25 : 22);
                 swing(InteractionHand.MAIN_HAND);
             }
+        }
+
+        private void pushCrowdingTarget(LivingEntity target) {
+            Vec3 away = target.position().subtract(position());
+            away = new Vec3(away.x, 0.0D, away.z);
+            if (away.horizontalDistanceSqr() < 1.0E-5D) {
+                away = Vec3.directionFromRotation(0.0F, getYRot());
+            } else {
+                away = away.normalize();
+            }
+            target.push(away.x * 0.32D, 0.08D, away.z * 0.32D);
         }
 
         private Vec3 pursuitStop(LivingEntity target, double idealDistance) {

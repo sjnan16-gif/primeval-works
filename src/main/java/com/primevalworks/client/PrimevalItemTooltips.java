@@ -40,8 +40,7 @@ public final class PrimevalItemTooltips {
             case "ancient_spell_stone" -> "Suppresses nearby hostile spawns.";
             case "magic_turret" -> "Burns through hostile targets with concentrated spelllight.";
             case "premium_egg_incubator" -> "Improves incubated dinosaurs.";
-            case "enhanced_rail" -> "A faster powered rail.";
-            case "ancient_reforged_bayonet" -> "A long-reaching blade built on spear handling.";
+            case "ancient_reforged_bayonet" -> "A precise blade with a narrow striking range.";
             case "pteranodon_saddle" -> "Enables Pteranodon flight.";
             case "spinosaurus_saddle" -> "Enables Spinosaurus riding.";
             case "primordial_sword" -> "A powerful ancient blade.";

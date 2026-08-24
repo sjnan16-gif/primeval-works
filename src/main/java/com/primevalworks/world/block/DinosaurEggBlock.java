@@ -62,9 +62,10 @@ public abstract class DinosaurEggBlock extends Block {
             return InteractionResult.FAIL;
         }
         level.removeBlock(pos, false);
-        // A first wild hatch supplies the fossil needed to establish a Command Table,
-        // keeping the opening progression free of an expedition-before-base loop.
-        popResource(level, pos, new ItemStack(com.primevalworks.registry.ModItems.FOSSIL_FRAGMENT.get()));
+        popResource(level, pos, new ItemStack(
+                com.primevalworks.registry.ModItems.FOSSIL_FRAGMENT.get(),
+                size.fossilFragmentCount(level.getRandom())
+        ));
         if (ModSounds.areAssetsReady()) {
             level.playSound(null, pos, ModSounds.EGG_HATCH.get(), SoundSource.BLOCKS, 0.85F, 1.0F);
         }

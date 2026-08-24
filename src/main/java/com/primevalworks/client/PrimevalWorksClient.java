@@ -5,6 +5,7 @@ import com.primevalworks.client.effect.DinosaurFootstepEffects;
 import com.primevalworks.client.effect.PteranodonFlightFeedback;
 import com.primevalworks.client.effect.PteranodonFirstPersonPose;
 import com.primevalworks.client.effect.DinosaurHatchReveal;
+import com.primevalworks.client.effect.BayonetClientExtension;
 import com.primevalworks.client.model.entity.DinosaurVisualProfile;
 import com.primevalworks.client.render.entity.FieldDodoRenderer;
 import com.primevalworks.client.render.WorksiteIndicatorRenderer;
@@ -53,6 +54,7 @@ import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.client.event.ViewportEvent;
 import net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
+import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
@@ -62,6 +64,8 @@ public final class PrimevalWorksClient {
         modBus.addListener(EntityRenderersEvent.RegisterRenderers.class, PrimevalWorksClient::registerRenderers);
         modBus.addListener(RegisterRenderPipelinesEvent.class,
                 event -> event.registerPipeline(WorksitePlannerScreen.XRAY_HIGHLIGHT_PIPELINE));
+        modBus.addListener(RegisterClientExtensionsEvent.class, event ->
+                event.registerItem(new BayonetClientExtension(), ModItems.ANCIENT_REFORGED_BAYONET.get()));
         modBus.addListener(RegisterMenuScreensEvent.class, event -> {
             event.register(ModMenus.FOOD_BOX.get(), FoodBoxScreen::new);
             event.register(ModMenus.PROCESSOR.get(), ProcessorScreen::new);

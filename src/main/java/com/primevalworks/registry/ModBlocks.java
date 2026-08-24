@@ -5,7 +5,6 @@ import com.primevalworks.world.block.CommandTableBlock;
 import com.primevalworks.world.block.AncientBarrelBlock;
 import com.primevalworks.world.block.CommandTableExtensionBlock;
 import com.primevalworks.world.block.AncientFurnaceBlock;
-import com.primevalworks.world.block.EnhancedRailBlock;
 import com.primevalworks.world.block.FoodBoxBlock;
 import com.primevalworks.world.block.PremiumEggIncubatorBlock;
 import com.primevalworks.world.block.PoweredMachineBlock;
@@ -119,11 +118,6 @@ public final class ModBlocks {
             properties -> new PremiumEggIncubatorBlock(properties.mapColor(MapColor.QUARTZ).strength(5.0F)
                     .noOcclusion().lightLevel(state -> 6).sound(SoundType.GLASS))
     );
-    public static final DeferredBlock<Block> ENHANCED_RAIL = BLOCKS.registerBlock(
-            "enhanced_rail",
-            properties -> new EnhancedRailBlock(properties.noCollision().noOcclusion()
-                    .strength(0.7F).sound(SoundType.METAL))
-    );
     public static final DeferredBlock<PrimevalBerryBushBlock> BERRY_BUSH = BLOCKS.registerBlock(
             "berry_bush",
             properties -> new PrimevalBerryBushBlock(properties.mapColor(MapColor.PLANT)
@@ -162,6 +156,10 @@ public final class ModBlocks {
         BLOCKS.addAlias(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "laser_turret"),
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "magic_turret")
+        );
+        BLOCKS.addAlias(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "enhanced_rail"),
+                Identifier.fromNamespaceAndPath("minecraft", "powered_rail")
         );
         BLOCKS.register(modBus);
     }

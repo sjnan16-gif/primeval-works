@@ -16,7 +16,7 @@ final class BlockPreviewAssetsTest {
             "command_table", "food_box", "wind_turbine", "water_turbine",
             "reinforced_piston", "sticky_reinforced_piston", "laser_observer", "ancient_barrel",
             "dart_turret", "processor", "ancient_furnace",
-            "ancient_spell_stone", "magic_turret", "premium_egg_incubator", "enhanced_rail",
+            "ancient_spell_stone", "magic_turret", "premium_egg_incubator",
             "small_dinosaur_egg", "big_dinosaur_egg", "large_dinosaur_egg"
     );
 

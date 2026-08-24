@@ -47,7 +47,6 @@
   "block.primevalworks.small_dinosaur_egg": "Small Ancient Egg",
   "block.primevalworks.big_dinosaur_egg": "Big Ancient Egg",
   "block.primevalworks.large_dinosaur_egg": "Large Ancient Egg",
-  "block.primevalworks.enhanced_rail": "Enhanced Rail",
   "container.primevalworks.food_box": "Food Box",
   "screen.primevalworks.food_box.search": "Search pack",
   "screen.primevalworks.food_box.search_hint": "Search your pack",
@@ -145,5 +144,7 @@
   "hud.primevalworks.pteranodon_stamina": "STAMINA  %1$s%%",
   "hud.primevalworks.pteranodon_stamina.exhausted": "WINDED - GLIDE TO RECOVER",
   "hud.primevalworks.spinosaurus_stamina.exhausted": "WINDED - EASE OFF TO RECOVER",
-  "hud.primevalworks.pteranodon_controls": "%1$s Fly  •  Mouse Steer  •  %2$s Climb  •  %3$s Boost  •  %4$s Dismount"
+  "hud.primevalworks.pteranodon_controls": "%1$s Fly  •  Mouse Steer  •  %2$s Climb  •  %3$s Boost  •  %4$s Dismount",
+  "death.attack.primevalworks.magic_turret": "%1$s was consumed by a spell beam",
+  "death.attack.primevalworks.magic_turret.player": "%1$s was consumed by %2$s's spell beam"
 }

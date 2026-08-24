@@ -143,7 +143,7 @@ when dismounted. There is no permanent controls bubble competing with the vanill
   the egg and timer render in the world.
 - Wind and Water Turbines: assigned and inspected in the Energy Map.
 - Reinforced and Sticky Reinforced Pistons: redstone blocks controlled by the Energy Map.
-- Laser Observer and Enhanced Rail: world/redstone blocks controlled by the Energy Map.
+- Powered Observer: world/redstone block controlled by the Energy Map.
 - Berry Bush: behaves like a crop.
 - Bayonet and swords: item models/tooltips, not screens.
 - Breeding: use a Nesting Treat on two identical species; no menu.

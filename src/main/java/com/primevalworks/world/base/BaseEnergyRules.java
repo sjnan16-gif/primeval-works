@@ -37,8 +37,7 @@ public final class BaseEnergyRules {
 
     public static int demandPerSecond(BlockState state) {
         Block block = state.getBlock();
-        if (block == ModBlocks.LASER_OBSERVER.get()
-                || block == ModBlocks.ENHANCED_RAIL.get()) {
+        if (block == ModBlocks.LASER_OBSERVER.get()) {
             return 1;
         }
         if (block == ModBlocks.REINFORCED_PISTON.get()

@@ -31,7 +31,9 @@ public final class FoodBoxScreen extends AbstractContainerScreen<FoodBoxMenu> {
             "textures/gui/space.png"
     );
     private static final int EDGE_DARK = 0xFF6D4E3B;
+    private static final int EDGE = 0xFF88664F;
     private static final int PAPER_DARK = 0xFFB99472;
+    private static final int PAPER = 0xFFD7B392;
     private static final int PAPER_LIGHT = 0xFFE7C9AA;
     private static final int TITLE_COLOR = 0xFFC74F43;
     private static final float POPUP_DURATION_TICKS = 24.0F;
@@ -80,9 +82,7 @@ public final class FoodBoxScreen extends AbstractContainerScreen<FoodBoxMenu> {
         graphics.pose().pushMatrix();
         applyUiMotion(graphics);
         try {
-            drawGroupShadow(graphics, local(TITLE_X, TITLE_Y, TITLE_WIDTH, TITLE_HEIGHT));
-            drawGroupShadow(graphics, local(FOOD_ROW_X, FOOD_ROW_Y, FoodBoxMenu.FOOD_SLOTS * 20, 20));
-            drawGroupShadow(graphics, local(INVENTORY_X, INVENTORY_Y, 180, 85));
+            drawPaperPanel(graphics, local(0, 0, IMAGE_WIDTH, IMAGE_HEIGHT));
             drawBubble(graphics, local(TITLE_X, TITLE_Y, TITLE_WIDTH, TITLE_HEIGHT));
 
             for (int index = 0; index < FoodBoxMenu.FOOD_SLOTS; index++) {
@@ -234,9 +234,18 @@ public final class FoodBoxScreen extends AbstractContainerScreen<FoodBoxMenu> {
                 + (y - height * 0.5D - renderOffsetY) / Math.max(0.001F, renderScale));
     }
 
-    private void drawGroupShadow(GuiGraphicsExtractor graphics, Rect rect) {
-        graphics.fill(rect.x + 3, rect.y + 4, rect.right() + 4, rect.bottom() + 5, 0x652E1E1B);
-        graphics.fill(rect.x + 1, rect.y + 2, rect.right() + 2, rect.bottom() + 3, 0x343E2923);
+    private void drawPaperPanel(GuiGraphicsExtractor graphics, Rect panel) {
+        graphics.fill(panel.x + 4, panel.y + 5, panel.right() + 4, panel.bottom() + 5, 0x46000000);
+        graphics.fill(panel.x, panel.y, panel.right(), panel.bottom(), EDGE_DARK);
+        graphics.fill(panel.x + 2, panel.y + 2, panel.right() - 2, panel.bottom() - 2, EDGE);
+        graphics.fill(panel.x + 4, panel.y + 4, panel.right() - 4, panel.bottom() - 4, PAPER);
+        for (int y = panel.y + 7; y < panel.bottom() - 5; y += 7) {
+            graphics.fill(panel.x + 5, y, panel.right() - 5, y + 1, 0x12FFFFFF);
+        }
+        graphics.fill(panel.x + 2, panel.y + 2, panel.x + 10, panel.y + 4, PAPER_LIGHT);
+        graphics.fill(panel.right() - 10, panel.y + 2, panel.right() - 2, panel.y + 4, PAPER_LIGHT);
+        graphics.fill(panel.x + 2, panel.bottom() - 4, panel.x + 10, panel.bottom() - 2, PAPER_DARK);
+        graphics.fill(panel.right() - 10, panel.bottom() - 4, panel.right() - 2, panel.bottom() - 2, PAPER_DARK);
     }
 
     private void drawBubble(GuiGraphicsExtractor graphics, Rect rect) {

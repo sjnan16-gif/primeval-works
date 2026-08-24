@@ -31,18 +31,17 @@ Authored entity assets are currently wired for Tyrannosaurus, Field Dodo, Pteran
 | Content | Status | Current behavior |
 |---|---|---|
 | Command Table | Working | A single-block base controller with a one-block footprint. It stores up to 500 base energy before upgrades and manages 7-14 active dinosaurs, the depot, work orders, power connections, and the upgrade tree. The starting work radius is 50 blocks. One table is allowed per player and tables need 72 blocks of horizontal separation. |
-| Food Box | Working | A 27-slot food-only inventory. A dinosaur below 50 hunger walks over and eats compatible food until full. Transporters can restock it. |
+| Food Box | Working | A 10-slot food-only row joined above the complete player inventory panel. A dinosaur below 50 hunger walks over and eats compatible food until full. Transporters can restock it. |
 | Ancient Furnace | Working | Smelts vanilla furnace recipes using base energy only. Its authored throttle ranges from 2.5-10.5 E/S and trades power draw for 0.75x-4.2x processing speed; Fire workers can tend it and Transport workers can supply input or collect output. It releases its energy demand while empty. |
 | Wind Turbine | Working | A 3-by-4 multiblock. It needs open air above the rotor and exactly one assigned Energy worker. Zero-to-four Energy stars produce 1.5, 2, 4.5, 7.5, or 11 E/S before level and mutation bonuses. |
 | Water Turbine | Working | A 2-by-2, one-block-thick rotor. The complete structure must be submerged, and exactly one Energy worker can be assigned. It generates 1.5 times the worker's normal Energy output. |
 | Premium Egg Incubator | Working | One physical egg, visible progress, genetic improvement, persistence, and automatic hatching into the crew/depot. Needs 2 E/S and a Command Table in range. |
 | Processor | Working | A four-slot fuel machine with material, fuel, catalyst, and output slots. It refines both ancient ingot chains and compresses Ancient Metal or Cores. Transporters honor per-slot insert/extract controls, and an assigned Fire worker accelerates valid active work. |
 | Ancient Barrel | Working | A 54-slot server-authoritative container included in transport routes and base inventory indexing. |
-| Enhanced Rail | Working foundation | Boosts a moving minecart by 18%, capped at 1.25 blocks/tick. It needs both a base-energy connection (1 E/S) and normal powered-rail redstone state. |
 | Reinforced Piston | Working foundation | Requires 1 E/S and redstone and currently uses reliable vanilla piston movement. Its final heavy-block behavior remains. |
 | Laser Observer | Working | Requires 1 E/S, detects block updates along its facing direction up to five blocks away, and emits a vanilla-style redstone pulse. |
 | Dart Turret | Working | Power-connectable at 3 E/S, automatically tracks the nearest hostile in 18 blocks, consumes Darts from its internal 3x3 magazine, and fires real crossed-sprite projectiles. It requests power only while armed with a live target. |
-| Magic Turret | Working | A late-game spell-metal defense upgrade. It consumes 5 E/S only with a live target, tracks hostiles within 24 blocks, and deals 16 direct magic damage through a synchronized purple beam with a white core. The beam is geometry; brief muzzle and impact particles mark each real hit. |
+| Magic Turret | Working | A late-game spell-metal defense upgrade. It consumes 5 E/S only with a live target, tracks hostiles within 24 blocks, and deals four 5-damage pulses five ticks apart through a synchronized purple beam with a white core. The beam is geometry; brief muzzle and impact particles mark each real hit. |
 | Ancient Spell Stone | Working | Power-connectable at 4 E/S and suppresses hostile spawn position checks within 48 blocks while powered. |
 
 ## Automation that works now
@@ -75,9 +74,11 @@ Authored entity assets are currently wired for Tyrannosaurus, Field Dodo, Pteran
 - Energy output is 2, 2, 5, 8, or 11 E/S by Energy stars.
 - Night shift keeps a dinosaur awake but drains mood at 2.3 times the normal duty rate.
 - Work pauses for combat, sleep, recovery, starvation at 10 hunger or lower, schedule conflicts, and emergency feeding.
+- Work hunger loss uses one persisted species interval no matter how many actions finish during that window.
 - Huge increases scale by 18% and work, damage, movement, and health by 20%.
 - Albino preserves texture shading through a hue algorithm, raises work/damage/movement and mount speed by 40%, and lowers health by 20%.
 - Huge and Albino can occur together. Fossil Fragment restores an Albino dinosaur's original pigment without removing its mutation stats.
+- Right-click hatching a wild egg drops one Fossil Fragment stack containing 1-3 fragments. Small/Big/Large eggs use progressively better bonus-fragment odds.
 
 ## Expedition materials
 

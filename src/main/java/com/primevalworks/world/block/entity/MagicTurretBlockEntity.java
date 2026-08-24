@@ -2,6 +2,7 @@ package com.primevalworks.world.block.entity;
 
 import com.primevalworks.registry.ModBlockEntities;
 import com.primevalworks.world.base.BaseEnergyRules;
+import com.primevalworks.world.damage.PrimevalDamageTypes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.particles.DustParticleOptions;
@@ -13,6 +14,7 @@ import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.level.Level;
@@ -25,9 +27,13 @@ import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Comparator;
+import java.util.UUID;
 
 public final class MagicTurretBlockEntity extends BlockEntity implements TargetingTurret {
-    private static final int FIRE_INTERVAL_TICKS = 30;
+    static final int BURST_HITS = 4;
+    static final int BURST_STEP_TICKS = 5;
+    static final float DAMAGE_PER_HIT = 5.0F;
+    private static final int RECOVERY_TICKS = 20;
     private static final double RANGE = 24.0D;
     private static final double PIVOT_HEIGHT = 0.75D;
     private static final DustParticleOptions SPELL_GLOW = new DustParticleOptions(0xA95CFF, 0.9F);
@@ -36,6 +42,9 @@ public final class MagicTurretBlockEntity extends BlockEntity implements Targeti
     private final TurretAimController aim = new TurretAimController();
     private int cooldown;
     private int targetRefresh;
+    private int burstHitsRemaining;
+    private int burstStep;
+    private @Nullable UUID burstTarget;
 
     public MagicTurretBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.MAGIC_TURRET.get(), pos, state);
@@ -44,6 +53,7 @@ public final class MagicTurretBlockEntity extends BlockEntity implements Targeti
     public static void serverTick(ServerLevel level, BlockPos pos, BlockState state, MagicTurretBlockEntity turret) {
         if (!BaseEnergyRules.isConnected(level, pos)) {
             turret.setTarget(null);
+            turret.cancelBurst();
             return;
         }
 
@@ -53,19 +63,56 @@ public final class MagicTurretBlockEntity extends BlockEntity implements Targeti
             turret.setTarget(target);
             turret.targetRefresh = 5;
         }
-        if (target == null) return;
+        if (target == null) {
+            turret.cancelBurst();
+            return;
+        }
+        if (turret.burstHitsRemaining > 0 && !target.getUUID().equals(turret.burstTarget)) {
+            turret.cancelBurst();
+        }
         if (!BaseEnergyRules.isPowered(level, pos)) return;
+        if (turret.burstHitsRemaining > 0) {
+            if (turret.burstStep > 0) {
+                turret.burstStep--;
+                return;
+            }
+            turret.strike(level, pos, target, false);
+            return;
+        }
         if (turret.cooldown > 0) {
             turret.cooldown--;
             return;
         }
 
-        target.hurtServer(level, level.damageSources().magic(), 16.0F);
-        turret.releaseSpellBurst(level, pos, target);
-        level.playSound(null, pos, SoundEvents.EVOKER_CAST_SPELL,
-                SoundSource.BLOCKS, 0.85F, 1.22F);
-        turret.cooldown = FIRE_INTERVAL_TICKS;
-        turret.setChanged();
+        turret.burstHitsRemaining = BURST_HITS;
+        turret.burstTarget = target.getUUID();
+        turret.strike(level, pos, target, true);
+    }
+
+    private void strike(ServerLevel level, BlockPos pos, LivingEntity target, boolean openingHit) {
+        Vec3 pivot = Vec3.atCenterOf(pos).add(0.0D, PIVOT_HEIGHT - 0.5D, 0.0D);
+        target.hurtServer(level, PrimevalDamageTypes.magicTurret(level, pivot), DAMAGE_PER_HIT);
+        releaseSpellBurst(level, pos, target);
+        if (openingHit) {
+            level.playSound(null, pos, SoundEvents.EVOKER_CAST_SPELL,
+                    SoundSource.BLOCKS, 0.85F, 1.22F);
+        }
+        burstHitsRemaining--;
+        if (burstHitsRemaining > 0 && target.isAlive()) {
+            burstStep = BURST_STEP_TICKS - 1;
+        } else {
+            burstHitsRemaining = 0;
+            burstStep = 0;
+            burstTarget = null;
+            cooldown = RECOVERY_TICKS;
+        }
+        setChanged();
+    }
+
+    private void cancelBurst() {
+        burstHitsRemaining = 0;
+        burstStep = 0;
+        burstTarget = null;
     }
 
     public static void clientTick(Level level, BlockPos pos, BlockState state, MagicTurretBlockEntity turret) {
@@ -123,12 +170,29 @@ public final class MagicTurretBlockEntity extends BlockEntity implements Targeti
     protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
         output.putInt("FireCooldown", cooldown);
+        output.putInt("BurstHits", burstHitsRemaining);
+        output.putInt("BurstStep", burstStep);
+        if (burstTarget != null) output.putString("BurstTarget", burstTarget.toString());
     }
 
     @Override
     protected void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
         cooldown = Math.max(0, input.getIntOr("FireCooldown", 0));
+        burstHitsRemaining = Mth.clamp(input.getIntOr("BurstHits", 0), 0, BURST_HITS);
+        burstStep = Mth.clamp(input.getIntOr("BurstStep", 0), 0, BURST_STEP_TICKS);
+        String savedTarget = input.getStringOr("BurstTarget", "");
+        try {
+            burstTarget = savedTarget.isBlank() ? null : UUID.fromString(savedTarget);
+        } catch (IllegalArgumentException ignored) {
+            burstTarget = null;
+            burstHitsRemaining = 0;
+            burstStep = 0;
+        }
+        if (burstTarget == null) {
+            burstHitsRemaining = 0;
+            burstStep = 0;
+        }
         aim.setTargetEntityId(input.getIntOr("RenderTarget", -1));
     }
 
