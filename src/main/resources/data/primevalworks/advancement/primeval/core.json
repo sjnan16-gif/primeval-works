@@ -1,0 +1,6 @@
+{
+  "parent": "primevalworks:primeval/first_expedition",
+  "criteria": {"core": {"trigger": "minecraft:inventory_changed", "conditions": {"items": [{"items": "primevalworks:core"}]}}},
+  "display": {"icon": {"id": "primevalworks:core"}, "title": {"text": "Dense Discovery"}, "description": {"text": "Bring an Ancient Core back from an expedition."}},
+  "requirements": [["core"]], "sends_telemetry_event": false
+}

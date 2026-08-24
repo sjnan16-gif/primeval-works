@@ -1,0 +1,15 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "shell": "minecraft:block/calcite",
+    "marking": "minecraft:block/dripstone_block",
+    "particle": "minecraft:block/calcite"
+  },
+  "elements": [
+    {"from":[6,0,6],"to":[10,1,10],"faces":{"down":{"texture":"#shell"},"up":{"texture":"#shell"},"north":{"texture":"#shell"},"south":{"texture":"#shell"},"west":{"texture":"#shell"},"east":{"texture":"#shell"}}},
+    {"from":[5,1,5],"to":[11,3,11],"faces":{"down":{"texture":"#shell"},"up":{"texture":"#marking"},"north":{"texture":"#shell"},"south":{"texture":"#shell"},"west":{"texture":"#shell"},"east":{"texture":"#shell"}}},
+    {"from":[4,3,4],"to":[12,7,12],"faces":{"down":{"texture":"#marking"},"up":{"texture":"#shell"},"north":{"texture":"#shell"},"south":{"texture":"#marking"},"west":{"texture":"#shell"},"east":{"texture":"#marking"}}},
+    {"from":[5,7,5],"to":[11,10,11],"faces":{"down":{"texture":"#shell"},"up":{"texture":"#shell"},"north":{"texture":"#marking"},"south":{"texture":"#shell"},"west":{"texture":"#marking"},"east":{"texture":"#shell"}}},
+    {"from":[6,10,6],"to":[10,11,10],"faces":{"down":{"texture":"#shell"},"up":{"texture":"#marking"},"north":{"texture":"#shell"},"south":{"texture":"#shell"},"west":{"texture":"#shell"},"east":{"texture":"#shell"}}}
+  ]
+}

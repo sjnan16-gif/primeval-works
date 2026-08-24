@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:smelting",
+  "category": "food",
+  "cookingtime": 160,
+  "experience": 0.35,
+  "ingredient": "primevalworks:small_dino_meat",
+  "result": { "id": "primevalworks:cooked_dino_meat" }
+}

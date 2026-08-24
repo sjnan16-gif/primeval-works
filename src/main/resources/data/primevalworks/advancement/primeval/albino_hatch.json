@@ -1,0 +1,12 @@
+{
+  "parent": "primevalworks:primeval/rare_mutation",
+  "criteria": {"albino": {"trigger": "minecraft:impossible"}},
+  "display": {
+    "icon": {"id": "primevalworks:fossil_fragment"},
+    "title": {"text": "Ghost of the Old World"},
+    "description": {"text": "Hatch an Albino dinosaur."},
+    "frame": "challenge"
+  },
+  "requirements": [["albino"]],
+  "sends_telemetry_event": false
+}

@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "combat",
+  "pattern": ["  T", " A ", "H  "],
+  "key": {
+    "T": "primevalworks:tyrannosaurus_tooth",
+    "A": "primevalworks:compressed_ancient_metal_ingot",
+    "H": "primevalworks:hardwood"
+  },
+  "result": {"id": "primevalworks:ancient_reforged_bayonet"}
+}

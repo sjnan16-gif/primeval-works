@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": ["SAS", "LCL", "W W"],
+  "key": {
+    "S": "primevalworks:silk",
+    "A": "primevalworks:ancient_metal_ingot",
+    "L": "minecraft:leather",
+    "C": "primevalworks:compressed_core",
+    "W": "primevalworks:pteranodon_wing_fragment"
+  },
+  "result": {"id": "primevalworks:pteranodon_saddle"}
+}

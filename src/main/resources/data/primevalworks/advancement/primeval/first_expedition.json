@@ -1,0 +1,6 @@
+{
+  "parent": "primevalworks:primeval/command_table",
+  "criteria": {"return": {"trigger": "minecraft:impossible"}},
+  "display": {"icon": {"id": "primevalworks:silk"}, "title": {"text": "Beyond the Fence"}, "description": {"text": "Welcome a dinosaur home from its first expedition."}},
+  "requirements": [["return"]], "sends_telemetry_event": false
+}

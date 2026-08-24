@@ -1,0 +1,23 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:beef",
+    "minecraft:chicken",
+    "minecraft:cod",
+    "minecraft:cooked_beef",
+    "minecraft:cooked_chicken",
+    "minecraft:cooked_cod",
+    "minecraft:cooked_mutton",
+    "minecraft:cooked_porkchop",
+    "minecraft:cooked_rabbit",
+    "minecraft:cooked_salmon",
+    "minecraft:mutton",
+    "minecraft:porkchop",
+    "minecraft:rabbit",
+    "minecraft:salmon",
+    "primevalworks:big_dino_meat",
+    "primevalworks:small_dino_meat",
+    "primevalworks:cooked_dino_meat",
+    "primevalworks:cooked_large_dino_meat"
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "key": {"D": "primevalworks:dart_turret", "S": "primevalworks:ancient_spell_ingot", "C": "primevalworks:compressed_core"},
+  "pattern": ["SCS", "CDC", "SCS"],
+  "result": {"id": "primevalworks:laser_turret"}
+}

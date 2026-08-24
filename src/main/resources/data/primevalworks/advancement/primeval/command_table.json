@@ -1,0 +1,6 @@
+{
+  "parent": "primevalworks:primeval/first_hatch",
+  "criteria": {"table": {"trigger": "minecraft:placed_block", "conditions": {"location": [{"condition": "minecraft:block_state_property", "block": "primevalworks:command_table"}]}}},
+  "display": {"icon": {"id": "primevalworks:command_table"}, "title": {"text": "Base Camp"}, "description": {"text": "Place a Command Table and give the crew a home."}},
+  "requirements": [["table"]], "sends_telemetry_event": false
+}

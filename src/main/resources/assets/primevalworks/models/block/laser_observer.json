@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {"body":"minecraft:block/observer_side","dark":"minecraft:block/polished_blackstone","lens":"minecraft:block/diamond_block","particle":"minecraft:block/observer_side"},
+  "elements": [
+    {"from":[1,1,1],"to":[15,15,15],"faces":{"down":{"texture":"#dark"},"up":{"texture":"#body"},"north":{"texture":"#body"},"south":{"texture":"#body"},"west":{"texture":"#body"},"east":{"texture":"#body"}}},
+    {"from":[5,5,0],"to":[11,11,2],"faces":{"down":{"texture":"#dark"},"up":{"texture":"#dark"},"north":{"texture":"#lens"},"south":{"texture":"#body"},"west":{"texture":"#dark"},"east":{"texture":"#dark"}}},
+    {"from":[7,7,15],"to":[9,9,16],"faces":{"down":{"texture":"#dark"},"up":{"texture":"#dark"},"north":{"texture":"#body"},"south":{"texture":"#lens"},"west":{"texture":"#dark"},"east":{"texture":"#dark"}}}
+  ]
+}

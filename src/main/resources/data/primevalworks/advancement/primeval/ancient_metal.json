@@ -1,0 +1,6 @@
+{
+  "parent": "primevalworks:primeval/first_expedition",
+  "criteria": {"metal": {"trigger": "minecraft:inventory_changed", "conditions": {"items": [{"items": "primevalworks:raw_ancient_metal_ingot"}]}}},
+  "display": {"icon": {"id": "primevalworks:raw_ancient_metal_ingot"}, "title": {"text": "Metal Before Memory"}, "description": {"text": "Recover raw ancient metal from the deep wilds."}},
+  "requirements": [["metal"]], "sends_telemetry_event": false
+}

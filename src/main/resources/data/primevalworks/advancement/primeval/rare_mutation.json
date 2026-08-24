@@ -1,0 +1,6 @@
+{
+  "parent": "primevalworks:primeval/first_hatch",
+  "criteria": {"mutation": {"trigger": "minecraft:impossible"}},
+  "display": {"icon": {"id": "primevalworks:fossil_fragment"}, "title": {"text": "Against the Odds"}, "description": {"text": "Hatch a dinosaur carrying a rare mutation."}, "frame": "challenge"},
+  "requirements": [["mutation"]], "sends_telemetry_event": false
+}

@@ -1,0 +1,6 @@
+{
+  "parent": "primevalworks:primeval/processor",
+  "criteria": {"metal": {"trigger": "minecraft:inventory_changed", "conditions": {"items": [{"items": "primevalworks:compressed_ancient_metal_ingot"}]}}},
+  "display": {"icon": {"id": "primevalworks:compressed_ancient_metal_ingot"}, "title": {"text": "No Space Left Between"}, "description": {"text": "Compress Ancient Metal with an Ancient Core in the Processor."}},
+  "requirements": [["metal"]], "sends_telemetry_event": false
+}

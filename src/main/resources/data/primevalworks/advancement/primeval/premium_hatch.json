@@ -1,0 +1,6 @@
+{
+  "parent": "primevalworks:primeval/compressed_metal",
+  "criteria": {"hatch": {"trigger": "minecraft:impossible"}},
+  "display": {"icon": {"id": "primevalworks:premium_egg_incubator"}, "title": {"text": "A Carefully Kept Egg"}, "description": {"text": "Complete a hatch in the Premium Egg Incubator."}},
+  "requirements": [["hatch"]], "sends_telemetry_event": false
+}

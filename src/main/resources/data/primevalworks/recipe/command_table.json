@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {"H": "primevalworks:hardwood", "F": "primevalworks:fossil_fragment", "R": "minecraft:redstone"},
+  "pattern": ["HFH", "HRH", "H H"],
+  "result": {"id": "primevalworks:command_table"}
+}

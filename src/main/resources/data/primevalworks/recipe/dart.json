@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "combat",
+  "key": {"F": "minecraft:flint", "I": "minecraft:iron_nugget", "D": "primevalworks:dodo_feather"},
+  "pattern": ["F", "I", "D"],
+  "result": {"count": 4, "id": "primevalworks:dart"}
+}

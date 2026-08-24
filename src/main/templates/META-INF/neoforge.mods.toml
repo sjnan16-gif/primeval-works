@@ -1,0 +1,43 @@
+license="${mod_license}"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+authors="Primeval Works Team"
+description='''
+Excavate ancient eggs, hatch genetically unique prehistoric companions, and build a living automated base powered and protected by dinosaurs.
+'''
+
+[[mixins]]
+    config="primevalworks.mixins.json"
+
+[[dependencies.${mod_id}]]
+    modId="neoforge"
+    type="required"
+    versionRange="[${neo_version},)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="minecraft"
+    type="required"
+    versionRange="${minecraft_version_range}"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="geckolib"
+    type="required"
+    reason="Primeval Works uses GeckoLib for creature and machine animation."
+    versionRange="[${geckolib_version},)"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="jei"
+    type="optional"
+    reason="Shows Processor recipes and supports recipe transfer when JEI is installed."
+    versionRange="[${jei_version},)"
+    ordering="AFTER"
+    side="CLIENT"

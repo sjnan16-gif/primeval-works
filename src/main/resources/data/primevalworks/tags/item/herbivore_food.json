@@ -1,0 +1,18 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:apple",
+    "minecraft:beetroot",
+    "minecraft:beetroot_seeds",
+    "minecraft:carrot",
+    "minecraft:glow_berries",
+    "minecraft:melon_slice",
+    "minecraft:pumpkin_seeds",
+    "minecraft:sweet_berries",
+    "minecraft:wheat",
+    "minecraft:wheat_seeds",
+    "primevalworks:berries",
+    "primevalworks:fire_roasted_melon",
+    "primevalworks:roasted_beet"
+  ]
+}

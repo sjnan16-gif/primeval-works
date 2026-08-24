@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": {"model": "primevalworks:block/command_table_extension"},
+    "facing=east": {"model": "primevalworks:block/command_table_extension"},
+    "facing=south": {"model": "primevalworks:block/command_table_extension"},
+    "facing=west": {"model": "primevalworks:block/command_table_extension"}
+  }
+}

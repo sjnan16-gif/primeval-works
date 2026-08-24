@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": ["AMA", "MBM", "AMA"],
+  "key": {
+    "A": "primevalworks:ancient_metal_ingot",
+    "M": "primevalworks:hardwood",
+    "B": "minecraft:barrel"
+  },
+  "result": {"id": "primevalworks:ancient_barrel"}
+}

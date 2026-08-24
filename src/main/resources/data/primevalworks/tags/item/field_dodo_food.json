@@ -1,0 +1,7 @@
+{
+  "replace": false,
+  "values": [
+    "#primevalworks:herbivore_food",
+    "#primevalworks:carnivore_food"
+  ]
+}

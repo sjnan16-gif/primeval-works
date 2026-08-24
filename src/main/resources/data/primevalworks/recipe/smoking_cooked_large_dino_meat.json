@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:smoking",
+  "category": "food",
+  "cookingtime": 100,
+  "experience": 0.7,
+  "ingredient": "primevalworks:big_dino_meat",
+  "result": { "id": "primevalworks:cooked_large_dino_meat" }
+}

@@ -1,0 +1,6 @@
+{
+  "parent": "primevalworks:primeval/root",
+  "criteria": {"hatch": {"trigger": "minecraft:impossible"}},
+  "display": {"icon": {"id": "primevalworks:small_dinosaur_egg"}, "title": {"text": "A New Set of Footprints"}, "description": {"text": "Hatch your first dinosaur."}},
+  "requirements": [["hatch"]], "sends_telemetry_event": false
+}

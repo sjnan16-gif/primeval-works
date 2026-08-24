@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": ["AMA", "LCL", "B B"],
+  "key": {
+    "A": "primevalworks:ancient_metal_ingot",
+    "M": "primevalworks:compressed_ancient_metal_ingot",
+    "L": "minecraft:leather",
+    "C": "primevalworks:compressed_core",
+    "B": "primevalworks:big_dino_bone"
+  },
+  "result": {"id": "primevalworks:spinosaurus_saddle"}
+}

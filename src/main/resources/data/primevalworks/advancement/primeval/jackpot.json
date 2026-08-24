@@ -1,0 +1,12 @@
+{
+  "parent": "primevalworks:primeval/albino_hatch",
+  "criteria": {"jackpot": {"trigger": "minecraft:impossible"}},
+  "display": {
+    "icon": {"id": "primevalworks:large_dinosaur_egg"},
+    "title": {"text": "Jackpot"},
+    "description": {"text": "Hatch a dinosaur with both mutations."},
+    "frame": "challenge"
+  },
+  "requirements": [["jackpot"]],
+  "sends_telemetry_event": false
+}

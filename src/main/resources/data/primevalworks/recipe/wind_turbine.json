@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "key": {"H": "primevalworks:hardwood", "I": "minecraft:iron_ingot", "R": "minecraft:redstone"},
+  "pattern": ["HIH", " I ", "IRI"],
+  "result": {"id": "primevalworks:wind_turbine"}
+}

@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "package": "com.primevalworks.mixin",
+  "mixins": [
+    "PistonBaseBlockMixin",
+    "PistonStructureResolverMixin"
+  ],
+  "client": [
+    "client.AvatarRendererMixin",
+    "client.CameraMixin",
+    "client.PlayerModelMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

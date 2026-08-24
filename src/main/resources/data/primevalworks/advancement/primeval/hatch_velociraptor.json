@@ -1,0 +1,1 @@
+{"parent":"primevalworks:primeval/first_hatch","criteria":{"hatch":{"trigger":"minecraft:impossible"}},"display":{"icon":{"id":"primevalworks:velociraptor_spawn_egg"},"title":{"text":"Quick on Its Feet"},"description":{"text":"Hatch a Velociraptor."}},"requirements":[["hatch"]],"sends_telemetry_event":false}

@@ -1,0 +1,13 @@
+{
+  "criteria": {"fossil": {"trigger": "minecraft:inventory_changed", "conditions": {"items": [{"items": "primevalworks:fossil_fragment"}]}}},
+  "display": {
+    "icon": {"id": "primevalworks:fossil_fragment"},
+    "title": {"text": "Primeval Works"},
+    "description": {"text": "Unearth a fossil fragment and follow the trail."},
+    "background": "minecraft:gui/advancements/backgrounds/adventure",
+    "show_toast": false,
+    "announce_to_chat": false
+  },
+  "requirements": [["fossil"]],
+  "sends_telemetry_event": false
+}

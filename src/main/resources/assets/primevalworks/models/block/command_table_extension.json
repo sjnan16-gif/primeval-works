@@ -1,0 +1,7 @@
+{
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "minecraft:block/copper_block"
+  },
+  "elements": []
+}

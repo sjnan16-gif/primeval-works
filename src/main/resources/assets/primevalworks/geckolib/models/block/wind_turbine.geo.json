@@ -1,0 +1,36 @@
+{
+  "format_version": "1.12.0",
+  "minecraft:geometry": [
+    {
+      "description": {
+        "identifier": "geometry.wind_turbine",
+        "texture_width": 64,
+        "texture_height": 64,
+        "visible_bounds_width": 4.0,
+        "visible_bounds_height": 4.0,
+        "visible_bounds_offset": [0, 1.75, 0]
+      },
+      "bones": [
+        {
+          "name": "root",
+          "pivot": [0, 0, 0],
+          "cubes": [
+            {"origin": [-6, 0, -6], "size": [12, 3, 12], "uv": [0, 0]},
+            {"origin": [-2, 3, -2], "size": [4, 29, 4], "uv": [0, 16]},
+            {"origin": [-4, 29, -4], "size": [8, 7, 8], "uv": [16, 16]}
+          ]
+        },
+        {
+          "name": "rotor",
+          "parent": "root",
+          "pivot": [0, 32.5, -4.5],
+          "cubes": [
+            {"origin": [-22, 30.5, -6], "size": [44, 4, 3], "uv": [0, 32]},
+            {"origin": [-2, 10.5, -6], "size": [4, 44, 3], "uv": [0, 40]},
+            {"origin": [-3.5, 29, -7.5], "size": [7, 7, 6], "uv": [32, 16]}
+          ]
+        }
+      ]
+    }
+  ]
+}

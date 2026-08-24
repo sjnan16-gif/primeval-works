@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:smelting",
+  "category": "food",
+  "cookingtime": 160,
+  "experience": 0.2,
+  "ingredient": "minecraft:beetroot",
+  "result": { "id": "primevalworks:roasted_beet" }
+}

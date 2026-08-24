@@ -1,0 +1,10 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "textures": {"base":"minecraft:block/polished_blackstone","rune":"minecraft:block/amethyst_block","light":"minecraft:block/budding_amethyst","particle":"minecraft:block/amethyst_block"},
+  "elements": [
+    {"from":[1,0,1],"to":[15,3,15],"faces":{"down":{"texture":"#base"},"up":{"texture":"#rune"},"north":{"texture":"#base"},"south":{"texture":"#base"},"west":{"texture":"#base"},"east":{"texture":"#base"}}},
+    {"from":[4,3,4],"to":[12,7,12],"faces":{"down":{"texture":"#base"},"up":{"texture":"#rune"},"north":{"texture":"#base"},"south":{"texture":"#base"},"west":{"texture":"#base"},"east":{"texture":"#base"}}},
+    {"from":[5,6,5],"to":[11,15,11],"rotation":{"angle":45,"axis":"y","origin":[8,10,8]},"faces":{"down":{"texture":"#rune"},"up":{"texture":"#light"},"north":{"texture":"#rune"},"south":{"texture":"#light"},"west":{"texture":"#rune"},"east":{"texture":"#light"}}}
+  ]
+}

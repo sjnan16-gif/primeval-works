@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {"R": "primevalworks:raw_ancient_metal_ingot", "I": "minecraft:iron_ingot", "S": "minecraft:stonecutter", "P": "minecraft:piston"},
+  "pattern": ["RPR", "ISI", "III"],
+  "result": {"id": "primevalworks:processor"}
+}

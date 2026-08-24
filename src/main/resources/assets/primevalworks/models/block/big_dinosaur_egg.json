@@ -1,0 +1,15 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "shell": "minecraft:block/sandstone_top",
+    "marking": "minecraft:block/packed_mud",
+    "particle": "minecraft:block/sandstone_top"
+  },
+  "elements": [
+    {"from":[5,0,5],"to":[11,2,11],"faces":{"down":{"texture":"#shell"},"up":{"texture":"#shell"},"north":{"texture":"#shell"},"south":{"texture":"#shell"},"west":{"texture":"#shell"},"east":{"texture":"#shell"}}},
+    {"from":[3,2,3],"to":[13,7,13],"faces":{"down":{"texture":"#shell"},"up":{"texture":"#marking"},"north":{"texture":"#shell"},"south":{"texture":"#marking"},"west":{"texture":"#shell"},"east":{"texture":"#marking"}}},
+    {"from":[4,7,4],"to":[12,12,12],"faces":{"down":{"texture":"#marking"},"up":{"texture":"#shell"},"north":{"texture":"#marking"},"south":{"texture":"#shell"},"west":{"texture":"#marking"},"east":{"texture":"#shell"}}},
+    {"from":[5,12,5],"to":[11,15,11],"faces":{"down":{"texture":"#shell"},"up":{"texture":"#shell"},"north":{"texture":"#shell"},"south":{"texture":"#shell"},"west":{"texture":"#shell"},"east":{"texture":"#shell"}}},
+    {"from":[7,15,7],"to":[9,16,9],"faces":{"down":{"texture":"#marking"},"up":{"texture":"#marking"},"north":{"texture":"#marking"},"south":{"texture":"#marking"},"west":{"texture":"#marking"},"east":{"texture":"#marking"}}}
+  ]
+}

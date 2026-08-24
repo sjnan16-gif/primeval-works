@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": ["BSB", "GEG", "BFB"],
+  "key": {
+    "B": "primevalworks:berries",
+    "S": "primevalworks:silk",
+    "G": "minecraft:gold_ingot",
+    "E": "minecraft:egg",
+    "F": "primevalworks:fossil_fragment"
+  },
+  "result": {"id": "primevalworks:nesting_treat", "count": 2}
+}

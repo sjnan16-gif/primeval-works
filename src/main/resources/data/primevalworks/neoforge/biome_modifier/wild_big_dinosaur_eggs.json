@@ -1,0 +1,22 @@
+{
+  "type": "neoforge:add_features",
+  "biomes": [
+    "minecraft:plains",
+    "minecraft:sunflower_plains",
+    "minecraft:forest",
+    "minecraft:dark_forest",
+    "minecraft:taiga",
+    "minecraft:jungle",
+    "minecraft:sparse_jungle",
+    "minecraft:bamboo_jungle",
+    "minecraft:savanna",
+    "minecraft:savanna_plateau",
+    "minecraft:windswept_savanna",
+    "minecraft:meadow",
+    "minecraft:badlands",
+    "minecraft:wooded_badlands",
+    "minecraft:eroded_badlands"
+  ],
+  "features": "primevalworks:big_dinosaur_egg",
+  "step": "vegetal_decoration"
+}

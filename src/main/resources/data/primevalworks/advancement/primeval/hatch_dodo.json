@@ -1,0 +1,1 @@
+{"parent":"primevalworks:primeval/first_hatch","criteria":{"hatch":{"trigger":"minecraft:impossible"}},"display":{"icon":{"id":"primevalworks:field_dodo_spawn_egg"},"title":{"text":"Small but Busy"},"description":{"text":"Hatch a Dodo."}},"requirements":[["hatch"]],"sends_telemetry_event":false}

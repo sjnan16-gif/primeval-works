@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {"H": "primevalworks:hardwood", "C": "minecraft:chest", "B": "primevalworks:berries"},
+  "pattern": ["HHH", "BCB", "HHH"],
+  "result": {"id": "primevalworks:food_box"}
+}

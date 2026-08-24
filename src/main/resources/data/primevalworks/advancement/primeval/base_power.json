@@ -1,0 +1,9 @@
+{
+  "parent": "primevalworks:primeval/command_table",
+  "criteria": {
+    "wind": {"trigger": "minecraft:placed_block", "conditions": {"location": [{"condition": "minecraft:block_state_property", "block": "primevalworks:wind_turbine"}]}},
+    "water": {"trigger": "minecraft:placed_block", "conditions": {"location": [{"condition": "minecraft:block_state_property", "block": "primevalworks:water_turbine"}]}}
+  },
+  "display": {"icon": {"id": "primevalworks:wind_turbine"}, "title": {"text": "Power in Motion"}, "description": {"text": "Build a turbine, then assign an Energy dinosaur from the Command Table."}},
+  "requirements": [["wind", "water"]], "sends_telemetry_event": false
+}

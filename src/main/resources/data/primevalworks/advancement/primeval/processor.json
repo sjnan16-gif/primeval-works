@@ -1,0 +1,6 @@
+{
+  "parent": "primevalworks:primeval/ancient_metal",
+  "criteria": {"processor": {"trigger": "minecraft:inventory_changed", "conditions": {"items": [{"items": "primevalworks:processor"}]}}},
+  "display": {"icon": {"id": "primevalworks:processor"}, "title": {"text": "Heat, Pressure, Catalyst"}, "description": {"text": "Build a Processor. Material goes left, fuel and catalyst go right."}},
+  "requirements": [["processor"]], "sends_telemetry_event": false
+}

@@ -1,0 +1,6 @@
+{
+  "parent": "primevalworks:primeval/command_table",
+  "criteria": {"box": {"trigger": "minecraft:placed_block", "conditions": {"location": [{"condition": "minecraft:block_state_property", "block": "primevalworks:food_box"}]}}},
+  "display": {"icon": {"id": "primevalworks:food_box"}, "title": {"text": "A Fed Crew"}, "description": {"text": "Place a Food Box so hungry dinosaurs can feed themselves."}},
+  "requirements": [["box"]], "sends_telemetry_event": false
+}

@@ -1,0 +1,1 @@
+{"parent":"primevalworks:primeval/first_expedition","criteria":{"hatch":{"trigger":"minecraft:impossible"}},"display":{"icon":{"id":"primevalworks:brachiosaurus_spawn_egg"},"title":{"text":"Head Above the Trees"},"description":{"text":"Hatch a Brachiosaurus."}},"requirements":[["hatch"]],"sends_telemetry_event":false}

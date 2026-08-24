@@ -1,0 +1,11 @@
+{
+  "parent": "primevalworks:primeval/first_hatch",
+  "criteria": {"breed": {"trigger": "minecraft:impossible"}},
+  "display": {
+    "icon": {"id": "primevalworks:nesting_treat"},
+    "title": {"text": "Runs in the Family"},
+    "description": {"text": "Breed two dinosaurs of the same species."}
+  },
+  "requirements": [["breed"]],
+  "sends_telemetry_event": false
+}

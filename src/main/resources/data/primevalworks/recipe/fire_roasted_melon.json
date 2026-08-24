@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:smelting",
+  "category": "food",
+  "cookingtime": 160,
+  "experience": 0.2,
+  "ingredient": "minecraft:melon_slice",
+  "result": { "id": "primevalworks:fire_roasted_melon" }
+}

@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {"S": "primevalworks:ancient_spell_ingot", "C": "primevalworks:compressed_core", "B": "minecraft:beacon"},
+  "pattern": ["SCS", "CBC", "SCS"],
+  "result": {"id": "primevalworks:ancient_spell_stone"}
+}

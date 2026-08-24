@@ -1,0 +1,1 @@
+{"parent":"primevalworks:primeval/first_expedition","criteria":{"hatch":{"trigger":"minecraft:impossible"}},"display":{"icon":{"id":"primevalworks:spinosaurus_spawn_egg"},"title":{"text":"River Hunter"},"description":{"text":"Hatch a Spinosaurus."}},"requirements":[["hatch"]],"sends_telemetry_event":false}

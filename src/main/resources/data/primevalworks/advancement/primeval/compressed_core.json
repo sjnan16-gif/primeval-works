@@ -1,0 +1,6 @@
+{
+  "parent": "primevalworks:primeval/processor",
+  "criteria": {"core": {"trigger": "minecraft:inventory_changed", "conditions": {"items": [{"items": "primevalworks:compressed_core"}]}}},
+  "display": {"icon": {"id": "primevalworks:compressed_core"}, "title": {"text": "Under Pressure"}, "description": {"text": "Compress an Ancient Core in the Processor."}},
+  "requirements": [["core"]], "sends_telemetry_event": false
+}

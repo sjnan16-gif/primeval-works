@@ -1,0 +1,1 @@
+{"parent":"primevalworks:primeval/command_table","criteria":{"hatch":{"trigger":"minecraft:impossible"}},"display":{"icon":{"id":"primevalworks:triceratops_spawn_egg"},"title":{"text":"Three-Horned Helper"},"description":{"text":"Hatch a Triceratops."}},"requirements":[["hatch"]],"sends_telemetry_event":false}

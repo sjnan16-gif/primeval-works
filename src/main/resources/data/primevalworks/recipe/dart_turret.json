@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "key": {"D": "minecraft:dispenser", "C": "minecraft:copper_ingot", "E": "minecraft:redstone_block", "A": "primevalworks:dart"},
+  "pattern": ["CAC", "EDE", "CCC"],
+  "result": {"id": "primevalworks:dart_turret"}
+}

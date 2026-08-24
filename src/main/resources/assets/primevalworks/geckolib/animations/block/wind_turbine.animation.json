@@ -1,0 +1,17 @@
+{
+  "format_version": "1.8.0",
+  "animations": {
+    "spin": {
+      "loop": true,
+      "animation_length": 2.4,
+      "bones": {
+        "rotor": {
+          "rotation": {
+            "0.0": {"post": {"vector": [0, 0, 0]}, "lerp_mode": "linear"},
+            "2.4": {"post": {"vector": [0, 0, 360]}, "lerp_mode": "linear"}
+          }
+        }
+      }
+    }
+  }
+}

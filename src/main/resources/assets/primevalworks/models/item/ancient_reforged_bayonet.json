@@ -1,0 +1,11 @@
+{
+  "parent": "minecraft:item/netherite_spear",
+  "display": {
+    "thirdperson_righthand": {"rotation": [0, -90, 62], "translation": [0, 4.5, 1], "scale": [0.92, 0.92, 0.92]},
+    "thirdperson_lefthand": {"rotation": [0, 90, -62], "translation": [0, 4.5, 1], "scale": [0.92, 0.92, 0.92]},
+    "firstperson_righthand": {"rotation": [0, -92, 28], "translation": [1.2, 3.4, 1.0], "scale": [0.88, 0.88, 0.88]},
+    "firstperson_lefthand": {"rotation": [0, 92, -28], "translation": [1.2, 3.4, 1.0], "scale": [0.88, 0.88, 0.88]},
+    "gui": {"rotation": [0, 0, -45], "translation": [0, 0, 0], "scale": [0.78, 0.78, 0.78]},
+    "ground": {"rotation": [0, 0, -45], "translation": [0, 2, 0], "scale": [0.50, 0.50, 0.50]}
+  }
+}
