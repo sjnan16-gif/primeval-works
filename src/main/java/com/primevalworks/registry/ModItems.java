@@ -2,6 +2,7 @@ package com.primevalworks.registry;
 
 import com.primevalworks.PrimevalWorks;
 import net.minecraft.world.food.FoodProperties;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.SpawnEggItem;
@@ -107,8 +108,8 @@ public final class ModItems {
             ITEMS.registerSimpleBlockItem("ancient_furnace", ModBlocks.ANCIENT_FURNACE);
     public static final DeferredItem<BlockItem> ANCIENT_SPELL_STONE =
             ITEMS.registerSimpleBlockItem("ancient_spell_stone", ModBlocks.ANCIENT_SPELL_STONE);
-    public static final DeferredItem<BlockItem> LASER_TURRET =
-            ITEMS.registerSimpleBlockItem("laser_turret", ModBlocks.LASER_TURRET);
+    public static final DeferredItem<BlockItem> MAGIC_TURRET =
+            ITEMS.registerSimpleBlockItem("magic_turret", ModBlocks.MAGIC_TURRET);
     public static final DeferredItem<BlockItem> PREMIUM_EGG_INCUBATOR =
             ITEMS.registerSimpleBlockItem("premium_egg_incubator", ModBlocks.PREMIUM_EGG_INCUBATOR);
     public static final DeferredItem<BlockItem> ENHANCED_RAIL =
@@ -200,6 +201,10 @@ public final class ModItems {
     }
 
     public static void register(IEventBus modBus) {
+        ITEMS.addAlias(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "laser_turret"),
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "magic_turret")
+        );
         ITEMS.register(modBus);
     }
 }

@@ -68,7 +68,8 @@ container machines. Do not make one routing PNG per block.
 
 Canvas: **427 x 240**, transparent outside the panel.
 
-This is one reusable status screen for Dart Turret, Laser Turret and Ancient Spell Stone.
+This is one reusable status screen for Dart Turret and Ancient Spell Stone. The Magic Turret
+intentionally has no right-click screen; its target, powered state, beam and shot feedback are visible in-world.
 The block name, energy state, target/range, ammunition and blocked reason are dynamic.
 
 | Element | X | Y | W | H |
@@ -81,8 +82,8 @@ The block name, energy state, target/range, ammunition and blocked reason are dy
 | Footer/help bubble | 98 | 150 | 232 | 22 |
 
 Leave a small **10 x 10** energy-icon space at the left of the main status bubble. Code
-shows no power / powered, nearest target, `15 block` Dart range, `24 block` Laser range,
-base dart stock, or the Spell Stone's `48 block` ward.
+shows no power / powered, nearest target, `18 block` Dart range, base dart stock,
+or the Spell Stone's `48 block` ward.
 
 ### 3. Ancient Furnace inventory — `ancinet_furnace.png`
 

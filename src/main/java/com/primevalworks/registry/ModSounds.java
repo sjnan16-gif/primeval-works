@@ -34,8 +34,8 @@ public final class ModSounds {
     public static final DeferredHolder<SoundEvent, SoundEvent> PROCESSOR_LOOP = register("block.processor.loop");
     public static final DeferredHolder<SoundEvent, SoundEvent> PROCESS_COMPLETE = register("block.processor.complete");
     public static final DeferredHolder<SoundEvent, SoundEvent> DART_TURRET_FIRE = register("block.dart_turret.fire");
-    public static final DeferredHolder<SoundEvent, SoundEvent> LASER_TURRET_CHARGE = register("block.laser_turret.charge");
-    public static final DeferredHolder<SoundEvent, SoundEvent> LASER_TURRET_FIRE = register("block.laser_turret.fire");
+    public static final DeferredHolder<SoundEvent, SoundEvent> MAGIC_TURRET_CHARGE = register("block.magic_turret.charge");
+    public static final DeferredHolder<SoundEvent, SoundEvent> MAGIC_TURRET_FIRE = register("block.magic_turret.fire");
     public static final DeferredHolder<SoundEvent, SoundEvent> ENHANCED_RAIL_BOOST = register("block.enhanced_rail.boost");
     public static final DeferredHolder<SoundEvent, SoundEvent> WORK_PICKUP = register("work.pickup");
     public static final DeferredHolder<SoundEvent, SoundEvent> WORK_DEPOSIT = register("work.deposit");

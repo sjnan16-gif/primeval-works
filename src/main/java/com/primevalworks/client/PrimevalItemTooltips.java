@@ -38,7 +38,7 @@ public final class PrimevalItemTooltips {
             case "processor" -> "Refines ancient materials.";
             case "ancient_furnace" -> "A fast powered furnace.";
             case "ancient_spell_stone" -> "Suppresses nearby hostile spawns.";
-            case "laser_turret" -> "Advanced base defense.";
+            case "magic_turret" -> "Burns through hostile targets with concentrated spelllight.";
             case "premium_egg_incubator" -> "Improves incubated dinosaurs.";
             case "enhanced_rail" -> "A faster powered rail.";
             case "ancient_reforged_bayonet" -> "A long-reaching blade built on spear handling.";

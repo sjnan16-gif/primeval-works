@@ -2,6 +2,7 @@ package com.primevalworks.gametest;
 
 import com.primevalworks.PrimevalWorks;
 import com.primevalworks.registry.ModBlocks;
+import com.primevalworks.registry.ModBlockEntities;
 import com.primevalworks.registry.ModEntities;
 import com.primevalworks.registry.ModItems;
 import com.primevalworks.world.block.entity.TurbineBlockEntity;
@@ -11,7 +12,7 @@ import com.primevalworks.world.block.entity.FoodBoxBlockEntity;
 import com.primevalworks.world.block.entity.ProcessorBlockEntity;
 import com.primevalworks.world.block.entity.AncientFurnaceBlockEntity;
 import com.primevalworks.world.block.entity.DartTurretBlockEntity;
-import com.primevalworks.world.block.entity.LaserTurretBlockEntity;
+import com.primevalworks.world.block.entity.MagicTurretBlockEntity;
 import com.primevalworks.world.block.CommandTableBlock;
 import com.primevalworks.world.block.PoweredObserverBlock;
 import com.primevalworks.world.block.TurbineBlock;
@@ -32,6 +33,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.FunctionGameTestInstance;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.gametest.framework.TestData;
@@ -398,6 +400,16 @@ public final class PrimevalGameTests {
     }
 
     private static void contentRegistration(GameTestHelper helper) {
+        Identifier retiredTurretId = Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "laser_turret");
+        helper.assertTrue(BuiltInRegistries.BLOCK.get(retiredTurretId).map(Holder::value).orElse(null)
+                        == ModBlocks.MAGIC_TURRET.get(),
+                "Saved Laser Turret blocks do not migrate to the Magic Turret");
+        helper.assertTrue(BuiltInRegistries.ITEM.get(retiredTurretId).map(Holder::value).orElse(null)
+                        == ModItems.MAGIC_TURRET.get(),
+                "Saved Laser Turret items do not migrate to the Magic Turret");
+        helper.assertTrue(BuiltInRegistries.BLOCK_ENTITY_TYPE.get(retiredTurretId).map(Holder::value).orElse(null)
+                        == ModBlockEntities.MAGIC_TURRET.get(),
+                "Saved Laser Turret block entities do not migrate to the Magic Turret");
         for (int x = 0; x <= 4; x++) {
             for (int z = 0; z <= 4; z++) {
                 helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
@@ -409,7 +421,7 @@ public final class PrimevalGameTests {
                 ModBlocks.WIND_TURBINE.get(), ModBlocks.WATER_TURBINE.get(), ModBlocks.LASER_OBSERVER.get(),
                 ModBlocks.ANCIENT_BARREL.get(), ModBlocks.DART_TURRET.get(),
                 ModBlocks.PROCESSOR.get(), ModBlocks.ANCIENT_FURNACE.get(),
-                ModBlocks.ANCIENT_SPELL_STONE.get(), ModBlocks.LASER_TURRET.get(),
+                ModBlocks.ANCIENT_SPELL_STONE.get(), ModBlocks.MAGIC_TURRET.get(),
                 ModBlocks.PREMIUM_EGG_INCUBATOR.get(), ModBlocks.ENHANCED_RAIL.get(),
                 ModBlocks.SMALL_DINOSAUR_EGG.get(), ModBlocks.BIG_DINOSAUR_EGG.get(),
                 ModBlocks.LARGE_DINOSAUR_EGG.get()
@@ -1093,17 +1105,17 @@ public final class PrimevalGameTests {
     private static void poweredTurretsDefendBase(GameTestHelper helper) {
         BlockPos tableRelative = new BlockPos(3, 1, 3);
         BlockPos dartRelative = new BlockPos(5, 1, 2);
-        BlockPos laserRelative = new BlockPos(5, 1, 4);
+        BlockPos magicRelative = new BlockPos(5, 1, 4);
         BlockPos dartThreatRelative = new BlockPos(4, 1, 2);
-        BlockPos laserThreatRelative = new BlockPos(4, 1, 4);
+        BlockPos magicThreatRelative = new BlockPos(4, 1, 4);
         for (int x = 0; x <= 10; x++) for (int z = 0; z <= 6; z++) {
             helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
         }
         helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
         helper.setBlock(dartRelative, ModBlocks.DART_TURRET.get());
-        helper.setBlock(laserRelative, ModBlocks.LASER_TURRET.get());
+        helper.setBlock(magicRelative, ModBlocks.MAGIC_TURRET.get());
         DartTurretBlockEntity dartTurret = helper.getBlockEntity(dartRelative, DartTurretBlockEntity.class);
-        LaserTurretBlockEntity laserTurret = helper.getBlockEntity(laserRelative, LaserTurretBlockEntity.class);
+        MagicTurretBlockEntity magicTurret = helper.getBlockEntity(magicRelative, MagicTurretBlockEntity.class);
         dartTurret.setItem(0, new ItemStack(ModItems.DART.get(), 3));
         dartTurret.setChanged();
         CommandTableBlockEntity table = helper.getBlockEntity(tableRelative, CommandTableBlockEntity.class);
@@ -1112,7 +1124,7 @@ public final class PrimevalGameTests {
                 "The Dart Turret could not join the powered base network");
         net.minecraft.world.entity.monster.Creeper[] dartThreat = {null};
         float[] dartHealth = {0.0F};
-        net.minecraft.world.entity.monster.Creeper[] laserThreat = {null};
+        net.minecraft.world.entity.monster.Creeper[] magicThreat = {null};
 
         helper.startSequence()
                 .thenExecute(() -> {
@@ -1135,35 +1147,35 @@ public final class PrimevalGameTests {
                             "The Dart Turret spent ammunition without retaining a hostile target");
                     dartThreat[0].discard();
                     helper.assertTrue(!table.toggleEnergyConsumer(helper.getLevel(), helper.absolutePos(dartRelative)),
-                            "The Dart Turret did not disconnect before the isolated Laser test");
-                    helper.assertTrue(table.toggleEnergyConsumer(helper.getLevel(), helper.absolutePos(laserRelative)),
-                            "The Laser Turret could not join the powered base network");
+                            "The Dart Turret did not disconnect before the isolated Magic Turret test");
+                    helper.assertTrue(table.toggleEnergyConsumer(helper.getLevel(), helper.absolutePos(magicRelative)),
+                            "The Magic Turret could not join the powered base network");
                     BaseEnergyRules.bindConsumer(helper.getLevel(), helper.absolutePos(tableRelative),
-                            helper.absolutePos(laserRelative), false);
-                    helper.assertTrue(BaseEnergyRules.isPowered(helper.getLevel(), helper.absolutePos(laserRelative)),
+                            helper.absolutePos(magicRelative), false);
+                    helper.assertTrue(BaseEnergyRules.isPowered(helper.getLevel(), helper.absolutePos(magicRelative)),
                             "A loaded Command Table did not repair a lost runtime energy binding");
                     helper.assertTrue(BaseEnergyRules.activeDemandPerSecond(
-                                    helper.getLevel(), helper.absolutePos(laserRelative)) == 0.0F,
-                            "An idle Laser Turret requested base energy without a target");
-                    laserThreat[0] = helper.spawn(EntityType.CREEPER, laserThreatRelative);
-                    laserThreat[0].setNoAi(true);
+                                    helper.getLevel(), helper.absolutePos(magicRelative)) == 0.0F,
+                            "An idle Magic Turret requested base energy without a target");
+                    magicThreat[0] = helper.spawn(EntityType.CREEPER, magicThreatRelative);
+                    magicThreat[0].setNoAi(true);
                     helper.assertTrue(BaseEnergyRules.ownsPosition(helper.getLevel(),
-                                    helper.absolutePos(laserRelative), laserThreat[0].position()),
-                            "The Laser Turret test target was outside its Command Table's base cell");
+                                    helper.absolutePos(magicRelative), magicThreat[0].position()),
+                            "The Magic Turret test target was outside its Command Table's base cell");
                 })
                 .thenWaitUntil(() -> helper.assertTrue(
-                        laserTurret.aimController().targetEntityId() >= 0,
-                        "The powered Laser Turret did not independently acquire a hostile target; powered="
-                                + BaseEnergyRules.isPowered(helper.getLevel(), helper.absolutePos(laserRelative))
-                                + ", enabled=" + table.isEnergyConsumerEnabled(helper.absolutePos(laserRelative))
+                        magicTurret.aimController().targetEntityId() >= 0,
+                        "The powered Magic Turret did not independently acquire a hostile target; powered="
+                                + BaseEnergyRules.isPowered(helper.getLevel(), helper.absolutePos(magicRelative))
+                                + ", enabled=" + table.isEnergyConsumerEnabled(helper.absolutePos(magicRelative))
                                 + ", stored=" + table.storedEnergy()
-                                + ", threatAlive=" + (laserThreat[0] != null && laserThreat[0].isAlive())))
+                                + ", threatAlive=" + (magicThreat[0] != null && magicThreat[0].isAlive())))
                 .thenExecuteAfter(2, () -> {
-                    var struck = helper.getLevel().getEntity(laserTurret.aimController().targetEntityId());
+                    var struck = helper.getLevel().getEntity(magicTurret.aimController().targetEntityId());
                     helper.assertTrue(struck instanceof net.minecraft.world.entity.LivingEntity living
-                                    && (living.getHealth() < living.getMaxHealth() || living.isOnFire()),
-                            "The powered Laser Turret did not independently acquire and strike its target");
-                    laserThreat[0].discard();
+                                    && living.getHealth() < living.getMaxHealth(),
+                            "The powered Magic Turret did not independently acquire and strike its target");
+                    magicThreat[0].discard();
                 })
                 .thenSucceed();
     }

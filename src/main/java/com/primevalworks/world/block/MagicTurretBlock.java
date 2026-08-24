@@ -2,7 +2,7 @@ package com.primevalworks.world.block;
 
 import com.mojang.serialization.MapCodec;
 import com.primevalworks.registry.ModBlockEntities;
-import com.primevalworks.world.block.entity.LaserTurretBlockEntity;
+import com.primevalworks.world.block.entity.MagicTurretBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
@@ -13,10 +13,10 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jspecify.annotations.Nullable;
 
-public final class LaserTurretBlock extends BaseEntityBlock {
-    public static final MapCodec<LaserTurretBlock> CODEC = simpleCodec(LaserTurretBlock::new);
+public final class MagicTurretBlock extends BaseEntityBlock {
+    public static final MapCodec<MagicTurretBlock> CODEC = simpleCodec(MagicTurretBlock::new);
 
-    public LaserTurretBlock(BlockBehaviour.Properties properties) {
+    public MagicTurretBlock(BlockBehaviour.Properties properties) {
         super(properties);
     }
 
@@ -27,16 +27,16 @@ public final class LaserTurretBlock extends BaseEntityBlock {
 
     @Override
     public @Nullable BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new LaserTurretBlockEntity(pos, state);
+        return new MagicTurretBlockEntity(pos, state);
     }
 
     @Override
     public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(
             Level level, BlockState state, BlockEntityType<T> type) {
         return level.isClientSide()
-                ? createTickerHelper(type, ModBlockEntities.LASER_TURRET.get(), LaserTurretBlockEntity::clientTick)
-                : createTickerHelper(type, ModBlockEntities.LASER_TURRET.get(),
-                        (tickLevel, pos, tickState, turret) -> LaserTurretBlockEntity.serverTick(
+                ? createTickerHelper(type, ModBlockEntities.MAGIC_TURRET.get(), MagicTurretBlockEntity::clientTick)
+                : createTickerHelper(type, ModBlockEntities.MAGIC_TURRET.get(),
+                        (tickLevel, pos, tickState, turret) -> MagicTurretBlockEntity.serverTick(
                                 (net.minecraft.server.level.ServerLevel)tickLevel, pos, tickState, turret));
     }
 }

@@ -7,6 +7,6 @@ public final class TurretRenderState extends BlockEntityRenderState {
     public float pitch;
     public float beamLength;
     public float animationTime;
-    public boolean laser;
+    public boolean magic;
     public boolean hasTarget;
 }

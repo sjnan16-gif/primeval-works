@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "key": {
+    "A": "primevalworks:ancient_spell_ingot",
+    "C": "primevalworks:compressed_core",
+    "D": "primevalworks:dart_turret",
+    "M": "primevalworks:compressed_ancient_metal_ingot",
+    "S": "primevalworks:ancient_spell_stone"
+  },
+  "pattern": ["ASA", "CMC", "ADA"],
+  "result": {"id": "primevalworks:magic_turret"}
+}

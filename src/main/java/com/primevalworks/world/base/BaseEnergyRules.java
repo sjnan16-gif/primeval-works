@@ -52,10 +52,10 @@ public final class BaseEnergyRules {
         if (block == ModBlocks.DART_TURRET.get()) {
             return 3;
         }
-        if (block == ModBlocks.ANCIENT_SPELL_STONE.get()
-                || block == ModBlocks.LASER_TURRET.get()) {
+        if (block == ModBlocks.ANCIENT_SPELL_STONE.get()) {
             return 4;
         }
+        if (block == ModBlocks.MAGIC_TURRET.get()) return 5;
         if (block == ModBlocks.PROCESSOR.get()) {
             return PROCESSOR_DEMAND;
         }

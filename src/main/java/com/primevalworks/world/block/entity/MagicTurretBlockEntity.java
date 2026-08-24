@@ -4,6 +4,8 @@ import com.primevalworks.registry.ModBlockEntities;
 import com.primevalworks.world.base.BaseEnergyRules;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.particles.DustParticleOptions;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
@@ -24,20 +26,22 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.Comparator;
 
-public final class LaserTurretBlockEntity extends BlockEntity implements TargetingTurret {
-    private static final int FIRE_INTERVAL_TICKS = 28;
+public final class MagicTurretBlockEntity extends BlockEntity implements TargetingTurret {
+    private static final int FIRE_INTERVAL_TICKS = 30;
     private static final double RANGE = 24.0D;
     private static final double PIVOT_HEIGHT = 0.75D;
+    private static final DustParticleOptions SPELL_GLOW = new DustParticleOptions(0xA95CFF, 0.9F);
+    private static final DustParticleOptions SPELL_CORE = new DustParticleOptions(0xFFF7FF, 0.46F);
 
     private final TurretAimController aim = new TurretAimController();
     private int cooldown;
     private int targetRefresh;
 
-    public LaserTurretBlockEntity(BlockPos pos, BlockState state) {
-        super(ModBlockEntities.LASER_TURRET.get(), pos, state);
+    public MagicTurretBlockEntity(BlockPos pos, BlockState state) {
+        super(ModBlockEntities.MAGIC_TURRET.get(), pos, state);
     }
 
-    public static void serverTick(ServerLevel level, BlockPos pos, BlockState state, LaserTurretBlockEntity turret) {
+    public static void serverTick(ServerLevel level, BlockPos pos, BlockState state, MagicTurretBlockEntity turret) {
         if (!BaseEnergyRules.isConnected(level, pos)) {
             turret.setTarget(null);
             return;
@@ -56,16 +60,32 @@ public final class LaserTurretBlockEntity extends BlockEntity implements Targeti
             return;
         }
 
-        target.hurtServer(level, level.damageSources().magic(), 14.0F);
-        target.igniteForSeconds(4.0F);
-        level.playSound(null, pos, SoundEvents.BEACON_POWER_SELECT,
-                SoundSource.BLOCKS, 0.75F, 1.35F);
+        target.hurtServer(level, level.damageSources().magic(), 16.0F);
+        turret.releaseSpellBurst(level, pos, target);
+        level.playSound(null, pos, SoundEvents.EVOKER_CAST_SPELL,
+                SoundSource.BLOCKS, 0.85F, 1.22F);
         turret.cooldown = FIRE_INTERVAL_TICKS;
         turret.setChanged();
     }
 
-    public static void clientTick(Level level, BlockPos pos, BlockState state, LaserTurretBlockEntity turret) {
+    public static void clientTick(Level level, BlockPos pos, BlockState state, MagicTurretBlockEntity turret) {
         turret.aim.clientTick(level, pos, PIVOT_HEIGHT);
+    }
+
+    private void releaseSpellBurst(ServerLevel level, BlockPos pos, LivingEntity target) {
+        Vec3 pivot = Vec3.atCenterOf(pos).add(0.0D, PIVOT_HEIGHT - 0.5D, 0.0D);
+        Vec3 direction = target.getEyePosition().subtract(pivot).normalize();
+        Vec3 focus = pivot.add(direction.scale(0.58D));
+        level.sendParticles(SPELL_GLOW, focus.x, focus.y, focus.z,
+                8, 0.08D, 0.08D, 0.08D, 0.015D);
+        level.sendParticles(SPELL_CORE, focus.x, focus.y, focus.z,
+                4, 0.035D, 0.035D, 0.035D, 0.008D);
+        Vec3 impact = target.getEyePosition();
+        level.sendParticles(SPELL_GLOW, impact.x, impact.y, impact.z,
+                16, target.getBbWidth() * 0.22D, target.getBbHeight() * 0.12D,
+                target.getBbWidth() * 0.22D, 0.035D);
+        level.sendParticles(ParticleTypes.END_ROD, impact.x, impact.y, impact.z,
+                5, 0.12D, 0.12D, 0.12D, 0.02D);
     }
 
     private static @Nullable LivingEntity findNearestThreat(ServerLevel level, BlockPos pos) {

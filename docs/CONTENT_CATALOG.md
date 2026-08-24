@@ -42,7 +42,7 @@ Authored entity assets are currently wired for Tyrannosaurus, Field Dodo, Pteran
 | Reinforced Piston | Working foundation | Requires 1 E/S and redstone and currently uses reliable vanilla piston movement. Its final heavy-block behavior remains. |
 | Laser Observer | Working | Requires 1 E/S, detects block updates along its facing direction up to five blocks away, and emits a vanilla-style redstone pulse. |
 | Dart Turret | Working | Power-connectable at 3 E/S, automatically tracks the nearest hostile in 18 blocks, consumes Darts from its internal 3x3 magazine, and fires real crossed-sprite projectiles. It requests power only while armed with a live target. |
-| Laser Turret | Working | Power-connectable at 4 E/S, automatically tracks the nearest hostile in 24 blocks, and applies a direct burning hit while rendering a synchronized five-layer animated beam. It has no projectile and requests power only while it has a live target. |
+| Magic Turret | Working | A late-game spell-metal defense upgrade. It consumes 5 E/S only with a live target, tracks hostiles within 24 blocks, and deals 16 direct magic damage through a synchronized purple beam with a white core. The beam is geometry; brief muzzle and impact particles mark each real hit. |
 | Ancient Spell Stone | Working | Power-connectable at 4 E/S and suppresses hostile spawn position checks within 48 blocks while powered. |
 
 ## Automation that works now

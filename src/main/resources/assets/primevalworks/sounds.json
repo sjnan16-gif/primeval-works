@@ -572,10 +572,10 @@
   "block.dart_turret.fire": {
     "sounds": []
   },
-  "block.laser_turret.charge": {
+  "block.magic_turret.charge": {
     "sounds": []
   },
-  "block.laser_turret.fire": {
+  "block.magic_turret.fire": {
     "sounds": []
   },
   "block.enhanced_rail.boost": {
