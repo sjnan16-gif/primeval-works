@@ -92,6 +92,11 @@ public final class CommandTableScreen extends Screen {
             new Rect(208, 90, 44, 24),
             new Rect(254, 90, 45, 24)
     };
+    static final float STORE_ALL_TEXT_OFFSET_X = -4.0F;
+    static final float RECALL_TEXT_OFFSET_X = -2.0F;
+    static final float ENERGY_TEXT_OFFSET_X = -1.0F;
+    static final float DEPOT_TEXT_OFFSET_X = 1.5F;
+    static final float ACTION_TEXT_OFFSET_Y = 1.0F;
     private static final Rect DEPOT_SORT = new Rect(310, 49, 51, 14);
     private static final Rect DEPOT_PAGE = new Rect(360, 49, 53, 14);
     private static final String[] ACTION_LABELS = {"STORE ALL", "RECALL", "ENERGY", "DEPOT"};
@@ -124,6 +129,7 @@ public final class CommandTableScreen extends Screen {
     private final Map<Integer, HoverDwell> dinosaurDwells = new HashMap<>();
     private final Map<Integer, HoverDwell> actionDwells = new HashMap<>();
     private final Map<Integer, HoverDwell> nodeDwells = new HashMap<>();
+    private final Map<Integer, Long> upgradeRevealNanos = new HashMap<>();
 
     private int insight;
     private float storedEnergy;
@@ -162,7 +168,7 @@ public final class CommandTableScreen extends Screen {
     private long openedNanos = Util.getNanos();
     private long lastRenderNanos = openedNanos;
     private long lastPurchaseNanos;
-    private int rippleUpgradeId = -1;
+    private int lastUpgradedId = -1;
     private boolean receivedBaseState;
     private long renderNowNanos = openedNanos;
     private String notice = "Choose a revealed branch to shape the base.";
@@ -176,6 +182,7 @@ public final class CommandTableScreen extends Screen {
     public static void acceptBaseState(BaseUpgradesPayload payload) {
         if (active == null || !active.tablePos.equals(payload.tablePos())) return;
         active.insight = payload.insight();
+        int[] previousLevels = active.upgradeLevels.clone();
         int upgraded = -1;
         for (int index = 0; index < active.upgradeLevels.length; index++) {
             int next = index < payload.levels().size() ? payload.levels().get(index) : 0;
@@ -185,8 +192,17 @@ public final class CommandTableScreen extends Screen {
         active.upgradeLevels[BaseUpgrade.HEARTHSTONE.id()] = 1;
         if (!payload.notice().isBlank()) active.notice = payload.notice();
         if (upgraded >= 0) {
-            active.lastPurchaseNanos = Util.getNanos();
-            active.rippleUpgradeId = upgraded;
+            long now = Util.getNanos();
+            active.lastPurchaseNanos = now;
+            active.lastUpgradedId = upgraded;
+            for (BaseUpgrade candidate : BaseUpgrade.values()) {
+                if (candidate.prerequisiteId() != upgraded) continue;
+                boolean newlyVisible = !isDiscovered(candidate, previousLevels)
+                        && isDiscovered(candidate, active.upgradeLevels);
+                boolean newlyUnlocked = !prerequisiteMet(candidate, previousLevels)
+                        && prerequisiteMet(candidate, active.upgradeLevels);
+                if (newlyVisible || newlyUnlocked) active.upgradeRevealNanos.put(candidate.id(), now);
+            }
         }
         active.receivedBaseState = true;
         active.activePage = Math.min(active.activePage, active.activePageCount() - 1);
@@ -273,7 +289,6 @@ public final class CommandTableScreen extends Screen {
         applyMotion(graphics, motion);
         drawPanel(graphics, layout, motion, mouseX, mouseY, uiMouseX, uiMouseY, time);
         graphics.pose().popMatrix();
-        drawUpgradeRipple(graphics, layout, motion);
         drawDraggedDinosaur(graphics, mouseX, mouseY, time);
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
@@ -627,29 +642,6 @@ public final class CommandTableScreen extends Screen {
         draggedPitch = follow(draggedPitch, targetPitch, 9.5F, deltaSeconds);
     }
 
-    private void drawUpgradeRipple(GuiGraphicsExtractor graphics, Layout layout, UiMotion motion) {
-        if (rippleUpgradeId < 0 || lastPurchaseNanos == 0L) return;
-        float progress = (renderNowNanos - lastPurchaseNanos) / 680_000_000.0F;
-        if (progress >= 1.0F) {
-            rippleUpgradeId = -1;
-            return;
-        }
-        BaseUpgrade upgrade = BaseUpgrade.byId(rippleUpgradeId).orElse(null);
-        if (upgrade == null) return;
-        NodePoint treeOrigin = upgradePoint(layout, upgrade, false);
-        float originX = motion.transformX(treeOrigin.x + treeParallaxX);
-        float originY = motion.transformY(treeOrigin.y + treeParallaxY);
-        float eased = 1.0F - (1.0F - progress) * (1.0F - progress);
-        int alpha = Math.round((1.0F - progress) * 218.0F);
-        for (int ring = 0; ring < 2; ring++) {
-            float ringProgress = Mth.clamp(eased - ring * 0.10F, 0.0F, 1.0F);
-            float ringRadius = 10.0F + ringProgress * (48.0F + ring * 9.0F);
-            int color = (Math.max(0, alpha - ring * 48) << 24) | (ring == 0 ? 0xFFD986 : 0xE8B95D);
-            drawEllipseRing(graphics, originX, originY, ringRadius, ringRadius * 0.62F,
-                    ring == 0 ? 1.8F : 1.2F, color);
-        }
-    }
-
     private List<DinosaurRosterPayload.Entry> visibleDepotEntries() {
         List<DinosaurRosterPayload.Entry> sorted = new ArrayList<>(depotEntries);
         sorted.sort(depotSort.comparator());
@@ -690,11 +682,11 @@ public final class CommandTableScreen extends Screen {
                 if (hovered) {
                     graphics.fill(button.x + 2, button.y + 2, button.right() - 2, button.bottom() - 2, 0x22FFF2CC);
                 }
-                Rect textBounds = capturedIndex == 0
-                        ? new Rect(button.x + Math.max(1, Math.round(layout.scale)), button.y,
-                        Math.max(1, button.width - Math.max(1, Math.round(layout.scale))), button.height)
-                        : button;
-                thickButtonText(graphics, ACTION_LABELS[capturedIndex], textBounds, color);
+                graphics.pose().pushMatrix();
+                graphics.pose().translate(actionTextOffsetX(capturedIndex) * layout.scale,
+                        ACTION_TEXT_OFFSET_Y * layout.scale);
+                thickButtonText(graphics, ACTION_LABELS[capturedIndex], button, color);
+                graphics.pose().popMatrix();
                 int underlineY = button.bottom() - 5;
                 int underlineWidth = Math.round((button.width - 10) * (hovered ? 0.82F : 0.36F));
                 graphics.fill(button.centerX() - underlineWidth / 2, underlineY,
@@ -740,13 +732,13 @@ public final class CommandTableScreen extends Screen {
             boolean purchased = level(upgrade) > 0;
             boolean complete = level(upgrade) >= upgrade.maxLevel();
             float dwell = hoverAmount(nodeDwells, upgrade.id(), hovered);
-            float purchasePulse = lastPurchaseNanos == 0L ? 0.0F
+            float purchasePulse = lastPurchaseNanos == 0L || upgrade.id() != lastUpgradedId ? 0.0F
                     : Mth.clamp(1.0F - (renderNowNanos - lastPurchaseNanos) / 420_000_000.0F, 0.0F, 1.0F);
             float wobbleX = Mth.sin(time * 10.0F + upgrade.id()) * 0.65F * dwell;
             float wobbleY = Mth.sin(time * 12.5F + upgrade.id() * 0.5F) * 0.35F * dwell;
             float nodeScale = 1.0F;
             nodeScale *= 1.0F + Mth.sin(time * 8.0F + upgrade.id()) * 0.018F * dwell;
-            if (hovered) nodeScale += Mth.sin(purchasePulse * Mth.PI) * 0.07F;
+            nodeScale += Mth.sin(purchasePulse * Mth.PI) * 0.07F;
             nodeScale *= treeZoom;
             graphics.pose().pushMatrix();
             graphics.pose().translate(point.x - node.centerX(), point.y - node.centerY());
@@ -796,12 +788,13 @@ public final class CommandTableScreen extends Screen {
                     Rect titleArea = new Rect(top.x + 5, top.y + 2, top.width - 10, top.height - 3);
                     fittedText(graphics, hovered.title().toUpperCase() + "   " + right, titleArea,
                             prerequisiteMet(hovered) ? GOLD : RED, 0.70F, true);
-                    int costWidth = rank >= hovered.maxLevel() || !prerequisiteMet(hovered) ? 0 : 66;
+                    int costWidth = rank >= hovered.maxLevel() || !prerequisiteMet(hovered)
+                            ? 0 : Math.min(bottom.width / 2, Math.max(56, Math.round(68 * layout.scale)));
                     Rect detailArea = new Rect(bottom.x + 5, bottom.y + 3,
-                            bottom.width - 10 - costWidth, bottom.height - 5);
+                            Math.max(1, bottom.width - 13 - costWidth), bottom.height - 5);
                     wrappedText(graphics, hovered.detail(), detailArea, MUTED, 0.59F, 2);
                     if (costWidth > 0) drawUpgradeCosts(graphics, hovered, rank,
-                            new Rect(bottom.right() - costWidth - 3, bottom.y + 1, costWidth, bottom.height - 2));
+                            new Rect(bottom.right() - costWidth - 4, bottom.y + 1, costWidth, bottom.height - 2));
                 });
     }
 
@@ -811,10 +804,13 @@ public final class CommandTableScreen extends Screen {
         for (int index = 0; index < costs.size(); index++) {
             BaseUpgrade.UpgradeCost cost = costs.get(index);
             int owned = minecraft.player == null ? 0 : minecraft.player.getInventory().countItem(cost.item());
-            Rect slot = new Rect(area.x + index * slotWidth, area.y, slotWidth, area.height);
-            Rect icon = new Rect(slot.x + 1, slot.y, Math.min(13, slot.height), Math.min(13, slot.height));
-            drawItemInRect(graphics, cost.stack(), icon);
-            Rect count = new Rect(icon.right() - 1, slot.y + 2, Math.max(8, slot.right() - icon.right()), slot.height - 3);
+            Rect costCell = new Rect(area.x + index * slotWidth, area.y, slotWidth, area.height);
+            int frameSize = Math.min(costCell.height, Math.max(11, costCell.width - 15));
+            Rect frame = new Rect(costCell.x, costCell.centerY() - frameSize / 2, frameSize, frameSize);
+            blit(graphics, HOTBAR, frame);
+            drawItemInRect(graphics, cost.stack(), inset(frame, Math.max(2, frameSize / 7)));
+            Rect count = new Rect(frame.right() + 1, costCell.y + 1,
+                    Math.max(8, costCell.right() - frame.right() - 1), costCell.height - 2);
             fittedText(graphics, owned + "/" + cost.count(), count,
                     owned >= cost.count() ? GREEN : RED, 0.55F, true);
         }
@@ -1135,13 +1131,33 @@ public final class CommandTableScreen extends Screen {
                 + (upgrade.treeX() + treePanX) * TREE_COORDINATE_SCALE * treeZoom * layout.scale;
         float targetY = viewport.centerY()
                 + (upgrade.treeY() + treePanY) * TREE_COORDINATE_SCALE * treeZoom * layout.scale;
+        Long revealStarted = animateReveal ? upgradeRevealNanos.get(upgrade.id()) : null;
+        if (revealStarted != null && upgrade.prerequisiteId() >= 0) {
+            float progress = Mth.clamp((renderNowNanos - revealStarted) / 720_000_000.0F, 0.0F, 1.0F);
+            if (progress >= 1.0F) {
+                upgradeRevealNanos.remove(upgrade.id());
+            } else {
+                BaseUpgrade parent = BaseUpgrade.byId(upgrade.prerequisiteId()).orElseThrow();
+                float parentX = viewport.centerX()
+                        + (parent.treeX() + treePanX) * TREE_COORDINATE_SCALE * treeZoom * layout.scale;
+                float parentY = viewport.centerY()
+                        + (parent.treeY() + treePanY) * TREE_COORDINATE_SCALE * treeZoom * layout.scale;
+                float slide = spring(progress, 6.4F, 10.5F);
+                targetX = Mth.lerp(slide, parentX, targetX);
+                targetY = Mth.lerp(slide, parentY, targetY);
+            }
+        }
         return new NodePoint(targetX, targetY);
     }
 
     private boolean isDiscovered(BaseUpgrade upgrade) {
+        return isDiscovered(upgrade, upgradeLevels);
+    }
+
+    private static boolean isDiscovered(BaseUpgrade upgrade, int[] levels) {
         if (upgrade == BaseUpgrade.HEARTHSTONE || upgrade.prerequisiteId() < 0) return true;
         BaseUpgrade parent = BaseUpgrade.byId(upgrade.prerequisiteId()).orElseThrow();
-        return parent == BaseUpgrade.HEARTHSTONE || level(parent) > 0;
+        return parent == BaseUpgrade.HEARTHSTONE || level(parent, levels) > 0;
     }
 
     private Rect dinosaurSlot(int index) {
@@ -1278,13 +1294,31 @@ public final class CommandTableScreen extends Screen {
     }
 
     private int level(BaseUpgrade upgrade) {
-        return upgrade.id() < upgradeLevels.length ? upgradeLevels[upgrade.id()] : 0;
+        return level(upgrade, upgradeLevels);
+    }
+
+    private static int level(BaseUpgrade upgrade, int[] levels) {
+        return upgrade.id() < levels.length ? levels[upgrade.id()] : 0;
     }
 
     private boolean prerequisiteMet(BaseUpgrade upgrade) {
+        return prerequisiteMet(upgrade, upgradeLevels);
+    }
+
+    private static boolean prerequisiteMet(BaseUpgrade upgrade, int[] levels) {
         if (upgrade == BaseUpgrade.HEARTHSTONE || upgrade.prerequisiteId() < 0) return true;
         BaseUpgrade parent = BaseUpgrade.byId(upgrade.prerequisiteId()).orElseThrow();
-        return level(parent) >= upgrade.prerequisiteLevel();
+        return level(parent, levels) >= upgrade.prerequisiteLevel();
+    }
+
+    static float actionTextOffsetX(int index) {
+        return switch (index) {
+            case 0 -> STORE_ALL_TEXT_OFFSET_X;
+            case 1 -> RECALL_TEXT_OFFSET_X;
+            case 2 -> ENERGY_TEXT_OFFSET_X;
+            case 3 -> DEPOT_TEXT_OFFSET_X;
+            default -> 0.0F;
+        };
     }
 
     private String prerequisiteText(BaseUpgrade upgrade) {
@@ -1457,43 +1491,6 @@ public final class CommandTableScreen extends Screen {
         }
         if (!current.isEmpty()) lines.add(current.toString());
         return lines;
-    }
-
-    private void drawEllipseRing(GuiGraphicsExtractor graphics, float centerX, float centerY,
-                                 float radiusX, float radiusY, float thickness, int color) {
-        int top = Math.round(centerY - radiusY);
-        int bottom = Math.round(centerY + radiusY);
-        float innerX = Math.max(0.0F, radiusX - thickness);
-        float innerY = Math.max(0.0F, radiusY - thickness);
-        for (int y = top; y <= bottom; y++) {
-            float dy = y + 0.5F - centerY;
-            float outerTerm = 1.0F - dy * dy / Math.max(1.0F, radiusY * radiusY);
-            if (outerTerm < 0.0F) continue;
-            float outer = radiusX * Mth.sqrt(outerTerm);
-            float inner = 0.0F;
-            if (innerX > 0.0F && innerY > 0.0F && Math.abs(dy) < innerY) {
-                inner = innerX * Mth.sqrt(Math.max(0.0F, 1.0F - dy * dy / (innerY * innerY)));
-            }
-            int leftOuter = Mth.floor(centerX - outer);
-            int rightOuter = Mth.ceil(centerX + outer);
-            int leftInner = Mth.floor(centerX - inner);
-            int rightInner = Mth.ceil(centerX + inner);
-            graphics.fill(leftOuter, y, Math.max(leftOuter + 1, leftInner), y + 1, color);
-            graphics.fill(Math.min(rightOuter - 1, rightInner), y, rightOuter, y + 1, color);
-        }
-    }
-
-    private void drawFilledEllipse(GuiGraphicsExtractor graphics, float centerX, float centerY,
-                                   float radiusX, float radiusY, int color) {
-        int top = Math.round(centerY - radiusY);
-        int bottom = Math.round(centerY + radiusY);
-        for (int y = top; y <= bottom; y++) {
-            float dy = y + 0.5F - centerY;
-            float term = 1.0F - dy * dy / Math.max(1.0F, radiusY * radiusY);
-            if (term < 0.0F) continue;
-            float extent = radiusX * Mth.sqrt(term);
-            graphics.fill(Mth.floor(centerX - extent), y, Mth.ceil(centerX + extent), y + 1, color);
-        }
     }
 
     private void drawItemInRect(GuiGraphicsExtractor graphics, net.minecraft.world.item.ItemStack stack, Rect rect) {
