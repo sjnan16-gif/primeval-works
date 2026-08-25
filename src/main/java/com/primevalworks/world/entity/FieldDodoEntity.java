@@ -21,7 +21,6 @@ import com.primevalworks.world.breeding.DinosaurBreeding;
 import com.primevalworks.registry.ModBlocks;
 import com.primevalworks.registry.ModItems;
 import com.primevalworks.registry.ModItemTags;
-import com.primevalworks.registry.ModSounds;
 import com.primevalworks.world.block.entity.FoodBoxBlockEntity;
 import com.primevalworks.world.block.entity.CommandTableBlockEntity;
 import com.primevalworks.world.block.entity.TurbineBlockEntity;
@@ -93,7 +92,6 @@ import net.minecraft.world.phys.Vec2;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -1038,22 +1036,21 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         }
         int restored = Math.max(4, Math.round(baseFoodValue / getSpecies().appetite()));
         feed(restored);
-        playDinosaurSound(ModSounds.forSpecies(getSpecies()).eat(), 0.72F);
     }
 
     @Override
     protected SoundEvent getAmbientSound() {
-        return ModSounds.forSpecies(getSpecies()).ambient();
+        return null;
     }
 
     @Override
     protected SoundEvent getHurtSound(DamageSource source) {
-        return ModSounds.forSpecies(getSpecies()).hurt();
+        return null;
     }
 
     @Override
     protected SoundEvent getDeathSound() {
-        return ModSounds.forSpecies(getSpecies()).death();
+        return null;
     }
 
     @Override
@@ -1217,9 +1214,14 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
 
     @Override
     protected void playStepSound(BlockPos pos, BlockState state) {
-        ModSounds.DinosaurSounds sounds = ModSounds.forSpecies(getSpecies());
-        SoundEvent event = isSprinting() ? sounds.runStep() : sounds.step();
-        playDinosaurSound(event, isSprinting() ? 0.34F : 0.22F);
+        if (!getSpecies().heavyweight() || isSilent() || level().isClientSide()) return;
+        boolean apex = getSpecies() == DinosaurSpecies.TYRANNOSAURUS
+                || getSpecies() == DinosaurSpecies.SPINOSAURUS;
+        SoundEvent sound = apex ? SoundEvents.RAVAGER_STEP : SoundEvents.SNIFFER_STEP;
+        float sizePitch = Mth.clamp(1.0F / Mth.sqrt(Math.max(0.65F, getGeneticScale())), 0.72F, 1.06F);
+        float volume = (apex ? 0.30F : 0.18F) * (isSprinting() ? 1.12F : 1.0F);
+        PrimevalSoundPlayback.playFromEntity(this, sound, getSoundSource(), volume, sizePitch,
+                apex ? PrimevalSoundPlayback.LARGE_RADIUS : PrimevalSoundPlayback.MACHINE_RADIUS);
     }
 
     @Override
@@ -1227,11 +1229,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         if (target instanceof Player && getDinosaurOwner().isPresent()) {
             target = null;
         }
-        LivingEntity previous = getTarget();
         super.setTarget(target);
-        if (target != null && target != previous && (previous == null || !previous.isAlive())) {
-            playDinosaurSound(ModSounds.forSpecies(getSpecies()).alert(), 0.9F);
-        }
     }
 
     @Override
@@ -1247,24 +1245,8 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         return hurt;
     }
 
-    private void playDinosaurSound(SoundEvent sound, float volumeMultiplier) {
-        if (!level().isClientSide() && !isSilent()) {
-            float sizePitch = Mth.clamp(1.08F / Mth.sqrt(Math.max(0.55F, getGeneticScale())), 0.72F, 1.22F);
-            float variation = 0.96F + random.nextFloat() * 0.08F;
-            PrimevalSoundPlayback.playFromEntity(this, sound, getSoundSource(),
-                    getSoundVolume() * volumeMultiplier, sizePitch * variation, dinosaurSoundRadius());
-        }
-    }
-
     @Override
     public void playSound(SoundEvent sound, float volume, float pitch) {
-        if (isSilent() || level().isClientSide()) return;
-        PrimevalSoundPlayback.playFromEntity(this, sound, getSoundSource(), volume, pitch, dinosaurSoundRadius());
-    }
-
-    private double dinosaurSoundRadius() {
-        return Mth.clamp(5.5D + getBbWidth() * 1.35D, PrimevalSoundPlayback.SMALL_RADIUS,
-                PrimevalSoundPlayback.LARGE_RADIUS);
     }
 
     @Override
@@ -2089,7 +2071,6 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         if (isDinosaurSleeping()) {
             if (!safeToStayAsleep) {
                 entityData.set(DINOSAUR_SLEEPING, false);
-                playDinosaurSound(ModSounds.forSpecies(getSpecies()).wake(), 0.72F);
             } else {
                 navigation.stop();
                 setDeltaMovement(Vec3.ZERO);
@@ -2097,7 +2078,6 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             }
         } else if (safeToStayAsleep && onGround() && hasSuitableSleepingArea() && random.nextInt(80) == 0) {
             entityData.set(DINOSAUR_SLEEPING, true);
-            playDinosaurSound(ModSounds.forSpecies(getSpecies()).sleep(), 0.68F);
             navigation.stop();
             setDeltaMovement(Vec3.ZERO);
             cancelWorkAction();
@@ -2578,7 +2558,6 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             entityData.set(WORK_ACTION, action);
             entityData.set(WORK_ACTION_PROGRESS, 0);
             entityData.set(WORK_ACTION_DURATION, duration);
-            playDinosaurSound(ModSounds.forSpecies(getSpecies()).work(), 0.46F);
         }
         if (workLockedPosition == null) {
             workLockedPosition = position();
@@ -3369,7 +3348,6 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         if (ate) {
             foodBox.setChanged();
             showIndicator(5, 40);
-            playDinosaurSound(ModSounds.forSpecies(getSpecies()).eat(), 0.72F);
             workerCooldown = workJobIndex == 2 ? 0 : 20;
         }
         foodTargetPos = null;
@@ -3635,7 +3613,6 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         pendingAttackContactTick = level().getGameTime()
                 + (spinosaurus ? SPINO_DAMAGE_DELAY_TICKS : T_REX_DAMAGE_DELAY_TICKS);
         entityData.set(ATTACK_ANIMATION_TICKS, spinosaurus ? 14 : 16);
-        playDinosaurSound(ModSounds.forSpecies(getSpecies()).attack(), 0.92F);
         return true;
     }
 
@@ -3660,7 +3637,6 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         faceMountedAttackAim();
         spinosaurusMountedAttackCooldown = SPINO_MOUNTED_ATTACK_COOLDOWN_TICKS;
         entityData.set(ATTACK_ANIMATION_TICKS, 14);
-        playDinosaurSound(ModSounds.forSpecies(getSpecies()).attack(), 0.92F);
 
         Vec3 attackOrigin = position().add(0.0D, getBbHeight() * 0.68D, 0.0D);
         Vec3 aim = Vec3.directionFromRotation(spinosaurusMountedAimPitch, spinosaurusMountedAimYaw).normalize();
@@ -3755,11 +3731,6 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             if (!level().isClientSide()) {
                 entityData.set(ORIGINAL_PIGMENT_RESTORED, true);
                 held.consume(1, player);
-                if (level() instanceof ServerLevel serverLevel) {
-                    PrimevalSoundPlayback.playAt(serverLevel, blockPosition(), SoundEvents.AMETHYST_BLOCK_RESONATE,
-                            SoundSource.NEUTRAL, 0.8F, 0.88F + random.nextFloat() * 0.12F,
-                            dinosaurSoundRadius());
-                }
                 if (level() instanceof ServerLevel serverLevel) {
                     serverLevel.sendParticles(ParticleTypes.POOF, getX(), getY() + getBbHeight() * 0.62D, getZ(),
                             14, getBbWidth() * 0.24D, getBbHeight() * 0.16D, getBbWidth() * 0.24D, 0.015D);
@@ -4930,7 +4901,6 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                     && getSensing().hasLineOfSight(target)) {
                 attackCooldownTicks = adjustedTickDelay(20);
                 swing(InteractionHand.MAIN_HAND);
-                playDinosaurSound(ModSounds.forSpecies(getSpecies()).attack(), 0.82F);
                 doHurtTarget(getServerLevel(FieldDodoEntity.this), target);
             }
         }

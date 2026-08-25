@@ -4,7 +4,6 @@ import com.primevalworks.registry.ModBlockEntities;
 import com.primevalworks.registry.ModEntities;
 import com.primevalworks.registry.ModItems;
 import com.primevalworks.world.base.BaseEnergyRules;
-import com.primevalworks.world.sound.PrimevalSoundPlayback;
 import com.primevalworks.world.entity.DartProjectileEntity;
 import com.primevalworks.world.inventory.DartTurretMenu;
 import net.minecraft.core.BlockPos;
@@ -16,8 +15,6 @@ import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Enemy;
@@ -95,8 +92,6 @@ public final class DartTurretBlockEntity extends BaseContainerBlockEntity implem
         Vec3 aim = target.getEyePosition().subtract(origin);
         dart.shoot(aim.x, aim.y, aim.z, PROJECTILE_SPEED, PROJECTILE_INACCURACY);
         level.addFreshEntity(dart);
-        PrimevalSoundPlayback.playAt(level, pos, SoundEvents.DISPENSER_LAUNCH, SoundSource.BLOCKS,
-                0.62F, 1.24F, PrimevalSoundPlayback.LARGE_RADIUS);
         turret.cooldown = FIRE_INTERVAL_TICKS;
         turret.setChanged();
     }

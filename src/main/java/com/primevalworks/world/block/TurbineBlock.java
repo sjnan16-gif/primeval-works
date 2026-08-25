@@ -1,16 +1,11 @@
 package com.primevalworks.world.block;
 
-import com.primevalworks.world.sound.PrimevalSoundPlayback;
-
 import com.mojang.serialization.MapCodec;
 import com.primevalworks.registry.ModBlocks;
 import com.primevalworks.world.block.entity.TurbineBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -111,26 +106,6 @@ public final class TurbineBlock extends BaseEntityBlock {
 
     public static InteractionResult useAt(Level level, BlockPos masterPos, Player player) {
         return InteractionResult.PASS;
-    }
-
-    @Override
-    public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
-        if (random.nextFloat() > 0.16F
-                || !(level.getBlockEntity(pos) instanceof TurbineBlockEntity turbine)
-                || !turbine.hasValidEnvironment()) {
-            return;
-        }
-        boolean water = state.is(ModBlocks.WATER_TURBINE.get());
-        PrimevalSoundPlayback.playLocalAt(level,
-                pos.getX() + 0.5D,
-                pos.getY() + (water ? 0.5D : 1.8D),
-                pos.getZ() + 0.5D,
-                water ? SoundEvents.BUBBLE_COLUMN_WHIRLPOOL_AMBIENT : SoundEvents.ELYTRA_FLYING,
-                SoundSource.BLOCKS,
-                water ? 0.18F : 0.13F,
-                water ? 0.82F : 0.68F + random.nextFloat() * 0.08F,
-                PrimevalSoundPlayback.MACHINE_RADIUS
-        );
     }
 
     @Override

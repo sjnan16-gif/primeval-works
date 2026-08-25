@@ -109,6 +109,8 @@ public final class PrimevalGameTests {
             TEST_FUNCTIONS.register("command_table_uses_one_block", () -> PrimevalGameTests::commandTableUsesOneBlock);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> STORE_ALL_RETURNS_ACTIVE_DINOSAURS =
             TEST_FUNCTIONS.register("store_all_returns_active_dinosaurs", () -> PrimevalGameTests::storeAllReturnsActiveDinosaurs);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> INDIVIDUAL_DINOSAUR_RECALL =
+            TEST_FUNCTIONS.register("individual_dinosaur_recall", () -> PrimevalGameTests::individualDinosaurRecall);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> PTERANODON_SADDLE_MOUNTS =
             TEST_FUNCTIONS.register("pteranodon_saddle_mounts", () -> PrimevalGameTests::pteranodonSaddleMounts);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> DEFEATED_DINOSAUR_RETURNS_TO_DEPOT =
@@ -252,6 +254,10 @@ public final class PrimevalGameTests {
         event.registerTest(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "store_all_returns_active_dinosaurs"),
                 new FunctionGameTestInstance(STORE_ALL_RETURNS_ACTIVE_DINOSAURS.getKey(), isolatedTestData(event, "store_all"))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "individual_dinosaur_recall"),
+                new FunctionGameTestInstance(INDIVIDUAL_DINOSAUR_RECALL.getKey(), isolatedTestData(event, "single_recall"))
         );
         event.registerTest(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "pteranodon_saddle_mounts"),
@@ -1645,6 +1651,51 @@ public final class PrimevalGameTests {
                 "Store All erased the dinosaur's assigned specialty");
         helper.assertTrue(stored.snapshot().getIntOr("PrimevalDinosaurExperience", -1) == 17,
                 "Store All erased level progress");
+        helper.succeed();
+    }
+
+    private static void individualDinosaurRecall(GameTestHelper helper) {
+        BlockPos tableRelative = new BlockPos(2, 1, 2);
+        for (int x = 0; x <= 10; x++) for (int z = 0; z <= 8; z++) {
+            helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+        }
+        helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
+        player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
+        BlockPos table = helper.absolutePos(tableRelative);
+        CommandTableBlock.claimExisting(player, table);
+
+        FieldDodoEntity recalled = helper.spawn(ModEntities.FIELD_DODO.get(), new BlockPos(8, 1, 6));
+        FieldDodoEntity untouched = helper.spawn(ModEntities.FIELD_DODO.get(), new BlockPos(9, 1, 6));
+        helper.assertTrue(DinosaurOwnership.addToActiveIfRoom(player, recalled, table)
+                        && DinosaurOwnership.addToActiveIfRoom(player, untouched, table),
+                "The individual recall test could not create a two-dinosaur active crew");
+        BlockPos workstation = table.offset(3, 0, 2);
+        recalled.assignWork(
+                3, table, List.of(), List.of(workstation), List.of(), null, List.of(),
+                List.of("minecraft:torch"), List.of(), Map.of(workstation, 2),
+                0, 3, 8, 0, 0, 0, 0, 1, true, true
+        );
+        UUID recalledId = recalled.getUUID();
+        UUID untouchedId = untouched.getUUID();
+        Vec3 untouchedPosition = untouched.position();
+
+        DinosaurOwnership.SwapResult result = DinosaurOwnership.recallActive(player, table, recalledId);
+        Vec3 expected = new Vec3(table.getX() + 2.5D, table.getY() + 1.0D, table.getZ() + 0.5D);
+        helper.assertTrue(result.success(), "Individual recall was rejected: " + result.message());
+        helper.assertTrue(recalled.position().distanceToSqr(expected) < 0.01D,
+                "Individual recall did not move the chosen dinosaur to its Command Table slot");
+        helper.assertTrue(untouched.position().distanceToSqr(untouchedPosition) < 0.01D,
+                "Individual recall moved a different active dinosaur");
+        helper.assertTrue(DinosaurOwnership.activeIds(player).equals(List.of(recalledId, untouchedId)),
+                "Individual recall changed active crew membership or ordering");
+        helper.assertTrue(recalled.isWorkEnabled() && recalled.getWorkJobIndex() == 3
+                        && recalled.getWorkWorkstationPositions().equals(List.of(workstation)),
+                "Individual recall erased the chosen dinosaur's automation order");
+        recalled.discard();
+        untouched.discard();
+        player.discard();
         helper.succeed();
     }
 

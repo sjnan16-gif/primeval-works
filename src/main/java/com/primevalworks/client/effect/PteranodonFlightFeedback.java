@@ -29,6 +29,7 @@ public final class PteranodonFlightFeedback {
     private static long lastHudNanos;
     private static int lastSpinosaurusSprintEntity = -1;
     private static boolean lastSpinosaurusSprintState;
+    private static PteranodonFlightSoundInstance flightSound;
 
     private PteranodonFlightFeedback() {
     }
@@ -39,6 +40,12 @@ public final class PteranodonFlightFeedback {
         if (mount != null) {
             if (mount.getSpecies() == DinosaurSpecies.PTERANODON) {
                 mount.setPteranodonClientDescendInput(minecraft.options.keySprint.isDown());
+                if (mount.isPteranodonAirborne()
+                        && minecraft.player instanceof net.minecraft.client.player.LocalPlayer localPlayer
+                        && (flightSound == null || flightSound.isStopped())) {
+                    flightSound = new PteranodonFlightSoundInstance(localPlayer, mount);
+                    minecraft.getSoundManager().play(flightSound);
+                }
             } else if (mount.getSpecies() == DinosaurSpecies.SPINOSAURUS) {
                 mount.setSpinosaurusClientDescendInput(minecraft.options.keySprint.isDown());
                 boolean landSprint = !mount.isInWater()

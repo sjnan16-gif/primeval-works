@@ -1,14 +1,10 @@
 package com.primevalworks.world.block;
 
-import com.primevalworks.world.sound.PrimevalSoundPlayback;
-
 import com.mojang.serialization.MapCodec;
 import com.primevalworks.registry.ModBlockEntities;
 import com.primevalworks.world.block.entity.ProcessorBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Containers;
@@ -92,9 +88,6 @@ public final class ProcessorBlock extends BaseEntityBlock {
                     x + (random.nextDouble() - 0.5D) * 0.25D, y,
                     z + (random.nextDouble() - 0.5D) * 0.25D,
                     0.0D, 0.025D, 0.0D);
-            PrimevalSoundPlayback.playLocalAt(level, x, y, z, SoundEvents.BLASTFURNACE_FIRE_CRACKLE,
-                    SoundSource.BLOCKS, 0.26F, 0.78F + random.nextFloat() * 0.12F,
-                    PrimevalSoundPlayback.MACHINE_RADIUS);
         }
     }
 

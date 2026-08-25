@@ -366,26 +366,51 @@ public final class DinosaurOwnership {
     }
 
     public static int recallActive(ServerPlayer player, BlockPos tablePos) {
-        List<OwnedDinosaur> records = new ArrayList<>(refresh(player));
         List<UUID> active = new ArrayList<>(activeIds(player));
         int recalled = 0;
-        for (int slot = 0; slot < active.size(); slot++) {
-            OwnedDinosaur record = find(records, active.get(slot)).orElse(null);
-            if (record == null || record.recoveryUntilTick() > player.level().getGameTime()) continue;
-            FieldDodoEntity dinosaur = findOrLoad(player.level().getServer(), record);
-            if (dinosaur == null) dinosaur = spawn(player.level(), record, slotPosition(tablePos, slot));
-            if (dinosaur == null) continue;
-            dinosaur.setDinosaurOwner(player.getUUID());
-            dinosaur.linkToCommandTable(tablePos);
-            if (!dinosaur.isOnExpedition()) {
-                dinosaur.getNavigation().stop();
-                dinosaur.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
-                moveToSlot(dinosaur, tablePos, slot);
-                recalled++;
-            }
+        for (UUID dinosaurId : active) {
+            if (recallActive(player, tablePos, dinosaurId).success()) recalled++;
         }
-        writeRecords(player.getPersistentData(), records);
         return recalled;
+    }
+
+    public static SwapResult recallActive(ServerPlayer player, BlockPos tablePos, UUID dinosaurId) {
+        List<UUID> active = new ArrayList<>(activeIds(player));
+        int slot = active.indexOf(dinosaurId);
+        if (slot < 0) return new SwapResult(false, "That dinosaur is not part of the active crew.");
+
+        List<OwnedDinosaur> records = new ArrayList<>(refresh(player));
+        OwnedDinosaur record = find(records, dinosaurId).orElse(null);
+        if (record == null) return new SwapResult(false, "That companion is no longer available.");
+        long now = player.level().getGameTime();
+        if (record.recoveryUntilTick() > now) {
+            return new SwapResult(false, record.name() + " is still recovering.");
+        }
+        if (record.isOnExpedition(now)) {
+            return new SwapResult(false, record.name() + " cannot return before the expedition ends.");
+        }
+
+        FieldDodoEntity dinosaur = findOrLoad(player.level().getServer(), record);
+        if (dinosaur != null && dinosaur.level() != player.level()) {
+            upsert(records, capture(dinosaur));
+            record = find(records, dinosaurId).orElse(record);
+            dinosaur.discard();
+            dinosaur = null;
+        }
+        if (dinosaur == null) dinosaur = spawn(player.level(), record, slotPosition(tablePos, slot));
+        if (dinosaur == null) return new SwapResult(false, "There is no safe room beside the Command Table.");
+        if (dinosaur.isOnExpedition()) {
+            return new SwapResult(false, dinosaur.getDisplayName().getString()
+                    + " cannot return before the expedition ends.");
+        }
+
+        dinosaur.setDinosaurOwner(player.getUUID());
+        dinosaur.linkToCommandTable(tablePos);
+        dinosaur.getNavigation().stop();
+        moveToSlot(dinosaur, tablePos, slot);
+        upsert(records, capture(dinosaur));
+        writeRecords(player.getPersistentData(), records);
+        return new SwapResult(true, dinosaur.getDisplayName().getString() + " returned to the Command Table.");
     }
 
     public static int activeLimit(ServerPlayer player, BlockPos tablePos) {

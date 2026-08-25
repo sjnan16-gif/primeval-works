@@ -13,6 +13,7 @@ import com.primevalworks.network.payload.RequestBaseUpgradesPayload;
 import com.primevalworks.network.payload.CommandTableActionPayload;
 import com.primevalworks.network.payload.DinosaurRosterPayload;
 import com.primevalworks.network.payload.SwapActiveDinosaurPayload;
+import com.primevalworks.network.payload.RecallDinosaurPayload;
 import com.primevalworks.network.payload.BaseEnergyPayload;
 import com.primevalworks.network.payload.RequestBaseEnergyPayload;
 import com.primevalworks.network.payload.ToggleBaseEnergyConsumerPayload;
@@ -110,6 +111,11 @@ public final class ModNetworking {
                 SwapActiveDinosaurPayload.TYPE,
                 SwapActiveDinosaurPayload.STREAM_CODEC,
                 SwapActiveDinosaurPayload::handle
+        );
+        event.registrar("1").playToServer(
+                RecallDinosaurPayload.TYPE,
+                RecallDinosaurPayload.STREAM_CODEC,
+                RecallDinosaurPayload::handle
         );
         event.registrar("1").playToServer(
                 RequestBaseEnergyPayload.TYPE,

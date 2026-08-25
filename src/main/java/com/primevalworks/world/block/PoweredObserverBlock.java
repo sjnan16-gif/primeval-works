@@ -1,14 +1,11 @@
 package com.primevalworks.world.block;
 
 import com.primevalworks.world.base.BaseEnergyRules;
-import com.primevalworks.world.sound.PrimevalSoundPlayback;
 import com.primevalworks.world.block.entity.LaserObserverBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -50,8 +47,6 @@ public final class PoweredObserverBlock extends ObserverBlock implements EntityB
             if (onBeam && !observer.getValue(POWERED)
                     && !level.getBlockTicks().hasScheduledTick(observerPos, observer.getBlock())) {
                 level.scheduleTick(observerPos, observer.getBlock(), 2);
-                PrimevalSoundPlayback.playAt(level, observerPos, SoundEvents.COPPER_BULB_TURN_ON,
-                        SoundSource.BLOCKS, 0.28F, 1.65F, PrimevalSoundPlayback.MACHINE_RADIUS);
             }
         }
     }

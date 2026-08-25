@@ -1,7 +1,6 @@
 package com.primevalworks.world.block.entity;
 
 import com.primevalworks.registry.ModBlockEntities;
-import com.primevalworks.registry.ModSounds;
 import com.primevalworks.world.block.CommandTableBlock;
 import com.primevalworks.world.egg.DinosaurEggSize;
 import com.primevalworks.world.egg.DinosaurHatching;
@@ -10,7 +9,6 @@ import com.primevalworks.world.entity.DinosaurSpecies;
 import com.primevalworks.world.entity.FieldDodoEntity;
 import com.primevalworks.world.entity.DinosaurMutationRules;
 import com.primevalworks.world.base.BaseEnergyRules;
-import com.primevalworks.world.sound.PrimevalSoundPlayback;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.particles.ParticleTypes;
@@ -21,7 +19,6 @@ import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
@@ -94,8 +91,6 @@ public final class PremiumEggIncubatorBlockEntity extends BlockEntity implements
                 pos.getX() + 0.5D, pos.getY() + 1.2D, pos.getZ() + 0.5D,
                 18, 0.34D, 0.28D, 0.34D, 0.025D
         );
-        PrimevalSoundPlayback.playAt(serverLevel, pos, ModSounds.INCUBATOR_HATCH, SoundSource.BLOCKS,
-                1.0F, 0.9F, PrimevalSoundPlayback.MACHINE_RADIUS);
     }
 
     public InsertResult insertEgg(ServerPlayer player, ItemStack heldStack) {
@@ -147,10 +142,6 @@ public final class PremiumEggIncubatorBlockEntity extends BlockEntity implements
         owner = player.getUUID();
         commandTablePos = table.pos();
         sync();
-        if (level instanceof ServerLevel serverLevel) {
-            PrimevalSoundPlayback.playAt(serverLevel, worldPosition, ModSounds.INCUBATOR_START,
-                    SoundSource.BLOCKS, 0.8F, 1.0F, PrimevalSoundPlayback.MACHINE_RADIUS);
-        }
         return InsertResult.success(Component.translatable(
                 "message.primevalworks.incubator.started",
                 Component.translatable(size.translationKey())

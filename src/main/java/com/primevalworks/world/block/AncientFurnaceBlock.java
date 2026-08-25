@@ -1,15 +1,11 @@
 package com.primevalworks.world.block;
 
-import com.primevalworks.world.sound.PrimevalSoundPlayback;
-
 import com.mojang.serialization.MapCodec;
 import com.primevalworks.registry.ModBlockEntities;
 import com.primevalworks.world.block.entity.AncientFurnaceBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Player;
@@ -73,10 +69,5 @@ public final class AncientFurnaceBlock extends AbstractFurnaceBlock {
         double dx = facing.getAxis() == Direction.Axis.X ? facing.getStepX() * 0.52D : side;
         double dz = facing.getAxis() == Direction.Axis.Z ? facing.getStepZ() * 0.52D : side;
         level.addParticle(ParticleTypes.SMOKE, x + dx, y, z + dz, 0.0D, 0.0D, 0.0D);
-        if (random.nextDouble() < 0.18D) {
-            PrimevalSoundPlayback.playLocalAt(level, x, y, z, SoundEvents.BLASTFURNACE_FIRE_CRACKLE,
-                    SoundSource.BLOCKS, 0.52F, 0.92F + random.nextFloat() * 0.12F,
-                    PrimevalSoundPlayback.MACHINE_RADIUS);
-        }
     }
 }

@@ -2,7 +2,6 @@ package com.primevalworks.world.block.entity;
 
 import com.primevalworks.registry.ModBlockEntities;
 import com.primevalworks.world.base.BaseEnergyRules;
-import com.primevalworks.world.sound.PrimevalSoundPlayback;
 import com.primevalworks.world.damage.PrimevalDamageTypes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -13,8 +12,6 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Enemy;
@@ -77,7 +74,7 @@ public final class MagicTurretBlockEntity extends BlockEntity implements Targeti
                 turret.burstStep--;
                 return;
             }
-            turret.strike(level, pos, target, false);
+            turret.strike(level, pos, target);
             return;
         }
         if (turret.cooldown > 0) {
@@ -87,17 +84,13 @@ public final class MagicTurretBlockEntity extends BlockEntity implements Targeti
 
         turret.burstHitsRemaining = BURST_HITS;
         turret.burstTarget = target.getUUID();
-        turret.strike(level, pos, target, true);
+        turret.strike(level, pos, target);
     }
 
-    private void strike(ServerLevel level, BlockPos pos, LivingEntity target, boolean openingHit) {
+    private void strike(ServerLevel level, BlockPos pos, LivingEntity target) {
         Vec3 pivot = Vec3.atCenterOf(pos).add(0.0D, PIVOT_HEIGHT - 0.5D, 0.0D);
         target.hurtServer(level, PrimevalDamageTypes.magicTurret(level, pivot), DAMAGE_PER_HIT);
         releaseSpellBurst(level, pos, target);
-        if (openingHit) {
-            PrimevalSoundPlayback.playAt(level, pos, SoundEvents.EVOKER_CAST_SPELL,
-                    SoundSource.BLOCKS, 0.85F, 1.22F, PrimevalSoundPlayback.LARGE_RADIUS);
-        }
         burstHitsRemaining--;
         if (burstHitsRemaining > 0 && target.isAlive()) {
             burstStep = BURST_STEP_TICKS - 1;

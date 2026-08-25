@@ -12,6 +12,7 @@ import com.primevalworks.network.payload.DinosaurRosterPayload;
 import com.primevalworks.network.payload.PurchaseBaseUpgradePayload;
 import com.primevalworks.network.payload.RequestBaseUpgradesPayload;
 import com.primevalworks.network.payload.RequestBaseEnergyPayload;
+import com.primevalworks.network.payload.RecallDinosaurPayload;
 import com.primevalworks.network.payload.SwapActiveDinosaurPayload;
 import com.primevalworks.registry.ModBlocks;
 import com.primevalworks.registry.ModEntities;
@@ -164,6 +165,8 @@ public final class CommandTableScreen extends Screen {
     private float draggedVelocityY;
     private float draggedYaw;
     private float draggedPitch;
+    private UUID recallMenuDinosaur;
+    private long recallMenuOpenedNanos;
     private boolean draggingTree;
     private long openedNanos = Util.getNanos();
     private long lastRenderNanos = openedNanos;
@@ -222,6 +225,10 @@ public final class CommandTableScreen extends Screen {
             else active.depotEntries.add(entry);
         }
         active.previewDinos.keySet().removeIf(id -> !incomingIds.contains(id));
+        if (active.recallMenuDinosaur != null
+                && active.activeEntries.stream().noneMatch(entry -> entry.id().equals(active.recallMenuDinosaur))) {
+            active.recallMenuDinosaur = null;
+        }
         active.rebuildActiveDinos();
         active.activePage = Math.min(active.activePage, active.activePageCount() - 1);
         active.clampDepotPage();
@@ -335,6 +342,7 @@ public final class CommandTableScreen extends Screen {
         if (depotProgress > 0.015F) {
             drawDepot(graphics, layout, motion, screenMouseX, screenMouseY, mouseX, mouseY, time);
         }
+        drawRecallMenu(graphics, layout, mouseX, mouseY, time);
     }
 
     private void drawTreeBackdrop(GuiGraphicsExtractor graphics, Rect viewport, int mouseX, int mouseY, float time) {
@@ -367,12 +375,14 @@ public final class CommandTableScreen extends Screen {
             boolean populated = entry != null && dinosaur != null;
             boolean expedition = entry != null && entry.onExpedition();
             boolean hovered = slot.contains(mouseX, mouseY);
+            boolean recallSelected = entry != null && entry.id().equals(recallMenuDinosaur);
             if (hovered && populated) focusedDinosaur = rosterIndex;
             float dwell = hoverAmount(dinosaurDwells, rosterIndex, hovered);
             float wobble = hovered ? dwell * Mth.sin(time * 12.0F + index * 0.7F) : 0.0F;
             if ((draggedDinosaur != null || hovered) && !locked) {
                 drawSlotEdgeGlow(graphics, slot, time, hovered ? 1.0F : 0.35F);
             }
+            if (recallSelected) drawSlotEdgeGlow(graphics, inset(slot, 1), time, 0.82F);
             FloatRect authoredPreview = globalSmooth(layout, ACTIVE_PREVIEWS[index]);
             if (!populated) {
                 int centerX = slot.centerX();
@@ -485,6 +495,50 @@ public final class CommandTableScreen extends Screen {
         Rect badge = new Rect(slot.centerX() - width / 2, slot.y - height - 2, width, height);
         blit(graphics, SPACE, badge);
         centeredBold(graphics, "LEVEL " + level, inset(badge, 2), GOLD, 0.66F);
+    }
+
+    private void drawRecallMenu(GuiGraphicsExtractor graphics, Layout layout, int mouseX, int mouseY, float time) {
+        DinosaurRosterPayload.Entry entry = recallMenuEntry();
+        Rect button = recallMenuButton(layout);
+        if (entry == null || button == null) return;
+        float progress = Mth.clamp((renderNowNanos - recallMenuOpenedNanos) / 220_000_000.0F, 0.0F, 1.0F);
+        float pop = 0.78F + spring(progress, 7.4F, 11.8F) * 0.22F;
+        boolean hovered = button.contains(mouseX, mouseY);
+        withMotion(graphics, button, 0.0F, (1.0F - progress) * 2.0F, pop, () -> {
+            graphics.fill(button.x + 2, button.y + 3, button.right() + 2, button.bottom() + 3, 0x62000000);
+            blit(graphics, SPACE, button);
+            if (hovered) {
+                graphics.fill(button.x + 2, button.y + 2, button.right() - 2, button.bottom() - 2, 0x30FFF0B3);
+                drawSlotEdgeGlow(graphics, button, time, 0.72F);
+            }
+            thickButtonText(graphics, "CALL BACK", inset(button, 3), hovered ? GOLD : INK);
+        });
+        if (hovered) {
+            graphics.requestCursor(CursorTypes.POINTING_HAND);
+            graphics.setTooltipForNextFrame(Component.literal(
+                    "Bring " + entry.name() + " back to the Command Table."), mouseX, mouseY);
+        }
+    }
+
+    private DinosaurRosterPayload.Entry recallMenuEntry() {
+        if (recallMenuDinosaur == null) return null;
+        return activeEntries.stream()
+                .filter(entry -> entry.id().equals(recallMenuDinosaur))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private Rect recallMenuButton(Layout layout) {
+        DinosaurRosterPayload.Entry entry = recallMenuEntry();
+        if (entry == null) return null;
+        int rosterIndex = activeEntries.indexOf(entry);
+        int visibleIndex = rosterIndex - activePage * ACTIVE_PAGE_SIZE;
+        if (visibleIndex < 0 || visibleIndex >= ACTIVE_PAGE_SIZE) return null;
+        Rect slot = global(layout, dinosaurSlot(visibleIndex));
+        int width = Math.max(48, Math.round(52 * layout.scale));
+        int height = Math.max(12, Math.round(14 * layout.scale));
+        int x = Mth.clamp(slot.centerX() - width / 2, layout.panel.x + 2, layout.panel.right() - width - 2);
+        return new Rect(x, slot.y - height - Math.max(2, Math.round(2 * layout.scale)), width, height);
     }
 
     private void drawDepot(GuiGraphicsExtractor graphics, Layout layout, UiMotion motion,
@@ -840,12 +894,27 @@ public final class CommandTableScreen extends Screen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        if (event.button() != 0) return super.mouseClicked(event, doubleClick);
-        PrimevalUiSounds.click();
+        if (event.button() != 0 && event.button() != 1) return super.mouseClicked(event, doubleClick);
         Layout layout = layout();
         UiMotion motion = currentMotion(layout);
         double uiMouseX = motion.inverseX((float)event.x());
         double uiMouseY = motion.inverseY((float)event.y());
+        if (event.button() == 1) {
+            return openRecallMenuAt(layout, uiMouseX, uiMouseY)
+                    || super.mouseClicked(event, doubleClick);
+        }
+        PrimevalUiSounds.click();
+        Rect recallButton = recallMenuButton(layout);
+        if (recallButton != null && recallButton.contains(uiMouseX, uiMouseY)) {
+            DinosaurRosterPayload.Entry entry = recallMenuEntry();
+            if (entry != null) {
+                ClientPacketDistributor.sendToServer(new RecallDinosaurPayload(tablePos, entry.id()));
+                notice = "Calling " + entry.name() + " back to the Command Table...";
+            }
+            recallMenuDinosaur = null;
+            return true;
+        }
+        recallMenuDinosaur = null;
         Rect rosterPage = global(layout, ROSTER_PAGE);
         if (rosterPage.contains(uiMouseX, uiMouseY)) {
             if (activePageCount() > 1) activePage = (activePage + 1) % activePageCount();
@@ -925,6 +994,33 @@ public final class CommandTableScreen extends Screen {
             return true;
         }
         return super.mouseClicked(event, doubleClick);
+    }
+
+    private boolean openRecallMenuAt(Layout layout, double mouseX, double mouseY) {
+        int pageStart = activePage * ACTIVE_PAGE_SIZE;
+        for (int index = 0; index < ACTIVE_PAGE_SIZE; index++) {
+            int rosterIndex = pageStart + index;
+            if (rosterIndex >= activeEntries.size()
+                    || !global(layout, dinosaurSlot(index)).contains(mouseX, mouseY)) continue;
+            DinosaurRosterPayload.Entry entry = activeEntries.get(rosterIndex);
+            if (entry.onExpedition()) {
+                PrimevalUiSounds.denied();
+                recallMenuDinosaur = null;
+                notice = expeditionStatus(entry);
+                return true;
+            }
+            PrimevalUiSounds.click(0.90F);
+            recallMenuDinosaur = entry.id();
+            recallMenuOpenedNanos = Util.getNanos();
+            notice = "Call back " + entry.name() + " without moving the rest of the crew.";
+            return true;
+        }
+        if (recallMenuDinosaur != null) {
+            recallMenuDinosaur = null;
+            PrimevalUiSounds.click(0.82F);
+            return true;
+        }
+        return false;
     }
 
     private void runAction(int action) {
@@ -1074,6 +1170,10 @@ public final class CommandTableScreen extends Screen {
 
     @Override
     public boolean keyPressed(KeyEvent event) {
+        if (event.key() == InputConstants.KEY_ESCAPE && recallMenuDinosaur != null) {
+            recallMenuDinosaur = null;
+            return true;
+        }
         if (event.key() == InputConstants.KEY_ESCAPE && depotOpen) {
             depotOpen = false;
             depotTransitionNanos = Util.getNanos();
