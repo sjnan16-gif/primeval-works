@@ -3,12 +3,12 @@
   "animations": {
     "spin": {
       "loop": true,
-      "animation_length": 1.8,
+      "animation_length": 2.2,
       "bones": {
         "rotor": {
           "rotation": {
             "0.0": {"post": {"vector": [0, 0, 0]}, "lerp_mode": "linear"},
-            "1.8": {"post": {"vector": [360, 0, 0]}, "lerp_mode": "linear"}
+            "2.2": {"post": {"vector": [0, 0, 360]}, "lerp_mode": "linear"}
           }
         }
       }

@@ -2,7 +2,6 @@ package com.primevalworks.client.render.block;
 
 import com.geckolib.renderer.GeoBlockRenderer;
 import com.geckolib.renderer.base.GeoRenderState;
-import com.geckolib.renderer.base.RenderPassInfo;
 import com.primevalworks.client.model.block.TurbineGeoModel;
 import com.primevalworks.registry.ModBlocks;
 import com.primevalworks.world.block.entity.TurbineBlockEntity;
@@ -26,12 +25,6 @@ public final class TurbineRenderer<R extends BlockEntityRenderState & GeoRenderS
     }
 
     @Override
-    public void scaleModelForRender(RenderPassInfo<R> renderPassInfo, float widthScale, float heightScale) {
-        boolean wind = renderPassInfo.getOrDefaultGeckolibData(TurbineGeoModel.WIND, false);
-        super.scaleModelForRender(renderPassInfo, widthScale, wind ? heightScale : heightScale * 2.0F);
-    }
-
-    @Override
     public AABB getRenderBoundingBox(TurbineBlockEntity turbine) {
         BlockPos pos = turbine.getBlockPos();
         Direction facing = turbine.getBlockState().getValue(com.primevalworks.world.block.TurbineBlock.FACING);
@@ -45,8 +38,8 @@ public final class TurbineRenderer<R extends BlockEntityRenderState & GeoRenderS
         }
         return widthRunsEastWest
                 ? new AABB(pos.getX() - 1.0D, pos.getY(), pos.getZ(),
-                        pos.getX() + 2.0D, pos.getY() + 2.0D, pos.getZ() + 1.0D)
+                        pos.getX() + 2.0D, pos.getY() + 3.0D, pos.getZ() + 1.0D)
                 : new AABB(pos.getX(), pos.getY(), pos.getZ() - 1.0D,
-                        pos.getX() + 1.0D, pos.getY() + 2.0D, pos.getZ() + 2.0D);
+                        pos.getX() + 1.0D, pos.getY() + 3.0D, pos.getZ() + 2.0D);
     }
 }

@@ -13,15 +13,22 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.ScheduledTickAccess;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.SimpleWaterloggedBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.material.Fluids;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
@@ -30,9 +37,10 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 
-public final class TurbineBlock extends BaseEntityBlock {
+public final class TurbineBlock extends BaseEntityBlock implements SimpleWaterloggedBlock {
     public static final MapCodec<TurbineBlock> CODEC = simpleCodec(TurbineBlock::new);
     public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
+    public static final BooleanProperty WATERLOGGED = BlockStateProperties.WATERLOGGED;
 
     private static final List<PartOffset> WIND_PARTS = List.of(
             new PartOffset(-1, 1), new PartOffset(0, 1), new PartOffset(1, 1),
@@ -41,7 +49,8 @@ public final class TurbineBlock extends BaseEntityBlock {
     );
     private static final List<PartOffset> WATER_PARTS = List.of(
             new PartOffset(-1, 0), new PartOffset(1, 0),
-            new PartOffset(-1, 1), new PartOffset(0, 1), new PartOffset(1, 1)
+            new PartOffset(-1, 1), new PartOffset(0, 1), new PartOffset(1, 1),
+            new PartOffset(-1, 2), new PartOffset(0, 2), new PartOffset(1, 2)
     );
     private static final VoxelShape WIND_BASE = Shapes.or(
             Block.box(2.0D, 0.0D, 2.0D, 14.0D, 3.0D, 14.0D),
@@ -50,7 +59,9 @@ public final class TurbineBlock extends BaseEntityBlock {
 
     public TurbineBlock(BlockBehaviour.Properties properties) {
         super(properties);
-        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
+        registerDefaultState(stateDefinition.any()
+                .setValue(FACING, Direction.NORTH)
+                .setValue(WATERLOGGED, false));
     }
 
     @Override
@@ -60,7 +71,10 @@ public final class TurbineBlock extends BaseEntityBlock {
 
     @Override
     public @Nullable BlockState getStateForPlacement(BlockPlaceContext context) {
-        BlockState state = defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+        BlockState state = defaultBlockState()
+                .setValue(FACING, context.getHorizontalDirection().getOpposite())
+                .setValue(WATERLOGGED, this == ModBlocks.WATER_TURBINE.get()
+                        && context.getLevel().getFluidState(context.getClickedPos()).is(Fluids.WATER));
         BlockPos masterPos = context.getClickedPos();
         for (PartOffset offset : parts(state)) {
             BlockPos partPos = partPos(masterPos, state, offset);
@@ -84,9 +98,11 @@ public final class TurbineBlock extends BaseEntityBlock {
         Direction facing = state.getValue(FACING);
         for (PartOffset offset : parts(state)) {
             BlockPos target = partPos(masterPos, state, offset);
+            boolean waterlogged = !wind && level.getFluidState(target).is(Fluids.WATER);
             BlockState partState = ModBlocks.TURBINE_PART.get().defaultBlockState()
                     .setValue(TurbinePartBlock.FACING, facing)
                     .setValue(TurbinePartBlock.WIND, wind)
+                    .setValue(TurbinePartBlock.WATERLOGGED, waterlogged)
                     .setValue(TurbinePartBlock.LOCAL_X, TurbinePartBlock.encodeLocalX(offset.x()))
                     .setValue(TurbinePartBlock.LOCAL_Y, offset.y());
             level.setBlock(target, partState, Block.UPDATE_ALL);
@@ -112,8 +128,11 @@ public final class TurbineBlock extends BaseEntityBlock {
     protected void affectNeighborsAfterRemoval(BlockState state, ServerLevel level, BlockPos pos, boolean movedByPiston) {
         for (PartOffset offset : parts(state)) {
             BlockPos partPos = partPos(pos, state, offset);
-            if (level.getBlockState(partPos).is(ModBlocks.TURBINE_PART.get())) {
-                level.setBlock(partPos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+            BlockState partState = level.getBlockState(partPos);
+            if (partState.is(ModBlocks.TURBINE_PART.get())) {
+                level.setBlock(partPos, partState.getValue(TurbinePartBlock.WATERLOGGED)
+                        ? Blocks.WATER.defaultBlockState()
+                        : Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
             }
         }
         super.affectNeighborsAfterRemoval(state, level, pos, movedByPiston);
@@ -133,8 +152,30 @@ public final class TurbineBlock extends BaseEntityBlock {
     }
 
     @Override
+    protected FluidState getFluidState(BlockState state) {
+        return state.getValue(WATERLOGGED) ? Fluids.WATER.getSource(false) : super.getFluidState(state);
+    }
+
+    @Override
+    protected BlockState updateShape(
+            BlockState state,
+            LevelReader level,
+            ScheduledTickAccess tickAccess,
+            BlockPos pos,
+            Direction direction,
+            BlockPos neighborPos,
+            BlockState neighborState,
+            RandomSource random
+    ) {
+        if (state.getValue(WATERLOGGED)) {
+            tickAccess.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
+        }
+        return super.updateShape(state, level, tickAccess, pos, direction, neighborPos, neighborState, random);
+    }
+
+    @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING);
+        builder.add(FACING, WATERLOGGED);
     }
 
     public static List<PartOffset> parts(BlockState state) {

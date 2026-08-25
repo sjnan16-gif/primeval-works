@@ -4944,9 +4944,9 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             double distance = horizontalDistanceTo(target);
             double idealDistance = getBbWidth() * 0.5D
                     + target.getBbWidth() * 0.5D
-                    + mouthReach * (spinosaurus ? 0.76D : 0.70D);
-            double closeDistance = idealDistance - (spinosaurus ? 1.12D : 0.82D);
-            double approachDistance = idealDistance + (spinosaurus ? 0.52D : 0.38D);
+                    + mouthReach * (spinosaurus ? 0.90D : 0.70D);
+            double closeDistance = idealDistance - (spinosaurus ? 0.68D : 0.82D);
+            double approachDistance = idealDistance + (spinosaurus ? 0.36D : 0.38D);
             float yawError = yawErrorTo(target);
             getLookControl().setLookAt(target, getSpecies().turnDegreesPerTick() * 1.25F, 20.0F);
             rejectWrongWayMomentum(target);
@@ -4974,8 +4974,12 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                 setYRot(Mth.approachDegrees(getYRot(), yawTo(target), getSpecies().turnDegreesPerTick()));
             }
 
+            boolean readyToCommit = spinosaurus
+                    ? distance <= getBbWidth() * 0.5D + target.getBbWidth() * 0.5D + mouthReach + 0.18D
+                            && Math.abs(yawError) <= 62.0F
+                    : isWithinMeleeAttackRange(target);
             if (attackCooldownTicks == 0
-                    && isWithinMeleeAttackRange(target)
+                    && readyToCommit
                     && getSensing().hasLineOfSight(target)
                     && beginLargePredatorAttack(target)) {
                 attackCooldownTicks = adjustedTickDelay(spinosaurus ? 25 : 22);
@@ -5335,7 +5339,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                     || getTarget() != null || getWorkAction() != 0
                     || commandTablePos != null && workEnabled && workJobIndex == 2
                     || commandTablePos != null && workEnabled && workerCooldown <= 10
-                    || random.nextInt(40) != 0) {
+                    || random.nextInt(30) != 0) {
                 return false;
             }
             for (int attempt = 0; attempt < 5; attempt++) {

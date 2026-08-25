@@ -16,6 +16,7 @@ import com.primevalworks.world.block.entity.MagicTurretBlockEntity;
 import com.primevalworks.world.block.CommandTableBlock;
 import com.primevalworks.world.block.PoweredObserverBlock;
 import com.primevalworks.world.block.TurbineBlock;
+import com.primevalworks.world.block.TurbinePartBlock;
 import com.primevalworks.world.base.BaseUpgrade;
 import com.primevalworks.world.base.BaseEnergyRules;
 import com.primevalworks.world.entity.DinosaurMutationRules;
@@ -52,6 +53,7 @@ import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
 import net.minecraft.world.level.block.piston.PistonBaseBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -1395,12 +1397,16 @@ public final class PrimevalGameTests {
         }
         helper.assertBlockPresent(Blocks.AIR, masterRelative.offset(0, 3, 0));
 
+        helper.setBlock(masterRelative.offset(-1, 0, 0), Blocks.WATER);
+        helper.setBlock(masterRelative, Blocks.WATER);
+        helper.setBlock(masterRelative.offset(1, 0, 0), Blocks.WATER);
         BlockState water = ModBlocks.WATER_TURBINE.get().defaultBlockState()
-                .setValue(TurbineBlock.FACING, Direction.NORTH);
+                .setValue(TurbineBlock.FACING, Direction.NORTH)
+                .setValue(TurbineBlock.WATERLOGGED, true);
         helper.setBlock(masterRelative, water);
         ((TurbineBlock) ModBlocks.WATER_TURBINE.get()).assemble(helper.getLevel(), masterAbsolute, water);
         for (int x = -1; x <= 1; x++) {
-            for (int y = 0; y <= 1; y++) {
+            for (int y = 0; y <= 2; y++) {
                 if (x == 0 && y == 0) {
                     continue;
                 }
@@ -1412,22 +1418,25 @@ public final class PrimevalGameTests {
             }
         }
         TurbineBlockEntity waterTurbine = helper.getBlockEntity(masterRelative, TurbineBlockEntity.class);
-        helper.assertTrue(!waterTurbine.hasValidEnvironment(),
-                "A Water Turbine generated while its rotor was not fully underwater");
-        for (BlockPos structurePos : TurbineBlock.structurePositions(masterAbsolute, water)) {
-            helper.getLevel().setBlock(structurePos.relative(Direction.NORTH),
-                    Blocks.WATER.defaultBlockState(), Block.UPDATE_ALL);
-            helper.getLevel().setBlock(structurePos.relative(Direction.SOUTH),
-                    Blocks.WATER.defaultBlockState(), Block.UPDATE_ALL);
-        }
         helper.assertTrue(waterTurbine.hasValidEnvironment(),
-                "A fully submerged Water Turbine did not begin generating");
+                "A Water Turbine with its bottom three cells waterlogged did not begin generating");
+        BlockPos dryBottomPart = masterRelative.offset(-1, 0, 0);
+        BlockState dryState = helper.getBlockState(dryBottomPart)
+                .setValue(TurbinePartBlock.WATERLOGGED, false);
+        helper.setBlock(dryBottomPart, dryState);
+        helper.assertTrue(!waterTurbine.hasValidEnvironment(),
+                "A Water Turbine generated while one of its three submerged cells was dry");
+        helper.setBlock(dryBottomPart, dryState.setValue(TurbinePartBlock.WATERLOGGED, true));
+        helper.assertTrue(waterTurbine.hasValidEnvironment(),
+                "Restoring the third waterlogged cell did not restore generation");
         helper.assertTrue(Math.abs(waterTurbine.generationMultiplier() - 1.5F) < 0.001F,
                 "Water Turbines must generate exactly 1.5x Wind Turbine output");
-        helper.setBlock(masterRelative.offset(1, 1, 0), Blocks.AIR);
-        helper.assertBlockPresent(Blocks.AIR, masterRelative);
+        helper.setBlock(masterRelative.offset(1, 0, 0), Blocks.AIR);
         for (int x = -1; x <= 1; x++) {
-            for (int y = 0; y <= 1; y++) {
+            helper.assertTrue(helper.getLevel().getFluidState(helper.absolutePos(masterRelative.offset(x, 0, 0)))
+                            .is(Fluids.WATER),
+                    "Breaking a waterlogged turbine must restore its submerged bottom row");
+            for (int y = 1; y <= 2; y++) {
                 helper.assertBlockPresent(Blocks.AIR, masterRelative.offset(x, y, 0));
             }
         }

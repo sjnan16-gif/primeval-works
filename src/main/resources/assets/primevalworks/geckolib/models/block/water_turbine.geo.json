@@ -6,29 +6,105 @@
         "identifier": "geometry.water_turbine",
         "texture_width": 64,
         "texture_height": 64,
-        "visible_bounds_width": 2.5,
-        "visible_bounds_height": 2.5,
-        "visible_bounds_offset": [0, 1, 0]
+        "visible_bounds_width": 3.2,
+        "visible_bounds_height": 3.2,
+        "visible_bounds_offset": [0, 1.5, 0]
       },
       "bones": [
         {
           "name": "root",
-          "pivot": [0, 8, 0],
+          "pivot": [0, 24, 0],
           "cubes": [
-            {"origin": [-16, 0, -6], "size": [32, 3, 12], "uv": [0, 0]},
-            {"origin": [-16, 13, -6], "size": [32, 3, 12], "uv": [0, 16]}
+            {"origin": [-5, 19, -11], "size": [10, 10, 22], "uv": [32, 32]},
+            {"origin": [-9, 15, -13], "size": [18, 18, 4], "uv": [0, 0]},
+            {"origin": [-9, 15, 9], "size": [18, 18, 4], "uv": [0, 0]}
           ]
         },
         {
           "name": "rotor",
           "parent": "root",
-          "pivot": [0, 8, 0],
+          "pivot": [0, 24, 0],
           "cubes": [
-            {"origin": [-16, 6, -2], "size": [32, 4, 4], "uv": [0, 32]},
-            {"origin": [-16, 1, -1.5], "size": [32, 3, 3], "uv": [0, 40]},
-            {"origin": [-16, 12, -1.5], "size": [32, 3, 3], "uv": [0, 46]},
-            {"origin": [-16, 6.5, -7], "size": [32, 3, 3], "uv": [0, 52]},
-            {"origin": [-16, 6.5, 4], "size": [32, 3, 3], "uv": [0, 58]}
+            {"origin": [-8, 16, -7], "size": [16, 16, 14], "uv": [32, 32]}
+          ]
+        },
+        {
+          "name": "blade_0",
+          "parent": "rotor",
+          "pivot": [0, 24, 0],
+          "cubes": [
+            {"origin": [-3, 26, -3], "size": [6, 13, 6], "uv": [0, 0]},
+            {"origin": [-8, 36, -5], "size": [16, 9, 10], "uv": [0, 16]}
+          ]
+        },
+        {
+          "name": "blade_1",
+          "parent": "rotor",
+          "pivot": [0, 24, 0],
+          "rotation": [0, 0, 45],
+          "cubes": [
+            {"origin": [-3, 26, -3], "size": [6, 13, 6], "uv": [0, 0]},
+            {"origin": [-8, 36, -5], "size": [16, 9, 10], "uv": [0, 16]}
+          ]
+        },
+        {
+          "name": "blade_2",
+          "parent": "rotor",
+          "pivot": [0, 24, 0],
+          "rotation": [0, 0, 90],
+          "cubes": [
+            {"origin": [-3, 26, -3], "size": [6, 13, 6], "uv": [0, 0]},
+            {"origin": [-8, 36, -5], "size": [16, 9, 10], "uv": [0, 16]}
+          ]
+        },
+        {
+          "name": "blade_3",
+          "parent": "rotor",
+          "pivot": [0, 24, 0],
+          "rotation": [0, 0, 135],
+          "cubes": [
+            {"origin": [-3, 26, -3], "size": [6, 13, 6], "uv": [0, 0]},
+            {"origin": [-8, 36, -5], "size": [16, 9, 10], "uv": [0, 16]}
+          ]
+        },
+        {
+          "name": "blade_4",
+          "parent": "rotor",
+          "pivot": [0, 24, 0],
+          "rotation": [0, 0, 180],
+          "cubes": [
+            {"origin": [-3, 26, -3], "size": [6, 13, 6], "uv": [0, 0]},
+            {"origin": [-8, 36, -5], "size": [16, 9, 10], "uv": [0, 16]}
+          ]
+        },
+        {
+          "name": "blade_5",
+          "parent": "rotor",
+          "pivot": [0, 24, 0],
+          "rotation": [0, 0, 225],
+          "cubes": [
+            {"origin": [-3, 26, -3], "size": [6, 13, 6], "uv": [0, 0]},
+            {"origin": [-8, 36, -5], "size": [16, 9, 10], "uv": [0, 16]}
+          ]
+        },
+        {
+          "name": "blade_6",
+          "parent": "rotor",
+          "pivot": [0, 24, 0],
+          "rotation": [0, 0, 270],
+          "cubes": [
+            {"origin": [-3, 26, -3], "size": [6, 13, 6], "uv": [0, 0]},
+            {"origin": [-8, 36, -5], "size": [16, 9, 10], "uv": [0, 16]}
+          ]
+        },
+        {
+          "name": "blade_7",
+          "parent": "rotor",
+          "pivot": [0, 24, 0],
+          "rotation": [0, 0, 315],
+          "cubes": [
+            {"origin": [-3, 26, -3], "size": [6, 13, 6], "uv": [0, 0]},
+            {"origin": [-8, 36, -5], "size": [16, 9, 10], "uv": [0, 16]}
           ]
         }
       ]

@@ -286,7 +286,7 @@ A Compressed Core Buffer stores a short reserve measured in power-ticks. It brid
 
 ### Power and utility
 
-- **Water Turbine** — generator requiring a valid flowing-water placement.
+- **Water Turbine** — 3x3 cog generator whose bottom row of three cells must remain waterlogged.
 - **Wind Turbine** — generator requiring sky access and rotor clearance.
 - **Kinetic Dynamo** — generator powered entirely by an Energy worker.
 - **Compressed Core Buffer** — stores short-term reserve power.

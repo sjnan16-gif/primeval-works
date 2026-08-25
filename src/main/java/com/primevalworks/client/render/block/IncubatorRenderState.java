@@ -1,5 +1,6 @@
 package com.primevalworks.client.render.block;
 
+import com.primevalworks.world.egg.DinosaurEggSize;
 import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.util.FormattedCharSequence;
@@ -10,4 +11,5 @@ public final class IncubatorRenderState extends BlockEntityRenderState {
     public float animationTime;
     public float progress;
     public boolean active;
+    public DinosaurEggSize eggSize = DinosaurEggSize.SMALL;
 }

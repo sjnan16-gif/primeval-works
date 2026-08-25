@@ -3,6 +3,7 @@ package com.primevalworks.client.render.block;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import com.primevalworks.world.block.entity.PremiumEggIncubatorBlockEntity;
+import com.primevalworks.world.egg.DinosaurEggSize;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
@@ -42,6 +43,7 @@ public final class PremiumEggIncubatorRenderer
     ) {
         BlockEntityRenderer.super.extractRenderState(incubator, state, partialTick, cameraPosition, breakProgress);
         state.active = incubator.hasEgg();
+        state.eggSize = DinosaurEggSize.fromItem(incubator.getEgg()).orElse(DinosaurEggSize.SMALL);
         state.progress = incubator.getProgressFraction();
         state.animationTime = incubator.getLevel() == null ? 0.0F : incubator.getLevel().getGameTime() + partialTick;
         itemModelResolver.updateForTopItem(
@@ -73,11 +75,12 @@ public final class PremiumEggIncubatorRenderer
         }
 
         float settle = Mth.clamp(state.animationTime / 10.0F, 0.0F, 1.0F);
-        float bob = Mth.sin(state.animationTime * 0.09F) * 0.035F;
+        float bob = Mth.sin(state.animationTime * 0.045F) * 0.004F;
+        float modelHeight = state.eggSize == DinosaurEggSize.SMALL ? 0.6875F : 1.0F;
         poseStack.pushPose();
-        poseStack.translate(0.5F, 0.58F + bob, 0.5F);
-        poseStack.mulPose(Axis.YP.rotationDegrees(state.animationTime * 1.2F));
-        float eggScale = 0.40F * (0.82F + 0.18F * settle);
+        poseStack.translate(0.5F, IncubatorEggFit.centerYForModelHeight(modelHeight) + bob, 0.5F);
+        poseStack.mulPose(Axis.ZP.rotationDegrees(Mth.sin(state.animationTime * 0.035F) * 0.8F));
+        float eggScale = IncubatorEggFit.scaleForModelHeight(modelHeight) * (0.90F + 0.10F * settle);
         poseStack.scale(eggScale, eggScale, eggScale);
         state.egg.submit(poseStack, submitNodeCollector, state.lightCoords, OverlayTexture.NO_OVERLAY, 0);
         poseStack.popPose();

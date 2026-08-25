@@ -75,7 +75,7 @@ public final class PrimevalConfig {
                     "Turns every Primeval Works menu sound up or down without touching Minecraft's master volume.");
             heavyFootsteps = bool(builder, "heavyFootsteps", true,
                     "Plays close-range foot contacts for the large dinosaurs. The timing comes from their animation keyframes.");
-            heavyFootstepVolume = decimal(builder, "heavyFootstepVolume", 0.75D, 0.0D, 2.0D,
+            heavyFootstepVolume = decimal(builder, "heavyFootstepVolume", 1.0D, 0.0D, 2.0D,
                     "Controls how strong a heavy dinosaur sounds while you are standing right beside it.");
             heavyFootstepRange = decimal(builder, "heavyFootstepRange", 5.5D, 1.5D, 12.0D,
                     "The hard hearing limit for heavy footsteps. They fade sharply before reaching this distance.");

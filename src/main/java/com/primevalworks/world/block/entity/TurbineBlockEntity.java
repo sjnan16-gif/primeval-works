@@ -12,7 +12,6 @@ import com.primevalworks.registry.ModBlocks;
 import com.primevalworks.config.PrimevalTuning;
 import com.primevalworks.world.block.TurbineBlock;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -31,10 +30,11 @@ public final class TurbineBlockEntity extends BlockEntity implements GeoBlockEnt
             return false;
         }
         if (getBlockState().is(ModBlocks.WATER_TURBINE.get())) {
-            Direction depth = getBlockState().getValue(TurbineBlock.FACING);
-            for (BlockPos structurePos : TurbineBlock.structurePositions(worldPosition, getBlockState())) {
-                if (!level.getFluidState(structurePos.relative(depth)).is(FluidTags.WATER)
-                        || !level.getFluidState(structurePos.relative(depth.getOpposite())).is(FluidTags.WATER)) {
+            for (int localX = -1; localX <= 1; localX++) {
+                BlockPos submergedCell = localX == 0
+                        ? worldPosition
+                        : TurbineBlock.partPos(worldPosition, getBlockState(), new TurbineBlock.PartOffset(localX, 0));
+                if (!level.getFluidState(submergedCell).is(FluidTags.WATER)) {
                     return false;
                 }
             }

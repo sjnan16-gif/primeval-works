@@ -52,17 +52,21 @@ public final class DinosaurFootstepEffects {
 
         Vec3 listener = minecraft.gameRenderer.getMainCamera().position();
         double range = PrimevalConfig.CLIENT.heavyFootstepRange.get();
-        double distance = listener.distanceTo(dinosaur.position());
+        double distance = FootstepDistance.toBox(
+                listener.x, listener.y, listener.z,
+                dinosaur.getBoundingBox().minX, dinosaur.getBoundingBox().minY, dinosaur.getBoundingBox().minZ,
+                dinosaur.getBoundingBox().maxX, dinosaur.getBoundingBox().maxY, dinosaur.getBoundingBox().maxZ
+        );
         if (distance >= range) return;
 
         float proximity = 1.0F - Mth.clamp((float)(distance / range), 0.0F, 1.0F);
-        float falloff = (float)Math.pow(proximity, 2.65D);
+        float falloff = (float)Math.pow(proximity, 1.9D);
         float occlusion = isOccluded(minecraft, listener, dinosaur.getBoundingBox().getCenter()) ? 0.32F : 1.0F;
         boolean apex = dinosaur.getSpecies() == DinosaurSpecies.TYRANNOSAURUS
                 || dinosaur.getSpecies() == DinosaurSpecies.SPINOSAURUS;
         SoundEvent sound = apex ? SoundEvents.RAVAGER_STEP : SoundEvents.SNIFFER_STEP;
         float pitch = Mth.clamp(1.0F / Mth.sqrt(Math.max(0.65F, dinosaur.getGeneticScale())), 0.72F, 1.06F);
-        float baseVolume = apex ? 0.64F : 0.46F;
+        float baseVolume = apex ? 1.55F : 1.18F;
         minecraft.level.playLocalSound(
                 dinosaur.getX(), dinosaur.getY(), dinosaur.getZ(), sound, SoundSource.NEUTRAL,
                 baseVolume * falloff * occlusion * PrimevalConfig.CLIENT.heavyFootstepVolume.get().floatValue(),

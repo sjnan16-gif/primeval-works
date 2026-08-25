@@ -38,15 +38,22 @@ final class TurbineGeoModelTest {
     }
 
     @Test
-    void turbineGeometryIsCenteredAndWaterWheelIsTwoBlocksWide() throws IOException {
+    void turbineGeometryIsCenteredAndWaterWheelIsAThreeByThreeCog() throws IOException {
         String wind = Files.readString(Path.of(
                 "src/main/resources/assets/primevalworks/geckolib/models/block/wind_turbine.geo.json"));
         String water = Files.readString(Path.of(
                 "src/main/resources/assets/primevalworks/geckolib/models/block/water_turbine.geo.json"));
         assertTrue(wind.contains("\"visible_bounds_offset\": [0, 1.75, 0]"));
-        assertTrue(water.contains("\"origin\": [-16, 0, -6], \"size\": [32, 3, 12]"));
-        assertTrue(water.contains("\"visible_bounds_offset\": [0, 1, 0]"));
-        assertTrue(!water.contains("\"size\": [64,"), "Water turbine regressed to four blocks wide");
+        assertTrue(water.contains("\"visible_bounds_width\": 3.2"));
+        assertTrue(water.contains("\"visible_bounds_offset\": [0, 1.5, 0]"));
+        for (int blade = 0; blade < 8; blade++) {
+            assertTrue(water.contains("\"name\": \"blade_" + blade + "\""));
+        }
+
+        String animation = Files.readString(Path.of(
+                "src/main/resources/assets/primevalworks/geckolib/animations/block/water_turbine.animation.json"));
+        assertTrue(animation.contains("\"vector\": [0, 0, 360]"),
+                "The upright cog must rotate around its Z axis");
     }
 
     private static void assertSpinClip(String name) throws IOException {

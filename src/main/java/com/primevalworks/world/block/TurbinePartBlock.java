@@ -9,23 +9,31 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.ScheduledTickAccess;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.SimpleWaterloggedBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.material.Fluids;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
-public final class TurbinePartBlock extends Block {
+public final class TurbinePartBlock extends Block implements SimpleWaterloggedBlock {
     public static final MapCodec<TurbinePartBlock> CODEC = simpleCodec(TurbinePartBlock::new);
     public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final BooleanProperty WIND = BooleanProperty.create("wind");
+    public static final BooleanProperty WATERLOGGED = BlockStateProperties.WATERLOGGED;
     public static final IntegerProperty LOCAL_X = IntegerProperty.create("local_x", 0, 4);
     public static final IntegerProperty LOCAL_Y = IntegerProperty.create("local_y", 0, 3);
 
@@ -34,6 +42,7 @@ public final class TurbinePartBlock extends Block {
         registerDefaultState(stateDefinition.any()
                 .setValue(FACING, Direction.NORTH)
                 .setValue(WIND, true)
+                .setValue(WATERLOGGED, false)
                 .setValue(LOCAL_X, encodeLocalX(0))
                 .setValue(LOCAL_Y, 1));
     }
@@ -56,6 +65,28 @@ public final class TurbinePartBlock extends Block {
         return state.getValue(WIND)
                 ? windShape(facing, localX, localY)
                 : waterShape(facing, localX);
+    }
+
+    @Override
+    protected FluidState getFluidState(BlockState state) {
+        return state.getValue(WATERLOGGED) ? Fluids.WATER.getSource(false) : super.getFluidState(state);
+    }
+
+    @Override
+    protected BlockState updateShape(
+            BlockState state,
+            LevelReader level,
+            ScheduledTickAccess tickAccess,
+            BlockPos pos,
+            Direction direction,
+            BlockPos neighborPos,
+            BlockState neighborState,
+            RandomSource random
+    ) {
+        if (state.getValue(WATERLOGGED)) {
+            tickAccess.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
+        }
+        return super.updateShape(state, level, tickAccess, pos, direction, neighborPos, neighborState, random);
     }
 
     @Override
@@ -90,12 +121,15 @@ public final class TurbinePartBlock extends Block {
         if (isExpectedMaster(level, masterPos, state)) {
             level.destroyBlock(masterPos, true);
         }
+        if (state.getValue(WATERLOGGED) && level.getBlockState(pos).isAir()) {
+            level.setBlock(pos, Blocks.WATER.defaultBlockState(), Block.UPDATE_ALL);
+        }
         super.affectNeighborsAfterRemoval(state, level, pos, movedByPiston);
     }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING, WIND, LOCAL_X, LOCAL_Y);
+        builder.add(FACING, WIND, WATERLOGGED, LOCAL_X, LOCAL_Y);
     }
 
     public static BlockPos masterPos(BlockPos partPos, BlockState state) {

@@ -310,7 +310,7 @@ environmental generation
 
 Consumers submit demand and priority. Allocation is deterministic and stable; a consumer does not flicker every scheduler pass when supply is tied. A powered work order retains a short lease, while long idle machines release capacity.
 
-Environmental producers cache validity. Block update events mark them dirty, with a slow safety recheck. A Wind Turbine must validate sky/rotor clearance, and a Water Turbine must validate its intended flowing-water faces.
+Environmental producers cache validity. Block update events mark them dirty, with a slow safety recheck. A Wind Turbine validates sky/rotor clearance. A Water Turbine retains water in its 3x3 cog structure and validates the three waterlogged cells along its bottom row.
 
 The internal system should not pretend to be Forge Energy. A compatibility bridge can expose/import energy later without changing the base ledger contract.
 
