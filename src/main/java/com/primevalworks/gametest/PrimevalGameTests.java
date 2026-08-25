@@ -81,6 +81,8 @@ public final class PrimevalGameTests {
             TEST_FUNCTIONS.register("energy_worker_stays_on_duty", () -> PrimevalGameTests::energyWorkerStaysOnDuty);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> WORK_ORDER_SURVIVES_ROSTER_ROUND_TRIP =
             TEST_FUNCTIONS.register("work_order_survives_roster_round_trip", () -> PrimevalGameTests::workOrderSurvivesRosterRoundTrip);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> ACTIVE_WORK_RESTORES_AFTER_LOGIN =
+            TEST_FUNCTIONS.register("active_work_restores_after_login", () -> PrimevalGameTests::activeWorkRestoresAfterLogin);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> CONTENT_REGISTRATION =
             TEST_FUNCTIONS.register("content_registration", () -> PrimevalGameTests::contentRegistration);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> HOSTILE_TARGETS_BASE_DINOSAUR =
@@ -195,6 +197,10 @@ public final class PrimevalGameTests {
                 new FunctionGameTestInstance(WORK_ORDER_SURVIVES_ROSTER_ROUND_TRIP.getKey(), isolatedTestData(event, "work_persistence"))
         );
         event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "active_work_restores_after_login"),
+                new FunctionGameTestInstance(ACTIVE_WORK_RESTORES_AFTER_LOGIN.getKey(), isolatedTestData(event, "login_work_restore"))
+        );
+        event.registerTest(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "content_registration"),
                 new FunctionGameTestInstance(CONTENT_REGISTRATION.getKey(), isolatedTestData(event, "content"))
         );
@@ -212,7 +218,8 @@ public final class PrimevalGameTests {
         );
         event.registerTest(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "night_shift_drains_mood"),
-                new FunctionGameTestInstance(NIGHT_SHIFT_DRAINS_MOOD.getKey(), isolatedTestData(event, "night_shift"))
+                new FunctionGameTestInstance(NIGHT_SHIFT_DRAINS_MOOD.getKey(),
+                        isolatedTestData(event, "night_shift", 2_400))
         );
         event.registerTest(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "dinosaur_sleeps_at_night"),
@@ -385,11 +392,19 @@ public final class PrimevalGameTests {
             RegisterGameTestsEvent event,
             String name
     ) {
+        return isolatedTestData(event, name, 1_200);
+    }
+
+    private static TestData<Holder<TestEnvironmentDefinition<?>>> isolatedTestData(
+            RegisterGameTestsEvent event,
+            String name,
+            int maxTicks
+    ) {
         Holder<TestEnvironmentDefinition<?>> environment = event.registerEnvironment(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "test_" + name),
                 new TestEnvironmentDefinition.AllOf(List.of())
         );
-        return new TestData<>(environment, Identifier.withDefaultNamespace("empty"), 1_200, 0, true);
+        return new TestData<>(environment, Identifier.withDefaultNamespace("empty"), maxTicks, 0, true);
     }
 
     private static void forceTicking(GameTestHelper helper, BlockPos... relativePositions) {
@@ -1784,6 +1799,9 @@ public final class PrimevalGameTests {
                     "Death recovery disabled a configured work route");
             helper.assertTrue(stored.snapshot().getIntOr("PrimevalDinosaurExperience", -1) == 17,
                     "Death recovery erased level progress");
+            helper.assertTrue(!stored.snapshot().getBooleanOr("PrimevalPendingOwnerRecovery", false)
+                            && !stored.snapshot().getBooleanOr("Invulnerable", false),
+                    "Recovery stored a transfer-only pending or invulnerable flag");
         }).thenSucceed();
     }
 
@@ -2358,6 +2376,61 @@ public final class PrimevalGameTests {
                         && !reloaded.shouldAvoidDanger(),
                 "The restored dinosaur did not retain its complete work configuration");
         reloaded.discard();
+        player.discard();
+        helper.succeed();
+    }
+
+    private static void activeWorkRestoresAfterLogin(GameTestHelper helper) {
+        BlockPos tableRelative = new BlockPos(2, 1, 2);
+        BlockPos sourceRelative = new BlockPos(4, 1, 2);
+        BlockPos destinationRelative = new BlockPos(5, 1, 2);
+        for (int x = 0; x <= 7; x++) for (int z = 0; z <= 4; z++) {
+            helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+        }
+        helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
+        player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
+        BlockPos table = helper.absolutePos(tableRelative);
+        BlockPos source = helper.absolutePos(sourceRelative);
+        BlockPos destination = helper.absolutePos(destinationRelative);
+        CommandTableBlock.claimExisting(player, table);
+
+        FieldDodoEntity active = helper.spawn(ModEntities.FIELD_DODO.get(), new BlockPos(3, 1, 2));
+        helper.assertTrue(DinosaurOwnership.addToActiveIfRoom(player, active, table),
+                "The login restore test could not create an active crew member");
+        UUID activeId = active.getUUID();
+        active.assignWork(
+                0, table, List.of(source), List.of(), List.of(destination), null, List.of(),
+                List.of("minecraft:coal"), List.of(), Map.of(source, 3, destination, 2),
+                0, 3, 24, 2, 5, 128, 0, 2, true, false
+        );
+
+        FieldDodoEntity reserve = helper.spawn(ModEntities.FIELD_DODO.get(), new BlockPos(6, 1, 2));
+        DinosaurOwnership.register(player, reserve);
+        UUID reserveId = reserve.getUUID();
+        active.discard();
+        reserve.discard();
+
+        DinosaurOwnership.restoreActiveForTable(player, table);
+        FieldDodoEntity restored = DinosaurOwnership.findLoaded(player.level().getServer(), activeId);
+        helper.assertTrue(restored != null, "Login did not restore the saved active dinosaur");
+        helper.assertTrue(restored.isWorkEnabled()
+                        && restored.getWorkJobIndex() == 0
+                        && restored.getWorkSourcePositions().equals(List.of(source))
+                        && restored.getWorkDestinationPositions().equals(List.of(destination))
+                        && restored.getWorkItemFilters().equals(List.of("minecraft:coal"))
+                        && restored.getWorkBatchSize() == 24
+                        && restored.getWorkSchedule() == 2
+                        && restored.getWorkSourceReserve() == 5
+                        && restored.getWorkDestinationTarget() == 128
+                        && !restored.shouldAvoidDanger(),
+                "Login restored the dinosaur but erased part of its automation order");
+        helper.assertTrue(DinosaurOwnership.activeIds(player).equals(List.of(activeId)),
+                "Login changed the saved active crew ordering");
+        helper.assertTrue(DinosaurOwnership.findLoaded(player.level().getServer(), reserveId) == null,
+                "Login incorrectly pulled a depot dinosaur into an empty crew slot");
+        restored.discard();
         player.discard();
         helper.succeed();
     }

@@ -10,6 +10,7 @@ import com.primevalworks.world.block.entity.PremiumEggIncubatorBlockEntity;
 import com.primevalworks.world.block.entity.ProcessorBlockEntity;
 import com.primevalworks.world.block.entity.DartTurretBlockEntity;
 import com.primevalworks.world.block.entity.MagicTurretBlockEntity;
+import com.primevalworks.world.block.entity.LaserObserverBlockEntity;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -67,6 +68,11 @@ public final class ModBlockEntities {
             BLOCK_ENTITIES.register("magic_turret", () -> new BlockEntityType<>(
                     MagicTurretBlockEntity::new,
                     ModBlocks.MAGIC_TURRET.get()
+            ));
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<LaserObserverBlockEntity>> LASER_OBSERVER =
+            BLOCK_ENTITIES.register("laser_observer", () -> new BlockEntityType<>(
+                    LaserObserverBlockEntity::new,
+                    ModBlocks.LASER_OBSERVER.get()
             ));
     private ModBlockEntities() {
     }

@@ -10,7 +10,6 @@ import com.primevalworks.registry.ModCreativeTabs;
 import com.primevalworks.registry.ModEntities;
 import com.primevalworks.registry.ModItems;
 import com.primevalworks.registry.ModMenus;
-import com.primevalworks.registry.ModSounds;
 import com.primevalworks.world.block.CommandTableBlock;
 import com.primevalworks.world.entity.DinosaurThreatTargeting;
 import com.primevalworks.world.entity.FieldDodoEntity;
@@ -40,7 +39,6 @@ public final class PrimevalWorks {
         ModBlockEntities.register(modBus);
         ModMenus.register(modBus);
         ModItems.register(modBus);
-        ModSounds.register(modBus);
         ModCreativeTabs.register(modBus);
         PrimevalGameTests.register(modBus);
         ModNetworking.register(modBus);
@@ -55,7 +53,7 @@ public final class PrimevalWorks {
         NeoForge.EVENT_BUS.addListener(PlayerEvent.PlayerLoggedInEvent.class, event -> {
             if (event.getEntity() instanceof ServerPlayer player) {
                 CommandTableBlock.getClaimedTable(player).ifPresent(table ->
-                        DinosaurOwnership.activateForTable(player, table.pos(), false));
+                        DinosaurOwnership.restoreActiveForTable(player, table));
             }
         });
         NeoForge.EVENT_BUS.addListener(PlayerEvent.PlayerLoggedOutEvent.class, event -> {

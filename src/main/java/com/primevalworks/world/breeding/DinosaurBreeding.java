@@ -8,6 +8,7 @@ import com.primevalworks.world.entity.DinosaurSpecies;
 import com.primevalworks.world.entity.FieldDodoEntity;
 import com.primevalworks.world.ownership.DinosaurOwnership;
 import com.primevalworks.world.progression.PrimevalAdvancements;
+import com.primevalworks.world.sound.PrimevalSoundPlayback;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -106,8 +107,9 @@ public final class DinosaurBreeding {
         ServerLevel level = (ServerLevel)target.level();
         showHearts(level, target, 12);
         showHearts(level, partner, 12);
-        level.playSound(null, target.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME,
-                SoundSource.NEUTRAL, 0.9F, 0.95F + level.getRandom().nextFloat() * 0.12F);
+        PrimevalSoundPlayback.playAt(level, target.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME,
+                SoundSource.NEUTRAL, 0.9F, 0.95F + level.getRandom().nextFloat() * 0.12F,
+                PrimevalSoundPlayback.MACHINE_RADIUS);
         PrimevalAdvancements.awardBreed(player);
         player.sendOverlayMessage(Component.translatable(
                 "message.primevalworks.breeding.success",

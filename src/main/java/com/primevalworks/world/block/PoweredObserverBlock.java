@@ -1,23 +1,28 @@
 package com.primevalworks.world.block;
 
 import com.primevalworks.world.base.BaseEnergyRules;
+import com.primevalworks.world.sound.PrimevalSoundPlayback;
+import com.primevalworks.world.block.entity.LaserObserverBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.ObserverBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.event.level.BlockEvent;
+import org.jspecify.annotations.Nullable;
 
-public final class PoweredObserverBlock extends ObserverBlock {
+public final class PoweredObserverBlock extends ObserverBlock implements EntityBlock {
     public static final int DETECTION_RANGE = 5;
-    private static final DustParticleOptions BEAM_EDGE = new DustParticleOptions(0x8F1822, 0.22F);
-    private static final DustParticleOptions BEAM_CORE = new DustParticleOptions(0xFF5961, 0.11F);
     private static final DustParticleOptions BEAM_END = new DustParticleOptions(0xFF202B, 0.34F);
 
     public PoweredObserverBlock(BlockBehaviour.Properties properties) {
@@ -45,8 +50,15 @@ public final class PoweredObserverBlock extends ObserverBlock {
             if (onBeam && !observer.getValue(POWERED)
                     && !level.getBlockTicks().hasScheduledTick(observerPos, observer.getBlock())) {
                 level.scheduleTick(observerPos, observer.getBlock(), 2);
+                PrimevalSoundPlayback.playAt(level, observerPos, SoundEvents.COPPER_BULB_TURN_ON,
+                        SoundSource.BLOCKS, 0.28F, 1.65F, PrimevalSoundPlayback.MACHINE_RADIUS);
             }
         }
+    }
+
+    @Override
+    public @Nullable BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return new LaserObserverBlockEntity(pos, state);
     }
 
     @Override
@@ -77,28 +89,18 @@ public final class PoweredObserverBlock extends ObserverBlock {
 
     @Override
     public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
+        if (random.nextFloat() > 0.42F) return;
         Direction facing = state.getValue(FACING);
         double startX = pos.getX() + 0.5D + facing.getStepX() * 0.52D;
         double startY = pos.getY() + 0.5D + facing.getStepY() * 0.52D;
         double startZ = pos.getZ() + 0.5D + facing.getStepZ() * 0.52D;
-        for (int step = 0; step <= DETECTION_RANGE * 3; step++) {
-            double distance = step / 3.0D;
-            double x = startX + facing.getStepX() * distance;
-            double y = startY + facing.getStepY() * distance;
-            double z = startZ + facing.getStepZ() * distance;
-            level.addParticle(BEAM_EDGE, x, y, z, 0.0D, 0.0D, 0.0D);
-            level.addParticle(BEAM_CORE, x, y, z, 0.0D, 0.0D, 0.0D);
-        }
-
         double endX = startX + facing.getStepX() * DETECTION_RANGE;
         double endY = startY + facing.getStepY() * DETECTION_RANGE;
         double endZ = startZ + facing.getStepZ() * DETECTION_RANGE;
-        for (int particle = 0; particle < 3; particle++) {
-            level.addParticle(BEAM_END,
-                    endX + random.triangle(0.0D, 0.055D),
-                    endY + random.triangle(0.0D, 0.055D),
-                    endZ + random.triangle(0.0D, 0.055D),
-                    0.0D, 0.0D, 0.0D);
-        }
+        level.addParticle(BEAM_END,
+                endX + random.triangle(0.0D, 0.042D),
+                endY + random.triangle(0.0D, 0.042D),
+                endZ + random.triangle(0.0D, 0.042D),
+                0.0D, 0.0D, 0.0D);
     }
 }

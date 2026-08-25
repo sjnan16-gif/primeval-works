@@ -100,6 +100,7 @@ public final class DinosaurOwnership {
         ServerPlayer owner = level.getServer().getPlayerList().getPlayer(ownerId);
         if (owner == null) return false;
 
+        dinosaur.prepareForRecoverySnapshot();
         dinosaur.setHealth(Math.max(1.0F, dinosaur.getMaxHealth() * 0.20F));
         List<OwnedDinosaur> records = new ArrayList<>(records(owner));
         long recoveryUntil = level.getGameTime() + recoveryDurationTicks(dinosaur.getSpecies());
@@ -138,8 +139,12 @@ public final class DinosaurOwnership {
     }
 
     public static void adoptLinkedDinosaurs(ServerPlayer player, BlockPos tablePos) {
+        adoptLinkedDinosaurs(player, player.level(), tablePos);
+    }
+
+    private static void adoptLinkedDinosaurs(ServerPlayer player, ServerLevel tableLevel, BlockPos tablePos) {
         int radius = 64;
-        List<FieldDodoEntity> nearby = player.level().getEntitiesOfClass(
+        List<FieldDodoEntity> nearby = tableLevel.getEntitiesOfClass(
                 FieldDodoEntity.class,
                 new net.minecraft.world.phys.AABB(tablePos).inflate(radius),
                 dinosaur -> dinosaur.isAlive()
@@ -150,13 +155,27 @@ public final class DinosaurOwnership {
     }
 
     public static void activateForTable(ServerPlayer player, BlockPos tablePos, boolean spawnMissing) {
-        adoptLinkedDinosaurs(player, tablePos);
+        activateForTable(player, player.level(), tablePos, spawnMissing, spawnMissing);
+    }
+
+    /** Restores the saved active crew after login without filling empty slots from the depot. */
+    public static void restoreActiveForTable(ServerPlayer player, BlockPos tablePos) {
+        activateForTable(player, player.level(), tablePos, false, true);
+    }
+
+    public static void restoreActiveForTable(ServerPlayer player, CommandTableBlock.ClaimedTable table) {
+        activateForTable(player, table.level(), table.pos(), false, true);
+    }
+
+    private static void activateForTable(ServerPlayer player, ServerLevel tableLevel, BlockPos tablePos,
+                                         boolean fillEmptySlots, boolean restoreMissingActive) {
+        adoptLinkedDinosaurs(player, tableLevel, tablePos);
         List<OwnedDinosaur> records = new ArrayList<>(refresh(player));
         Set<UUID> ownedIds = new HashSet<>();
         records.forEach(record -> ownedIds.add(record.id()));
         List<UUID> active = new ArrayList<>(activeIds(player));
-        int activeLimit = activeLimit(player, tablePos);
-        long now = player.level().getGameTime();
+        int activeLimit = activeLimit(player, tableLevel, tablePos);
+        long now = tableLevel.getGameTime();
         active.removeIf(id -> !ownedIds.contains(id) || find(records, id)
                 .map(record -> record.recoveryUntilTick() > now).orElse(true));
         while (active.size() > activeLimit) {
@@ -170,7 +189,7 @@ public final class DinosaurOwnership {
                 stored.discard();
             }
         }
-        if (spawnMissing) {
+        if (fillEmptySlots) {
             for (OwnedDinosaur record : records) {
                 if (active.size() >= activeLimit) break;
                 if (record.recoveryUntilTick() <= now && !active.contains(record.id())) active.add(record.id());
@@ -181,15 +200,18 @@ public final class DinosaurOwnership {
         for (int index = 0; index < active.size(); index++) {
             OwnedDinosaur record = find(records, active.get(index)).orElse(null);
             if (record == null) continue;
-            FieldDodoEntity dinosaur = spawnMissing
+            FieldDodoEntity dinosaur = restoreMissingActive
                     ? findOrLoad(player.level().getServer(), record)
                     : findLoaded(player.level().getServer(), record.id());
-            if (dinosaur == null && spawnMissing) dinosaur = spawn(player.level(), record, slotPosition(tablePos, index));
+            if (dinosaur == null && restoreMissingActive) {
+                dinosaur = spawn(tableLevel, record, slotPosition(tablePos, index));
+            }
             if (dinosaur == null) continue;
             dinosaur.setDinosaurOwner(player.getUUID());
             boolean changingBase = dinosaur.getCommandTablePos().filter(tablePos::equals).isEmpty();
             dinosaur.linkToCommandTable(tablePos);
             if (changingBase) moveToSlot(dinosaur, tablePos, index);
+            upsert(records, capture(dinosaur));
         }
 
         Set<UUID> activeSet = Set.copyOf(active);
@@ -367,7 +389,11 @@ public final class DinosaurOwnership {
     }
 
     public static int activeLimit(ServerPlayer player, BlockPos tablePos) {
-        if (player.level().getBlockEntity(tablePos) instanceof CommandTableBlockEntity table
+        return activeLimit(player, player.level(), tablePos);
+    }
+
+    private static int activeLimit(ServerPlayer player, ServerLevel tableLevel, BlockPos tablePos) {
+        if (tableLevel.getBlockEntity(tablePos) instanceof CommandTableBlockEntity table
                 && table.isOwnedBy(player.getUUID())) {
             return Mth.clamp(table.activeDinosaurCapacity(), STARTING_ACTIVE_LIMIT, ACTIVE_LIMIT);
         }
@@ -454,6 +480,12 @@ public final class DinosaurOwnership {
         ServerLevel level = server.getLevel(ResourceKey.create(Registries.DIMENSION, dimensionId));
         if (level == null) return null;
         BlockPos lastPosition = BlockPos.of(snapshot.getLongOr(SNAPSHOT_POSITION, 0L));
+        level.getChunkAt(lastPosition);
+        Entity entityAtLastPosition = level.getEntity(record.id());
+        if (entityAtLastPosition instanceof FieldDodoEntity dinosaur && dinosaur.isAlive()) {
+            dinosaur.reconcilePersistentTimedState();
+            return dinosaur;
+        }
         // A companion may cross a chunk border after its last portable snapshot. Loading only
         // the old chunk made recall miss the real entity and could create a duplicate from the
         // stale depot copy. Owned workers stay inside the linked base, so load that bounded area.

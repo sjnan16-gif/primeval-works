@@ -1,6 +1,7 @@
 package com.primevalworks.world.block;
 
 import com.primevalworks.registry.ModItems;
+import com.primevalworks.world.sound.PrimevalSoundPlayback;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
@@ -35,8 +36,9 @@ public final class PrimevalBerryBushBlock extends SweetBerryBushBlock {
         if (level instanceof ServerLevel serverLevel) {
             int count = 1 + serverLevel.getRandom().nextInt(2) + (age == MAX_AGE ? 1 : 0);
             Block.popResource(serverLevel, pos, new ItemStack(ModItems.BERRIES.get(), count));
-            serverLevel.playSound(null, pos, SoundEvents.SWEET_BERRY_BUSH_PICK_BERRIES,
-                    SoundSource.BLOCKS, 1.0F, 0.8F + serverLevel.getRandom().nextFloat() * 0.4F);
+            PrimevalSoundPlayback.playAt(serverLevel, pos, SoundEvents.SWEET_BERRY_BUSH_PICK_BERRIES,
+                    SoundSource.BLOCKS, 1.0F, 0.8F + serverLevel.getRandom().nextFloat() * 0.4F,
+                    PrimevalSoundPlayback.SMALL_RADIUS);
             BlockState picked = state.setValue(AGE, 1);
             serverLevel.setBlock(pos, picked, Block.UPDATE_CLIENTS);
             serverLevel.gameEvent(GameEvent.BLOCK_CHANGE, pos, GameEvent.Context.of(player, picked));

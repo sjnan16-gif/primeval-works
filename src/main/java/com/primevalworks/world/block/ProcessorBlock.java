@@ -1,5 +1,7 @@
 package com.primevalworks.world.block;
 
+import com.primevalworks.world.sound.PrimevalSoundPlayback;
+
 import com.mojang.serialization.MapCodec;
 import com.primevalworks.registry.ModBlockEntities;
 import com.primevalworks.world.block.entity.ProcessorBlockEntity;
@@ -90,8 +92,9 @@ public final class ProcessorBlock extends BaseEntityBlock {
                     x + (random.nextDouble() - 0.5D) * 0.25D, y,
                     z + (random.nextDouble() - 0.5D) * 0.25D,
                     0.0D, 0.025D, 0.0D);
-            level.playLocalSound(x, y, z, SoundEvents.BLASTFURNACE_FIRE_CRACKLE,
-                    SoundSource.BLOCKS, 0.26F, 0.78F + random.nextFloat() * 0.12F, false);
+            PrimevalSoundPlayback.playLocalAt(level, x, y, z, SoundEvents.BLASTFURNACE_FIRE_CRACKLE,
+                    SoundSource.BLOCKS, 0.26F, 0.78F + random.nextFloat() * 0.12F,
+                    PrimevalSoundPlayback.MACHINE_RADIUS);
         }
     }
 

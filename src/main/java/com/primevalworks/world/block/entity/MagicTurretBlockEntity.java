@@ -2,6 +2,7 @@ package com.primevalworks.world.block.entity;
 
 import com.primevalworks.registry.ModBlockEntities;
 import com.primevalworks.world.base.BaseEnergyRules;
+import com.primevalworks.world.sound.PrimevalSoundPlayback;
 import com.primevalworks.world.damage.PrimevalDamageTypes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -94,8 +95,8 @@ public final class MagicTurretBlockEntity extends BlockEntity implements Targeti
         target.hurtServer(level, PrimevalDamageTypes.magicTurret(level, pivot), DAMAGE_PER_HIT);
         releaseSpellBurst(level, pos, target);
         if (openingHit) {
-            level.playSound(null, pos, SoundEvents.EVOKER_CAST_SPELL,
-                    SoundSource.BLOCKS, 0.85F, 1.22F);
+            PrimevalSoundPlayback.playAt(level, pos, SoundEvents.EVOKER_CAST_SPELL,
+                    SoundSource.BLOCKS, 0.85F, 1.22F, PrimevalSoundPlayback.LARGE_RADIUS);
         }
         burstHitsRemaining--;
         if (burstHitsRemaining > 0 && target.isAlive()) {

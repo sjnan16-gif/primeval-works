@@ -2,6 +2,7 @@ package com.primevalworks.world.block;
 
 import com.mojang.serialization.MapCodec;
 import com.primevalworks.registry.ModSounds;
+import com.primevalworks.world.sound.PrimevalSoundPlayback;
 import com.primevalworks.world.egg.DinosaurEggSize;
 import com.primevalworks.world.egg.DinosaurHatching;
 import net.minecraft.core.BlockPos;
@@ -66,10 +67,9 @@ public abstract class DinosaurEggBlock extends Block {
                 com.primevalworks.registry.ModItems.FOSSIL_FRAGMENT.get(),
                 size.fossilFragmentCount(level.getRandom())
         ));
-        if (ModSounds.areAssetsReady()) {
-            level.playSound(null, pos, ModSounds.EGG_HATCH.get(), SoundSource.BLOCKS, 0.85F, 1.0F);
-        }
         if (level instanceof ServerLevel serverLevel) {
+            PrimevalSoundPlayback.playAt(serverLevel, pos, ModSounds.EGG_HATCH, SoundSource.BLOCKS,
+                    0.85F, 1.0F, PrimevalSoundPlayback.MACHINE_RADIUS);
             serverLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.POOF,
                     pos.getX() + 0.5D, pos.getY() + 0.45D, pos.getZ() + 0.5D,
                     12, 0.25D, 0.2D, 0.25D, 0.02D);

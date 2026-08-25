@@ -12,6 +12,7 @@ import com.primevalworks.client.render.block.PremiumEggIncubatorRenderer;
 import com.primevalworks.client.render.block.TurbineRenderer;
 import com.primevalworks.client.render.block.DartTurretRenderer;
 import com.primevalworks.client.render.block.MagicTurretRenderer;
+import com.primevalworks.client.render.block.LaserObserverRenderer;
 import com.primevalworks.client.screen.CommandTableScreen;
 import com.primevalworks.client.screen.CompanionScreen;
 import com.primevalworks.client.screen.WorksitePlannerScreen;
@@ -98,6 +99,7 @@ public final class PrimevalWorksClient {
         event.registerBlockEntityRenderer(ModBlockEntities.TURBINE.get(), TurbineRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.DART_TURRET.get(), DartTurretRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.MAGIC_TURRET.get(), MagicTurretRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.LASER_OBSERVER.get(), LaserObserverRenderer::new);
         event.registerEntityRenderer(ModEntities.DART_PROJECTILE.get(), DartProjectileRenderer::new);
     }
 

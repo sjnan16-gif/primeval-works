@@ -10,6 +10,7 @@ import com.primevalworks.world.entity.DinosaurSpecies;
 import com.primevalworks.world.entity.FieldDodoEntity;
 import com.primevalworks.world.entity.DinosaurMutationRules;
 import com.primevalworks.world.base.BaseEnergyRules;
+import com.primevalworks.world.sound.PrimevalSoundPlayback;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.particles.ParticleTypes;
@@ -93,9 +94,8 @@ public final class PremiumEggIncubatorBlockEntity extends BlockEntity implements
                 pos.getX() + 0.5D, pos.getY() + 1.2D, pos.getZ() + 0.5D,
                 18, 0.34D, 0.28D, 0.34D, 0.025D
         );
-        if (ModSounds.areAssetsReady()) {
-            level.playSound(null, pos, ModSounds.INCUBATOR_HATCH.get(), SoundSource.BLOCKS, 1.0F, 0.9F);
-        }
+        PrimevalSoundPlayback.playAt(serverLevel, pos, ModSounds.INCUBATOR_HATCH, SoundSource.BLOCKS,
+                1.0F, 0.9F, PrimevalSoundPlayback.MACHINE_RADIUS);
     }
 
     public InsertResult insertEgg(ServerPlayer player, ItemStack heldStack) {
@@ -147,8 +147,9 @@ public final class PremiumEggIncubatorBlockEntity extends BlockEntity implements
         owner = player.getUUID();
         commandTablePos = table.pos();
         sync();
-        if (ModSounds.areAssetsReady()) {
-            level.playSound(null, worldPosition, ModSounds.INCUBATOR_START.get(), SoundSource.BLOCKS, 0.8F, 1.0F);
+        if (level instanceof ServerLevel serverLevel) {
+            PrimevalSoundPlayback.playAt(serverLevel, worldPosition, ModSounds.INCUBATOR_START,
+                    SoundSource.BLOCKS, 0.8F, 1.0F, PrimevalSoundPlayback.MACHINE_RADIUS);
         }
         return InsertResult.success(Component.translatable(
                 "message.primevalworks.incubator.started",

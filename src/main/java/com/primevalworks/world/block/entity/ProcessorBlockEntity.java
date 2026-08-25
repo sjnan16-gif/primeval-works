@@ -1,7 +1,9 @@
 package com.primevalworks.world.block.entity;
 
 import com.primevalworks.registry.ModBlockEntities;
+import com.primevalworks.registry.ModSounds;
 import com.primevalworks.world.base.BaseEnergyRules;
+import com.primevalworks.world.sound.PrimevalSoundPlayback;
 import com.primevalworks.world.inventory.AutomationConfigurableContainer;
 import com.primevalworks.world.inventory.ProcessorMenu;
 import com.primevalworks.world.block.ProcessorBlock;
@@ -11,6 +13,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
 import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.WorldlyContainer;
@@ -206,6 +209,10 @@ public final class ProcessorBlockEntity extends BaseContainerBlockEntity
         processDuration = 0;
         activeRecipeId = "";
         setChanged();
+        if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+            PrimevalSoundPlayback.playAt(serverLevel, worldPosition, ModSounds.PROCESS_COMPLETE,
+                    SoundSource.BLOCKS, 0.65F, 1.08F, PrimevalSoundPlayback.MACHINE_RADIUS);
+        }
     }
 
     @Override
