@@ -14,6 +14,7 @@ import com.primevalworks.world.block.entity.AncientFurnaceBlockEntity;
 import com.primevalworks.world.block.entity.DartTurretBlockEntity;
 import com.primevalworks.world.block.entity.MagicTurretBlockEntity;
 import com.primevalworks.world.block.CommandTableBlock;
+import com.primevalworks.world.block.BeamLineOfSight;
 import com.primevalworks.world.block.PoweredObserverBlock;
 import com.primevalworks.world.block.TurbineBlock;
 import com.primevalworks.world.block.TurbinePartBlock;
@@ -1109,6 +1110,7 @@ public final class PrimevalGameTests {
         BlockPos observerRelative = new BlockPos(3, 1, 2);
         BlockPos fifthRelative = observerRelative.relative(Direction.EAST, 5);
         BlockPos sixthRelative = observerRelative.relative(Direction.EAST, 6);
+        BlockPos wallRelative = observerRelative.relative(Direction.EAST, 2);
         for (int x = 1; x <= 10; x++) helper.setBlock(new BlockPos(x, 0, 2), Blocks.STONE);
         helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
         helper.setBlock(observerRelative, ModBlocks.LASER_OBSERVER.get().defaultBlockState()
@@ -1140,6 +1142,34 @@ public final class PrimevalGameTests {
                 .thenExecuteAfter(4, () -> helper.assertTrue(
                         !helper.getBlockState(observerRelative).getValue(PoweredObserverBlock.POWERED),
                         "The Laser Observer detected an update beyond its five-block range"))
+                .thenExecute(() -> helper.setBlock(wallRelative, Blocks.STONE))
+                .thenExecuteAfter(6, () -> {
+                    helper.assertTrue(!helper.getBlockState(observerRelative)
+                                    .getValue(PoweredObserverBlock.POWERED),
+                            "The Laser Observer did not settle after its beam was blocked");
+                    float visibleDistance = BeamLineOfSight.visibleAxisDistance(
+                            helper.getLevel(), observerPos, Direction.EAST, 0.505F, 5.50F);
+                    helper.assertTrue(visibleDistance < 2.0F,
+                            "The Laser Observer beam did not stop against the blocking wall");
+                    PoweredObserverBlock.notifyDistantObservers(
+                            helper.getLevel(), helper.absolutePos(fifthRelative));
+                })
+                .thenExecuteAfter(4, () -> {
+                    helper.assertTrue(!helper.getBlockState(observerRelative)
+                                    .getValue(PoweredObserverBlock.POWERED),
+                            "The Laser Observer detected an update through a wall");
+                    helper.setBlock(wallRelative, Blocks.AIR);
+                })
+                .thenExecuteAfter(6, () -> {
+                    helper.assertTrue(!helper.getBlockState(observerRelative)
+                                    .getValue(PoweredObserverBlock.POWERED),
+                            "The Laser Observer did not settle after its wall was removed");
+                    PoweredObserverBlock.notifyDistantObservers(
+                            helper.getLevel(), helper.absolutePos(fifthRelative));
+                })
+                .thenExecuteAfter(3, () -> helper.assertTrue(
+                        helper.getBlockState(observerRelative).getValue(PoweredObserverBlock.POWERED),
+                        "The Laser Observer did not reacquire its clear five-block beam"))
                 .thenSucceed();
     }
 
@@ -1148,13 +1178,16 @@ public final class PrimevalGameTests {
         BlockPos dartRelative = new BlockPos(5, 1, 2);
         BlockPos magicRelative = new BlockPos(5, 1, 4);
         BlockPos dartThreatRelative = new BlockPos(4, 1, 2);
-        BlockPos magicThreatRelative = new BlockPos(4, 1, 4);
+        BlockPos magicThreatRelative = new BlockPos(2, 1, 4);
+        BlockPos magicWallRelative = new BlockPos(4, 1, 4);
         for (int x = 0; x <= 10; x++) for (int z = 0; z <= 6; z++) {
             helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
         }
         helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
         helper.setBlock(dartRelative, ModBlocks.DART_TURRET.get());
         helper.setBlock(magicRelative, ModBlocks.MAGIC_TURRET.get());
+        helper.setBlock(magicWallRelative, Blocks.STONE);
+        helper.setBlock(magicWallRelative.above(), Blocks.STONE);
         DartTurretBlockEntity dartTurret = helper.getBlockEntity(dartRelative, DartTurretBlockEntity.class);
         MagicTurretBlockEntity magicTurret = helper.getBlockEntity(magicRelative, MagicTurretBlockEntity.class);
         dartTurret.setItem(0, new ItemStack(ModItems.DART.get(), 3));
@@ -1166,6 +1199,7 @@ public final class PrimevalGameTests {
         net.minecraft.world.entity.monster.Creeper[] dartThreat = {null};
         float[] dartHealth = {0.0F};
         net.minecraft.world.entity.monster.Creeper[] magicThreat = {null};
+        float[] magicHealth = {0.0F};
 
         helper.startSequence()
                 .thenExecute(() -> {
@@ -1200,9 +1234,18 @@ public final class PrimevalGameTests {
                             "An idle Magic Turret requested base energy without a target");
                     magicThreat[0] = helper.spawn(EntityType.CREEPER, magicThreatRelative);
                     magicThreat[0].setNoAi(true);
+                    magicHealth[0] = magicThreat[0].getHealth();
                     helper.assertTrue(BaseEnergyRules.ownsPosition(helper.getLevel(),
                                     helper.absolutePos(magicRelative), magicThreat[0].position()),
                             "The Magic Turret test target was outside its Command Table's base cell");
+                })
+                .thenExecuteAfter(10, () -> {
+                    helper.assertTrue(magicTurret.aimController().targetEntityId() < 0,
+                            "The Magic Turret acquired a hostile through a wall");
+                    helper.assertTrue(Math.abs(magicThreat[0].getHealth() - magicHealth[0]) < 0.01F,
+                            "The Magic Turret damaged a hostile through a wall");
+                    helper.setBlock(magicWallRelative, Blocks.AIR);
+                    helper.setBlock(magicWallRelative.above(), Blocks.AIR);
                 })
                 .thenWaitUntil(() -> helper.assertTrue(
                         magicTurret.aimController().targetEntityId() >= 0,

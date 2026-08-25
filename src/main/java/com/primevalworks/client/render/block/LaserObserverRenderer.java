@@ -2,6 +2,7 @@ package com.primevalworks.client.render.block;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.primevalworks.world.block.BeamLineOfSight;
 import com.primevalworks.world.block.PoweredObserverBlock;
 import com.primevalworks.world.block.entity.LaserObserverBlockEntity;
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -48,6 +49,10 @@ public final class LaserObserverRenderer
         state.animationTime = observer.getLevel() == null
                 ? partialTick
                 : observer.getLevel().getGameTime() + partialTick;
+        state.endDistance = observer.getLevel() == null
+                ? END_DISTANCE
+                : BeamLineOfSight.visibleAxisDistance(
+                        observer.getLevel(), observer.getBlockPos(), state.facing, START_DISTANCE, END_DISTANCE);
     }
 
     @Override
@@ -57,8 +62,9 @@ public final class LaserObserverRenderer
             SubmitNodeCollector submits,
             net.minecraft.client.renderer.state.level.CameraRenderState camera
     ) {
-        BeamBox outer = beamBox(state.facing, 0.026F, START_DISTANCE, END_DISTANCE);
-        BeamBox core = beamBox(state.facing, 0.009F, START_DISTANCE - 0.006F, END_DISTANCE + 0.006F);
+        if (state.endDistance <= START_DISTANCE + 0.002F) return;
+        BeamBox outer = beamBox(state.facing, 0.026F, START_DISTANCE, state.endDistance);
+        BeamBox core = beamBox(state.facing, 0.009F, START_DISTANCE - 0.006F, state.endDistance);
         submits.order(1).submitCustomGeometry(
                 poseStack,
                 RenderTypes.entityTranslucentEmissive(BEAM_TEXTURE),
@@ -76,8 +82,8 @@ public final class LaserObserverRenderer
                 poseStack,
                 RenderTypes.entityTranslucentEmissive(BEAM_TEXTURE),
                 (matrix, vertices) -> {
-                    for (float distance = START_DISTANCE + phase; distance < END_DISTANCE; distance += spacing) {
-                        float end = Math.min(END_DISTANCE, distance + 0.075F);
+                    for (float distance = START_DISTANCE + phase; distance < state.endDistance; distance += spacing) {
+                        float end = Math.min(state.endDistance, distance + 0.075F);
                         renderCuboid(matrix, vertices,
                                 beamBox(state.facing, 0.015F, distance, end), 0xC8FFD1D5);
                     }

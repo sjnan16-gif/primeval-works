@@ -291,7 +291,8 @@ A Compressed Core Buffer stores a short reserve measured in power-ticks. It brid
 - **Kinetic Dynamo** — generator powered entirely by an Energy worker.
 - **Compressed Core Buffer** — stores short-term reserve power.
 - **Gust Fan** — Power 1 directional push for entities and loose items. This is separate from the Wind Turbine.
-- **Ancient Sensor** — Power 1 line sensor that detects block changes up to three blocks away.
+- **Powered Observer** — Power 1 line sensor that detects block changes up to five blocks away and stops at the first colliding block.
+- **Reinforced Pistons** — Power 1 redstone machinery. Both variants push Obsidian and Crying Obsidian; the sticky form also pulls them while retaining vanilla protection for immovable blocks and block entities.
 
 ### Storage and defense
 
@@ -304,8 +305,6 @@ A Compressed Core Buffer stores a short reserve measured in power-ticks. It brid
 
 These remain part of the product plan but must not destabilize the core save/gameplay loop:
 
-- Reinforced Piston — powered heavy-duty movement for automation.
-- Reinforced Piston upgrade — may move obsidian but never bedrock, portals, world anchors, or block entities unless specifically supported.
 - Remote Vault Terminal — opens linked Ancient Vault pages.
 
 ## Items and materials

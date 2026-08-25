@@ -38,10 +38,10 @@ Authored entity assets are currently wired for Tyrannosaurus, Field Dodo, Pteran
 | Premium Egg Incubator | Working | One physical egg, visible progress, genetic improvement, persistence, and automatic hatching into the crew/depot. Needs 2 E/S and a Command Table in range. |
 | Processor | Working | A four-slot fuel machine with material, fuel, catalyst, and output slots. It refines both ancient ingot chains and compresses Ancient Metal or Cores. Transporters honor per-slot insert/extract controls, and an assigned Fire worker accelerates valid active work. |
 | Ancient Barrel | Working | A 54-slot server-authoritative container included in transport routes and base inventory indexing. |
-| Reinforced Piston | Working foundation | Requires 1 E/S and redstone and currently uses reliable vanilla piston movement. Its final heavy-block behavior remains. |
-| Laser Observer | Working | Requires 1 E/S, detects block updates along its facing direction up to five blocks away, and emits a vanilla-style redstone pulse. |
+| Reinforced and Sticky Reinforced Pistons | Working | Require 1 E/S plus redstone. Both push Obsidian and Crying Obsidian through the normal piston movement rules; the sticky version also pulls either block back. They still reject bedrock, block entities, and other immovable world anchors. |
+| Laser Observer | Working | Requires 1 E/S, detects block updates along its facing direction up to five blocks away, and emits a vanilla-style redstone pulse. Its rendered beam and detection both stop at the first colliding block. |
 | Dart Turret | Working | Power-connectable at 3 E/S, automatically tracks the nearest hostile in 18 blocks, consumes Darts from its internal 3x3 magazine, and fires real crossed-sprite projectiles. It requests power only while armed with a live target. |
-| Magic Turret | Working | A late-game spell-metal defense upgrade. It consumes 5 E/S only with a live target, tracks hostiles within 24 blocks, and deals four 5-damage pulses five ticks apart through a synchronized purple beam with a white core. The beam is geometry; brief muzzle and impact particles mark each real hit. |
+| Magic Turret | Working | A late-game spell-metal defense upgrade. It consumes 5 E/S only with a visible live target, tracks hostiles within 24 blocks, and deals four 5-damage pulses five ticks apart through a synchronized purple beam with a white core. Walls block acquisition, cancel an interrupted burst, and cut the rendered beam at the collision surface. |
 | Ancient Spell Stone | Working | Power-connectable at 4 E/S and suppresses hostile spawn position checks within 48 blocks while powered. |
 
 ## Automation that works now
@@ -61,7 +61,6 @@ Authored entity assets are currently wired for Tyrannosaurus, Field Dodo, Pteran
 
 ## Automation still missing or intentionally manual
 
-- Reinforced Piston heavy-block behavior is not implemented yet.
 - Ancient Furnace has no unique high-tier recipes beyond powered furnace behavior.
 - Breeding is intentionally initiated by feeding two treats; it is not a passive breeding pen.
 - Egg insertion into the Premium Incubator is intentionally manual. Incubation and crew/depot delivery are automatic afterward.

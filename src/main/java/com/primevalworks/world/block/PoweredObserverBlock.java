@@ -39,7 +39,8 @@ public final class PoweredObserverBlock extends ObserverBlock implements EntityB
             Direction facing = observer.getValue(FACING);
             boolean onBeam = false;
             for (int distance = 1; distance <= DETECTION_RANGE; distance++) {
-                if (observerPos.relative(facing, distance).equals(changed)) {
+                if (observerPos.relative(facing, distance).equals(changed)
+                        && BeamLineOfSight.isAxisClearBefore(level, observerPos, facing, distance)) {
                     onBeam = true;
                     break;
                 }
@@ -89,9 +90,11 @@ public final class PoweredObserverBlock extends ObserverBlock implements EntityB
         double startX = pos.getX() + 0.5D + facing.getStepX() * 0.52D;
         double startY = pos.getY() + 0.5D + facing.getStepY() * 0.52D;
         double startZ = pos.getZ() + 0.5D + facing.getStepZ() * 0.52D;
-        double endX = startX + facing.getStepX() * DETECTION_RANGE;
-        double endY = startY + facing.getStepY() * DETECTION_RANGE;
-        double endZ = startZ + facing.getStepZ() * DETECTION_RANGE;
+        float endDistance = BeamLineOfSight.visibleAxisDistance(
+                level, pos, facing, 0.52F, DETECTION_RANGE + 0.50F);
+        double endX = pos.getX() + 0.5D + facing.getStepX() * endDistance;
+        double endY = pos.getY() + 0.5D + facing.getStepY() * endDistance;
+        double endZ = pos.getZ() + 0.5D + facing.getStepZ() * endDistance;
         level.addParticle(BEAM_END,
                 endX + random.triangle(0.0D, 0.042D),
                 endY + random.triangle(0.0D, 0.042D),

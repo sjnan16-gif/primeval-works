@@ -3,6 +3,7 @@ package com.primevalworks.world.block.entity;
 import com.primevalworks.config.PrimevalTuning;
 import com.primevalworks.registry.ModBlockEntities;
 import com.primevalworks.world.base.BaseEnergyRules;
+import com.primevalworks.world.block.BeamLineOfSight;
 import com.primevalworks.world.damage.PrimevalDamageTypes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -90,6 +91,11 @@ public final class MagicTurretBlockEntity extends BlockEntity implements Targeti
 
     private void strike(ServerLevel level, BlockPos pos, LivingEntity target) {
         Vec3 pivot = Vec3.atCenterOf(pos).add(0.0D, PIVOT_HEIGHT - 0.5D, 0.0D);
+        if (!canSee(level, pos, pivot, target)) {
+            setTarget(null);
+            cancelBurst();
+            return;
+        }
         target.hurtServer(level, PrimevalDamageTypes.magicTurret(level, pivot),
                 DAMAGE_PER_HIT * (float)PrimevalTuning.server().turretDamage());
         releaseSpellBurst(level, pos, target);
@@ -138,6 +144,7 @@ public final class MagicTurretBlockEntity extends BlockEntity implements Targeti
                         new AABB(pos).inflate(configuredRange()),
                         entity -> entity.isAlive() && entity instanceof Enemy
                                 && BaseEnergyRules.ownsPosition(level, pos, entity.position())
+                                && canSee(level, pos, origin, entity)
                 ).stream()
                 .min(Comparator.comparingDouble(entity -> entity.distanceToSqr(origin)))
                 .orElse(null);
@@ -148,7 +155,18 @@ public final class MagicTurretBlockEntity extends BlockEntity implements Targeti
         return target != null && target.distanceToSqr(Vec3.atCenterOf(pos))
                 <= configuredRange() * configuredRange()
                 && target instanceof Enemy
-                && BaseEnergyRules.ownsPosition(level, pos, target.position()) ? target : null;
+                && BaseEnergyRules.ownsPosition(level, pos, target.position())
+                && canSee(level, pos,
+                        Vec3.atCenterOf(pos).add(0.0D, PIVOT_HEIGHT - 0.5D, 0.0D), target) ? target : null;
+    }
+
+    private static boolean canSee(ServerLevel level, BlockPos pos, Vec3 pivot, LivingEntity target) {
+        Vec3 targetEye = target.getEyePosition();
+        return BeamLineOfSight.isClear(
+                level,
+                BeamLineOfSight.justOutside(pos, pivot, targetEye),
+                targetEye
+        );
     }
 
     private void setTarget(@Nullable LivingEntity target) {

@@ -3,6 +3,7 @@ package com.primevalworks.client.render.block;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
+import com.primevalworks.world.block.BeamLineOfSight;
 import com.primevalworks.world.block.entity.MagicTurretBlockEntity;
 import com.primevalworks.world.block.entity.TargetingTurret;
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -67,7 +68,20 @@ public abstract class AbstractTurretRenderer<T extends BlockEntity & TargetingTu
         state.hasTarget = target != null;
         if (target != null) {
             Vec3 pivot = Vec3.atLowerCornerOf(turret.getBlockPos()).add(0.5D, PIVOT_HEIGHT, 0.5D);
-            state.beamLength = (float)Math.max(0.0D, target.getEyePosition(partialTick).distanceTo(pivot) - 0.48D);
+            Vec3 targetEye = target.getEyePosition(partialTick);
+            double targetDistance = targetEye.distanceTo(pivot);
+            double yawRadians = state.yaw * Mth.DEG_TO_RAD;
+            double pitchRadians = state.pitch * Mth.DEG_TO_RAD;
+            double horizontal = Math.cos(pitchRadians);
+            Vec3 renderedEnd = pivot.add(
+                    -Math.sin(yawRadians) * horizontal * targetDistance,
+                    Math.sin(pitchRadians) * targetDistance,
+                    -Math.cos(yawRadians) * horizontal * targetDistance
+            );
+            Vec3 sightStart = BeamLineOfSight.justOutside(turret.getBlockPos(), pivot, renderedEnd);
+            double visibleDistance = pivot.distanceTo(sightStart)
+                    + BeamLineOfSight.visibleDistance(turret.getLevel(), sightStart, renderedEnd);
+            state.beamLength = (float)Math.max(0.0D, Math.min(targetDistance, visibleDistance) - 0.48D);
         } else {
             state.beamLength = 0.0F;
         }
