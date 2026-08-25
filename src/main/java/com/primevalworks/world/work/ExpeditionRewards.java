@@ -1,5 +1,6 @@
 package com.primevalworks.world.work;
 
+import com.primevalworks.config.PrimevalTuning;
 import com.primevalworks.registry.ModItems;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.Item;
@@ -70,10 +71,11 @@ public final class ExpeditionRewards {
     public static List<ItemStack> roll(int tier, int gatheringStars, float tableRewardMultiplier,
                                        RandomSource random) {
         Tier definition = tier(tier);
-        int rolls = definition.rolls();
+        int rolls = Math.max(0, Math.round(definition.rolls()
+                * (float)PrimevalTuning.server().expeditionRewards()));
         float bonusChance = Math.min(0.55F,
                 Math.max(0, gatheringStars) * 0.08F + Math.max(0.0F, tableRewardMultiplier - 1.0F));
-        if (random.nextFloat() < bonusChance) rolls++;
+        if (rolls > 0 && random.nextFloat() < bonusChance) rolls++;
 
         Map<Item, ItemStack> combined = new LinkedHashMap<>();
         for (int roll = 0; roll < rolls; roll++) {

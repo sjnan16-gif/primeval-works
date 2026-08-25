@@ -2341,19 +2341,22 @@ public final class PrimevalGameTests {
         );
         BlockPos tableRelative = new BlockPos(1, 1, 1);
         BlockPos turbineRelative = new BlockPos(3, 1, 1);
+        BlockPos secondTurbineRelative = new BlockPos(5, 1, 1);
         BlockPos dinosaurRelative = new BlockPos(3, 1, 2);
-        forceTicking(helper, tableRelative, turbineRelative, dinosaurRelative);
+        forceTicking(helper, tableRelative, turbineRelative, secondTurbineRelative, dinosaurRelative);
         for (int x = 0; x <= 7; x++) for (int z = 0; z <= 3; z++) {
             helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
         }
         helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
         helper.setBlock(turbineRelative, ModBlocks.WIND_TURBINE.get());
+        helper.setBlock(secondTurbineRelative, ModBlocks.WIND_TURBINE.get());
         FieldDodoEntity worker = helper.spawn(ModEntities.PARASAUROLOPHUS.get(), dinosaurRelative);
         BlockPos table = helper.absolutePos(tableRelative);
         BlockPos turbine = helper.absolutePos(turbineRelative);
+        BlockPos secondTurbine = helper.absolutePos(secondTurbineRelative);
         worker.assignWork(
-                2, table, List.of(), List.of(turbine), List.of(), null, List.of(),
-                List.of(), List.of(), Map.of(turbine, 3),
+                2, table, List.of(), List.of(turbine, secondTurbine), List.of(), null, List.of(),
+                List.of(), List.of(), Map.of(turbine, 3, secondTurbine, 3),
                 0, 3, 1, 0, 0, 0, 0, 1, true, true
         );
 
@@ -2362,14 +2365,20 @@ public final class PrimevalGameTests {
                     helper.assertBlockEntityData(
                             turbineRelative,
                             TurbineBlockEntity.class,
-                            blockEntity -> blockEntity.getGenerationPulseCount() >= 6,
-                            () -> Component.literal("The energy worker stopped after only a few cycles")
+                            blockEntity -> blockEntity.getGenerationPulseCount() >= 2,
+                            () -> Component.literal("The first turbine did not receive its share of a multi-target order")
+                    );
+                    helper.assertBlockEntityData(
+                            secondTurbineRelative,
+                            TurbineBlockEntity.class,
+                            blockEntity -> blockEntity.getGenerationPulseCount() >= 2,
+                            () -> Component.literal("The second turbine was saved but never worked")
                     );
                     helper.assertTrue(worker.isWorkEnabled(),
                             "A continuous energy order disabled itself after repeated cycles");
                     helper.assertTrue(worker.getWorkJobIndex() == 2
-                                    && worker.getWorkWorkstationPositions().contains(turbine),
-                            "The running energy order lost its assigned turbine");
+                                    && worker.getWorkWorkstationPositions().equals(List.of(turbine, secondTurbine)),
+                            "The running energy order lost one of its assigned turbines");
                 })
                 .thenSucceed();
     }

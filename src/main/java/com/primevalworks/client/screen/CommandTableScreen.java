@@ -903,9 +903,9 @@ public final class CommandTableScreen extends Screen {
             return openRecallMenuAt(layout, uiMouseX, uiMouseY)
                     || super.mouseClicked(event, doubleClick);
         }
-        PrimevalUiSounds.click();
         Rect recallButton = recallMenuButton(layout);
         if (recallButton != null && recallButton.contains(uiMouseX, uiMouseY)) {
+            PrimevalUiSounds.click();
             DinosaurRosterPayload.Entry entry = recallMenuEntry();
             if (entry != null) {
                 ClientPacketDistributor.sendToServer(new RecallDinosaurPayload(tablePos, entry.id()));
@@ -917,18 +917,21 @@ public final class CommandTableScreen extends Screen {
         recallMenuDinosaur = null;
         Rect rosterPage = global(layout, ROSTER_PAGE);
         if (rosterPage.contains(uiMouseX, uiMouseY)) {
+            PrimevalUiSounds.click();
             if (activePageCount() > 1) activePage = (activePage + 1) % activePageCount();
             else notice = "Unlock Crew Perches to open a second active-crew page.";
             return true;
         }
         if (depotOpen && depotProgress > 0.82F) {
             if (depotGlobal(layout, DEPOT_SORT).contains(uiMouseX, uiMouseY)) {
+                PrimevalUiSounds.click();
                 depotSort = depotSort.next();
                 depotPage = 0;
                 notice = "Depot sorted by " + depotSort.label().toLowerCase() + ".";
                 return true;
             }
             if (depotGlobal(layout, DEPOT_PAGE).contains(uiMouseX, uiMouseY)) {
+                PrimevalUiSounds.click();
                 int pages = depotPageCount();
                 depotPage = pages <= 1 ? 0 : (depotPage + 1) % pages;
                 return true;
@@ -975,11 +978,13 @@ public final class CommandTableScreen extends Screen {
                 notice = "Drag " + draggedDinosaur.name() + " into the depot or onto another crew slot.";
                 return true;
             }
+            PrimevalUiSounds.click();
             openDinosaur(rosterIndex);
             return true;
         }
         for (int index = 0; index < ACTIONS.length; index++) {
             if (!global(layout, ACTIONS[index]).contains(uiMouseX, uiMouseY)) continue;
+            PrimevalUiSounds.click();
             runAction(index);
             return true;
         }
@@ -987,6 +992,7 @@ public final class CommandTableScreen extends Screen {
         if (viewport.contains(uiMouseX, uiMouseY)) {
             BaseUpgrade upgrade = hoveredUpgrade(layout, uiMouseX, uiMouseY);
             if (upgrade != null) {
+                PrimevalUiSounds.click();
                 purchase(upgrade);
                 return true;
             }

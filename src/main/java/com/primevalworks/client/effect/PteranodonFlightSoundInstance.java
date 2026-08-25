@@ -1,5 +1,7 @@
 package com.primevalworks.client.effect;
 
+import com.primevalworks.config.PrimevalConfig;
+import com.primevalworks.config.PrimevalTuning;
 import com.primevalworks.world.entity.DinosaurSpecies;
 import com.primevalworks.world.entity.FieldDodoEntity;
 import net.minecraft.client.player.LocalPlayer;
@@ -20,13 +22,21 @@ final class PteranodonFlightSoundInstance extends AbstractTickableSoundInstance 
         this.pteranodon = pteranodon;
         this.looping = true;
         this.delay = 0;
-        this.volume = 0.0F;
+        this.relative = true;
+        this.attenuation = SoundInstance.Attenuation.NONE;
+        this.volume = 0.01F;
         this.pitch = 0.82F;
     }
 
     @Override
+    public boolean canStartSilent() {
+        return true;
+    }
+
+    @Override
     public void tick() {
-        boolean flying = !rider.isRemoved()
+        boolean flying = PrimevalConfig.CLIENT.pteranodonWind.get()
+                && !rider.isRemoved()
                 && !pteranodon.isRemoved()
                 && rider.getVehicle() == pteranodon
                 && pteranodon.getSpecies() == DinosaurSpecies.PTERANODON
@@ -40,9 +50,11 @@ final class PteranodonFlightSoundInstance extends AbstractTickableSoundInstance 
         x = pteranodon.getX();
         y = pteranodon.getY() + pteranodon.getBbHeight() * 0.55D;
         z = pteranodon.getZ();
-        float speed = Mth.clamp(pteranodon.getPteranodonFlightSpeed() / 1.72F, 0.0F, 1.0F);
-        float airflow = 0.10F + 0.54F * speed * speed;
-        volume = presence * airflow;
-        pitch = 0.80F + speed * 0.30F;
+        float speed = Mth.clamp(pteranodon.getPteranodonFlightSpeed()
+                / (1.72F * (float)PrimevalTuning.server().pteranodonFlightSpeed()), 0.0F, 1.0F);
+        float targetVolume = presence * (0.055F + 0.82F * speed * speed)
+                * PrimevalConfig.CLIENT.pteranodonWindVolume.get().floatValue();
+        volume = Mth.lerp(0.24F, volume, targetVolume);
+        pitch = Mth.lerp(0.20F, pitch, 0.76F + speed * 0.44F);
     }
 }

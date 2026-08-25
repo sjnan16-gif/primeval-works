@@ -8,6 +8,7 @@ import com.mojang.blaze3d.platform.cursor.CursorTypes;
 import com.mojang.blaze3d.platform.CompareOp;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.primevalworks.network.payload.AssignDodoWorkPayload;
+import com.primevalworks.config.PrimevalTuning;
 import com.primevalworks.network.payload.DinosaurWorkStatePayload;
 import com.primevalworks.network.payload.RequestDinosaurWorkStatePayload;
 import com.primevalworks.network.payload.OpenBaseMachineMenuPayload;
@@ -2988,8 +2989,10 @@ public final class WorksitePlannerScreen extends Screen {
             feedback(selectionInstruction(selection) + ". That block cannot fill this role.");
             return;
         }
-        if (supportsMultiple(selection) && !positions(selection).contains(selectedPos) && positions(selection).size() >= 8) {
-            feedback(selectionLabel(selection) + " already has the maximum of 8 locations.");
+        int targetLimit = PrimevalTuning.server().targetsPerWorkOrder();
+        if (supportsMultiple(selection) && !positions(selection).contains(selectedPos)
+                && positions(selection).size() >= targetLimit) {
+            feedback(selectionLabel(selection) + " already has the maximum of " + targetLimit + " locations.");
             return;
         }
         boolean added = false;
@@ -3038,7 +3041,7 @@ public final class WorksitePlannerScreen extends Screen {
         refreshBaseInventoryIndex();
         refreshSuitableBlocks();
         feedback(selectionLabel(selection) + (added ? " added" : " removed") + " at " + compactPos(selectedPos)
-                + (supportsMultiple(selection) ? ". " + count + "/8 selected." : "."));
+                + (supportsMultiple(selection) ? ". " + count + "/" + targetLimit + " selected." : "."));
     }
 
     private BlockPos canonicalSelectionPosition(Selection option, BlockPos position) {

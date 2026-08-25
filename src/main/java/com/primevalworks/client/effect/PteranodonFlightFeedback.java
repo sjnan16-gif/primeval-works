@@ -1,5 +1,7 @@
 package com.primevalworks.client.effect;
 
+import com.primevalworks.config.PrimevalConfig;
+import com.primevalworks.config.PrimevalTuning;
 import com.primevalworks.network.payload.SpinosaurusLandSprintPayload;
 import com.primevalworks.world.entity.DinosaurSpecies;
 import com.primevalworks.world.entity.FieldDodoEntity;
@@ -95,7 +97,10 @@ public final class PteranodonFlightFeedback {
             mount = null;
         }
         float fullSpeed = mount != null && mount.getSpecies() == DinosaurSpecies.SPINOSAURUS
-                ? spinosaurusLandSprint ? 0.36F : 1.62F : FULL_FLIGHT_SPEED;
+                ? spinosaurusLandSprint
+                        ? 0.36F * (float)PrimevalTuning.server().spinosaurusSprintSpeed()
+                        : 1.62F * (float)PrimevalTuning.server().spinosaurusSwimSpeed()
+                : FULL_FLIGHT_SPEED * (float)PrimevalTuning.server().pteranodonFlightSpeed();
         float speed = mount == null ? 0.0F : mount.getSpecies() == DinosaurSpecies.SPINOSAURUS
                 ? spinosaurusLandSprint ? (float)mount.getDeltaMovement().horizontalDistance()
                 : mount.getSpinosaurusSwimSpeed() : mount.getPteranodonFlightSpeed();
@@ -112,7 +117,8 @@ public final class PteranodonFlightFeedback {
                 / (fullSpeed - 0.30F), 0.0F, 1.0F);
         float frontLoaded = 1.0F - (float)Math.pow(1.0F - normalized, 1.75D);
         float target = mount == null ? 0.0F
-                : frontLoaded * (spinosaurusLandSprint ? 16.0F : 13.0F) + takeoffKick;
+                : (frontLoaded * (spinosaurusLandSprint ? 16.0F : 13.0F) + takeoffKick)
+                * PrimevalConfig.CLIENT.mountFovStrength.get().floatValue();
         fovBoost = follow(fovBoost, target, target > fovBoost ? 7.0F : 5.0F, deltaSeconds);
         float accessibility = minecraft.options.fovEffectScale().get().floatValue();
         event.setFOV(event.getFOV() + fovBoost * accessibility);
@@ -124,17 +130,25 @@ public final class PteranodonFlightFeedback {
         float target = 0.0F;
         if (mount != null && minecraft.player != null) {
             float speed = mount.getSpecies() == DinosaurSpecies.SPINOSAURUS
-                    ? Mth.clamp(mount.getSpinosaurusSwimSpeed() / 1.62F, 0.0F, 1.0F)
-                    : Mth.clamp(mount.getPteranodonFlightSpeed() / FULL_FLIGHT_SPEED, 0.0F, 1.0F);
+                    ? Mth.clamp(mount.getSpinosaurusSwimSpeed()
+                            / (1.62F * (float)PrimevalTuning.server().spinosaurusSwimSpeed()), 0.0F, 1.0F)
+                    : Mth.clamp(mount.getPteranodonFlightSpeed()
+                            / (FULL_FLIGHT_SPEED * (float)PrimevalTuning.server().pteranodonFlightSpeed()),
+                            0.0F, 1.0F);
             float steeringError = Mth.wrapDegrees(minecraft.player.getYRot() - mount.getYRot());
             target = Mth.clamp(-steeringError * 0.075F, -4.2F, 4.2F) * speed;
         }
+        target *= PrimevalConfig.CLIENT.mountBankStrength.get().floatValue();
         cameraBank = follow(cameraBank, target, 8.0F, frameSeconds(false));
         float accessibility = minecraft.options.screenEffectScale().get().floatValue();
         event.setRoll(event.getRoll() + cameraBank * accessibility);
     }
 
     public static void renderFlightHud(RenderGuiEvent.Post event) {
+        if (!PrimevalConfig.CLIENT.staminaHud.get()) {
+            hudVisibility = 0.0F;
+            return;
+        }
         Minecraft minecraft = Minecraft.getInstance();
         FieldDodoEntity currentMount = mountedStaminaDinosaur(minecraft);
         boolean mounted = currentMount != null

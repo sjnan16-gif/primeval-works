@@ -1,5 +1,6 @@
 package com.primevalworks.world.ownership;
 
+import com.primevalworks.config.PrimevalTuning;
 import com.primevalworks.registry.ModEntities;
 import com.primevalworks.registry.ModBlocks;
 import com.primevalworks.world.entity.DinosaurSpecies;
@@ -804,10 +805,11 @@ public final class DinosaurOwnership {
     }
 
     public static long recoveryDurationTicks(DinosaurSpecies species) {
-        return switch (species) {
+        long base = switch (species) {
             case DODO, VELOCIRAPTOR, DILOPHOSAURUS, PACHYCEPHALOSAURUS -> 3L * 60L * 20L;
             case TRICERATOPS, STEGOSAURUS, PARASAUROLOPHUS, ANKYLOSAURUS, PTERANODON -> 5L * 60L * 20L;
             case TYRANNOSAURUS, BRACHIOSAURUS, SPINOSAURUS -> 8L * 60L * 20L;
         };
+        return Math.max(1L, Math.round(base * PrimevalTuning.server().recoveryTime()));
     }
 }

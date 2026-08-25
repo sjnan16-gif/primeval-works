@@ -1,5 +1,6 @@
 package com.primevalworks.world.base;
 
+import com.primevalworks.config.PrimevalTuning;
 import com.primevalworks.registry.ModBlocks;
 import com.primevalworks.world.block.CommandTableBlock;
 import com.primevalworks.world.block.entity.AncientFurnaceBlockEntity;
@@ -66,7 +67,8 @@ public final class BaseEnergyRules {
                 && level.getBlockEntity(pos) instanceof AncientFurnaceBlockEntity furnace) {
             return furnace.energyPerSecond();
         }
-        return demandPerSecond(level.getBlockState(pos));
+        return demandPerSecond(level.getBlockState(pos))
+                * (float)PrimevalTuning.server().machineEnergyUse();
     }
 
     public static CommandTableBlockEntity ownedTableFor(ServerPlayer player, BlockPos consumerPos) {

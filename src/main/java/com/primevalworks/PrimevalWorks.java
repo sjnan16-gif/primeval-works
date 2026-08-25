@@ -15,8 +15,12 @@ import com.primevalworks.world.entity.DinosaurThreatTargeting;
 import com.primevalworks.world.entity.FieldDodoEntity;
 import com.primevalworks.world.ownership.DinosaurOwnership;
 import com.primevalworks.client.PrimevalItemTooltips;
+import com.primevalworks.config.PrimevalConfig;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
@@ -33,7 +37,12 @@ public final class PrimevalWorks {
     public static final String MOD_ID = "primevalworks";
     public static final Logger LOGGER = LogUtils.getLogger();
 
-    public PrimevalWorks(IEventBus modBus) {
+    public PrimevalWorks(IEventBus modBus, ModContainer container) {
+        container.registerConfig(ModConfig.Type.CLIENT, PrimevalConfig.CLIENT_SPEC, "primevalworks-client.toml");
+        container.registerConfig(ModConfig.Type.SERVER, PrimevalConfig.SERVER_SPEC, "primevalworks-server.toml");
+        modBus.addListener(ModConfigEvent.Loading.class, PrimevalConfig::loadServer);
+        modBus.addListener(ModConfigEvent.Reloading.class, PrimevalConfig::loadServer);
+        modBus.addListener(ModConfigEvent.Unloading.class, PrimevalConfig::unloadServer);
         ModEntities.register(modBus);
         ModBlocks.register(modBus);
         ModBlockEntities.register(modBus);

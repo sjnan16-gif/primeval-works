@@ -1,5 +1,6 @@
 package com.primevalworks.world.block.entity;
 
+import com.primevalworks.config.PrimevalTuning;
 import com.primevalworks.registry.ModBlockEntities;
 import com.primevalworks.world.base.BaseEnergyRules;
 import com.primevalworks.world.inventory.AutomationConfigurableContainer;
@@ -106,8 +107,9 @@ public final class ProcessorBlockEntity extends BaseContainerBlockEntity
                 processor.processProgress = 0;
                 changed = true;
             }
-            if (processor.processDuration != recipe.processTicks()) {
-                processor.processDuration = recipe.processTicks();
+            int configuredDuration = configuredDuration(recipe);
+            if (processor.processDuration != configuredDuration) {
+                processor.processDuration = configuredDuration;
                 processor.processProgress = Math.min(processor.processProgress, processor.processDuration);
                 changed = true;
             }
@@ -150,7 +152,7 @@ public final class ProcessorBlockEntity extends BaseContainerBlockEntity
             activeRecipeId = recipeId;
             processProgress = 0;
         }
-        processDuration = recipe.processTicks();
+        processDuration = configuredDuration(recipe);
         processProgress = Math.min(processDuration, processProgress + ticks);
         if (processProgress >= processDuration) finish(recipe);
         setChanged();
@@ -182,6 +184,10 @@ public final class ProcessorBlockEntity extends BaseContainerBlockEntity
         fuel.shrink(1);
         if (fuel.isEmpty()) items.set(FUEL_SLOT, remainder);
         return true;
+    }
+
+    private static int configuredDuration(ProcessorRecipe recipe) {
+        return Math.max(1, (int)Math.ceil(recipe.processTicks() / PrimevalTuning.server().processorSpeed()));
     }
 
     private boolean canAccept(ItemStack result) {

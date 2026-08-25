@@ -1,121 +1,106 @@
 package com.primevalworks.client.effect;
 
-import com.primevalworks.registry.ModEntities;
-import com.primevalworks.world.entity.FieldDodoEntity;
+import com.geckolib.animation.state.KeyFrameEvent;
+import com.geckolib.cache.animation.keyframeevent.SoundKeyframeData;
+import com.primevalworks.config.PrimevalConfig;
 import com.primevalworks.world.entity.DinosaurSpecies;
+import com.primevalworks.world.entity.FieldDodoEntity;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.ViewportEvent;
 
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
+import java.util.WeakHashMap;
 
 public final class DinosaurFootstepEffects {
-    private static final int RUN_CYCLE_TICKS = 10;
-    private static final double MAX_EFFECT_DISTANCE = 24.0D;
     private static final double SHAKE_SECONDS = 0.09D;
-    private static final Map<Integer, RunGait> RUN_GAITS = new HashMap<>();
+    private static final Map<FieldDodoEntity, Long> LAST_CONTACT_NANOS = new WeakHashMap<>();
     private static long shakeStartedNanos;
     private static float shakeStrength;
 
     private DinosaurFootstepEffects() {
     }
 
-    public static void tick(ClientTickEvent.Post event) {
-        Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.level == null || minecraft.player == null) {
-            RUN_GAITS.clear();
-            shakeStrength = 0.0F;
+    public static void onAnimationFootstep(KeyFrameEvent<FieldDodoEntity, SoundKeyframeData> event) {
+        FieldDodoEntity dinosaur = event.animatable();
+        if (!PrimevalConfig.CLIENT.heavyFootsteps.get()
+                || !dinosaur.isAddedToLevel()
+                || !dinosaur.isAlive()
+                || dinosaur.isSilent()
+                || !dinosaur.getSpecies().heavyweight()
+                || !dinosaur.onGround()
+                || dinosaur.getDeltaMovement().horizontalDistanceSqr() < 0.0004D) {
             return;
         }
-        Set<Integer> presentRexes = new HashSet<>();
-        for (var entity : minecraft.level.entitiesForRendering()) {
-            if (!(entity instanceof FieldDodoEntity dinosaur)) continue;
-            boolean tyrannosaurus = dinosaur.getType() == ModEntities.TYRANNOSAURUS.get();
-            boolean mountedSpinosaurusLand = dinosaur.getSpecies() == DinosaurSpecies.SPINOSAURUS
-                    && dinosaur.getControllingPassenger() != null
-                    && !dinosaur.isSpinosaurusAquaticPose();
-            if (!tyrannosaurus && !mountedSpinosaurusLand) continue;
-            presentRexes.add(dinosaur.getId());
-            RunGait gait = RUN_GAITS.computeIfAbsent(dinosaur.getId(), ignored -> new RunGait());
-            boolean running = dinosaur.onGround()
-                    && (dinosaur.usesRunAnimation() || mountedSpinosaurusLand)
-                    && dinosaur.getDeltaMovement().horizontalDistanceSqr() >= 0.0025D
-                    && dinosaur.getWorkAction() == 0;
-            if (!running) {
-                gait.running = false;
-                gait.cycleTick = 0;
-                continue;
-            }
-            if (!gait.running) {
-                gait.running = true;
-                gait.cycleTick = 0;
-                emitFootContact(minecraft, dinosaur, false);
-                continue;
-            }
-            int cycleTicks = mountedSpinosaurusLand
-                    ? Mth.clamp(Math.round(13.0F / Mth.clamp(dinosaur.walkAnimation.speed(), 0.72F, 1.75F)), 7, 15)
-                    : RUN_CYCLE_TICKS;
-            int secondContact = Math.max(2, cycleTicks / 2);
-            gait.cycleTick = (gait.cycleTick + 1) % cycleTicks;
-            if (gait.cycleTick == secondContact) {
-                emitFootContact(minecraft, dinosaur, true);
-            } else if (gait.cycleTick == 0) {
-                emitFootContact(minecraft, dinosaur, false);
-            }
+
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.level == null || minecraft.player == null || dinosaur.level() != minecraft.level) return;
+        long now = System.nanoTime();
+        long previous = LAST_CONTACT_NANOS.getOrDefault(dinosaur, 0L);
+        if (now - previous < 30_000_000L) return;
+        LAST_CONTACT_NANOS.put(dinosaur, now);
+
+        Vec3 listener = minecraft.gameRenderer.getMainCamera().position();
+        double range = PrimevalConfig.CLIENT.heavyFootstepRange.get();
+        double distance = listener.distanceTo(dinosaur.position());
+        if (distance >= range) return;
+
+        float proximity = 1.0F - Mth.clamp((float)(distance / range), 0.0F, 1.0F);
+        float falloff = (float)Math.pow(proximity, 2.65D);
+        float occlusion = isOccluded(minecraft, listener, dinosaur.getBoundingBox().getCenter()) ? 0.32F : 1.0F;
+        boolean apex = dinosaur.getSpecies() == DinosaurSpecies.TYRANNOSAURUS
+                || dinosaur.getSpecies() == DinosaurSpecies.SPINOSAURUS;
+        SoundEvent sound = apex ? SoundEvents.RAVAGER_STEP : SoundEvents.SNIFFER_STEP;
+        float pitch = Mth.clamp(1.0F / Mth.sqrt(Math.max(0.65F, dinosaur.getGeneticScale())), 0.72F, 1.06F);
+        float baseVolume = apex ? 0.64F : 0.46F;
+        minecraft.level.playLocalSound(
+                dinosaur.getX(), dinosaur.getY(), dinosaur.getZ(), sound, SoundSource.NEUTRAL,
+                baseVolume * falloff * occlusion * PrimevalConfig.CLIENT.heavyFootstepVolume.get().floatValue(),
+                pitch, false
+        );
+
+        boolean leftFoot = event.keyframeData().getSound().endsWith("left");
+        if (PrimevalConfig.CLIENT.footstepDust.get()) {
+            spawnSurfaceDust(minecraft, dinosaur, leftFoot, falloff);
         }
-        RUN_GAITS.keySet().removeIf(id -> !presentRexes.contains(id));
+        boolean runningRex = dinosaur.getSpecies() == DinosaurSpecies.TYRANNOSAURUS
+                && dinosaur.usesRunAnimation();
+        boolean mountedSpino = dinosaur.getSpecies() == DinosaurSpecies.SPINOSAURUS
+                && dinosaur.getControllingPassenger() != null;
+        if (minecraft.screen == null && (runningRex || mountedSpino)) {
+            float speciesStrength = mountedSpino
+                    ? dinosaur.isSpinosaurusLandSprinting() ? 1.85F : 0.92F
+                    : 0.72F;
+            shakeStartedNanos = now;
+            shakeStrength = Math.max(shakeStrength, falloff * occlusion * speciesStrength
+                    * PrimevalConfig.CLIENT.footstepShakeStrength.get().floatValue());
+        }
     }
 
     public static void applyCameraImpulse(ViewportEvent.ComputeCameraAngles event) {
         Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.screen != null || shakeStrength <= 0.0F) {
-            return;
-        }
+        if (minecraft.screen != null || shakeStrength <= 0.0F) return;
         double age = (System.nanoTime() - shakeStartedNanos) / 1_000_000_000.0D;
         if (age < 0.0D || age >= SHAKE_SECONDS) {
             shakeStrength = 0.0F;
             return;
         }
         float accessibility = minecraft.options.screenEffectScale().get().floatValue();
-        if (accessibility <= 0.0F) {
-            return;
-        }
-        float phase = (float) (age / SHAKE_SECONDS);
-        float envelope = (float) Math.pow(1.0F - phase, 3.0D);
-        float impulse = shakeStrength * accessibility * envelope;
-        float impactWave = Mth.sin(phase * Mth.TWO_PI - Mth.HALF_PI);
-        event.setPitch(event.getPitch() + impactWave * impulse * 0.72F);
+        if (accessibility <= 0.0F) return;
+        float phase = (float)(age / SHAKE_SECONDS);
+        float impulse = shakeStrength * accessibility * (float)Math.pow(1.0F - phase, 3.0D);
+        event.setPitch(event.getPitch() + Mth.sin(phase * Mth.TWO_PI - Mth.HALF_PI) * impulse * 0.72F);
         event.setRoll(event.getRoll() + Mth.sin(phase * Mth.TWO_PI) * impulse * 0.14F);
-    }
-
-    private static void emitFootContact(Minecraft minecraft, FieldDodoEntity dinosaur, boolean leftFoot) {
-        Vec3 listener = minecraft.gameRenderer.getMainCamera().position();
-        double distance = listener.distanceTo(dinosaur.position());
-        if (distance > MAX_EFFECT_DISTANCE) {
-            return;
-        }
-        float falloff = 1.0F - Mth.clamp((float) ((distance - 2.0D) / (MAX_EFFECT_DISTANCE - 2.0D)), 0.0F, 1.0F);
-        falloff *= falloff;
-        float occlusion = isOccluded(minecraft, listener, dinosaur.getBoundingBox().getCenter()) ? 0.38F : 1.0F;
-        if (minecraft.screen == null) {
-            shakeStartedNanos = System.nanoTime();
-            float speciesStrength = dinosaur.getSpecies() == DinosaurSpecies.SPINOSAURUS
-                    ? dinosaur.isSpinosaurusLandSprinting() ? 1.85F : 0.92F
-                    : 0.72F;
-            shakeStrength = Math.max(shakeStrength, falloff * occlusion * speciesStrength);
-        }
-        spawnSurfaceDust(minecraft, dinosaur, leftFoot, falloff);
     }
 
     private static boolean isOccluded(Minecraft minecraft, Vec3 start, Vec3 end) {
@@ -133,11 +118,9 @@ public final class DinosaurFootstepEffects {
     ) {
         BlockPos groundPos = dinosaur.getBlockPosBelowThatAffectsMyMovement();
         BlockState surface = minecraft.level.getBlockState(groundPos);
-        if (surface.isAir()) {
-            return;
-        }
+        if (surface.isAir()) return;
         double yaw = Math.toRadians(dinosaur.getYRot());
-        double side = leftFoot ? -0.58D : 0.58D;
+        double side = (leftFoot ? -0.58D : 0.58D) * dinosaur.getGeneticScale();
         double footX = dinosaur.getX() + Math.cos(yaw) * side;
         double footZ = dinosaur.getZ() + Math.sin(yaw) * side;
         BlockParticleOption particle = new BlockParticleOption(ParticleTypes.BLOCK, surface);
@@ -154,10 +137,5 @@ public final class DinosaurFootstepEffects {
                     Math.sin(yaw + index) * 0.018D
             );
         }
-    }
-
-    private static final class RunGait {
-        private boolean running;
-        private int cycleTick;
     }
 }

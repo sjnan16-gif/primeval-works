@@ -9,6 +9,7 @@ import com.geckolib.animation.object.PlayState;
 import com.geckolib.util.GeckoLibUtil;
 import com.primevalworks.registry.ModBlockEntities;
 import com.primevalworks.registry.ModBlocks;
+import com.primevalworks.config.PrimevalTuning;
 import com.primevalworks.world.block.TurbineBlock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -54,7 +55,8 @@ public final class TurbineBlockEntity extends BlockEntity implements GeoBlockEnt
     }
 
     public float generationMultiplier() {
-        return getBlockState().is(ModBlocks.WATER_TURBINE.get()) ? 1.5F : 1.0F;
+        return getBlockState().is(ModBlocks.WATER_TURBINE.get())
+                ? (float)PrimevalTuning.server().waterTurbineOutput() : 1.0F;
     }
 
     public int getGenerationPulseCount() {

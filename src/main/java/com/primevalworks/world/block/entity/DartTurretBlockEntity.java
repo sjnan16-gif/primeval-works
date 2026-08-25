@@ -1,5 +1,6 @@
 package com.primevalworks.world.block.entity;
 
+import com.primevalworks.config.PrimevalTuning;
 import com.primevalworks.registry.ModBlockEntities;
 import com.primevalworks.registry.ModEntities;
 import com.primevalworks.registry.ModItems;
@@ -64,7 +65,7 @@ public final class DartTurretBlockEntity extends BaseContainerBlockEntity implem
         if (target == null || turret.targetRefresh-- <= 0) {
             target = level.getEntitiesOfClass(
                         LivingEntity.class,
-                        new AABB(pos).inflate(RANGE),
+                        new AABB(pos).inflate(configuredRange()),
                         entity -> entity.isAlive() && entity instanceof Enemy
                                 && BaseEnergyRules.ownsPosition(level, pos, entity.position())
                 ).stream()
@@ -88,7 +89,7 @@ public final class DartTurretBlockEntity extends BaseContainerBlockEntity implem
         turret.setItem(ammoSlot, ammo);
         DartProjectileEntity dart = new DartProjectileEntity(ModEntities.DART_PROJECTILE.get(), level);
         dart.setPos(origin.x, origin.y, origin.z);
-        dart.setBaseDamage(PROJECTILE_DAMAGE);
+        dart.setBaseDamage(PROJECTILE_DAMAGE * PrimevalTuning.server().turretDamage());
         Vec3 aim = target.getEyePosition().subtract(origin);
         dart.shoot(aim.x, aim.y, aim.z, PROJECTILE_SPEED, PROJECTILE_INACCURACY);
         level.addFreshEntity(dart);
@@ -103,7 +104,7 @@ public final class DartTurretBlockEntity extends BaseContainerBlockEntity implem
     private @Nullable LivingEntity currentTarget(ServerLevel level, BlockPos pos) {
         LivingEntity target = aim.target(level);
         return target != null && target instanceof Enemy
-                && target.distanceToSqr(Vec3.atCenterOf(pos)) <= RANGE * RANGE
+                && target.distanceToSqr(Vec3.atCenterOf(pos)) <= configuredRange() * configuredRange()
                 && BaseEnergyRules.ownsPosition(level, pos, target.position()) ? target : null;
     }
 
@@ -112,6 +113,10 @@ public final class DartTurretBlockEntity extends BaseContainerBlockEntity implem
         if (!aim.setTargetEntityId(id) || level == null) return;
         setChanged();
         level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 2);
+    }
+
+    private static double configuredRange() {
+        return RANGE * PrimevalTuning.server().turretRange();
     }
 
     @Override

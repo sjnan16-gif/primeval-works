@@ -1,5 +1,6 @@
 package com.primevalworks.client.effect;
 
+import com.primevalworks.config.PrimevalConfig;
 import com.primevalworks.client.model.entity.DinosaurVisualProfile;
 import com.primevalworks.client.model.entity.DinosaurPreviewBounds;
 import com.primevalworks.network.payload.HatchRevealPayload;
@@ -34,6 +35,7 @@ public final class DinosaurHatchReveal {
     }
 
     public static void show(HatchRevealPayload payload) {
+        if (!PrimevalConfig.CLIENT.hatchReveal.get()) return;
         current = payload;
         preview = null;
         startedNanos = System.nanoTime();

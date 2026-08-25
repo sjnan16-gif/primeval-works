@@ -13,6 +13,8 @@ import com.primevalworks.world.work.PriorityRouting;
 import com.primevalworks.world.work.DinoSpeciesWorkProfile;
 import com.primevalworks.world.work.WorkSpecialtyRules;
 import com.primevalworks.world.work.ExpeditionRewards;
+import com.primevalworks.config.PrimevalConfig;
+import com.primevalworks.config.PrimevalTuning;
 import com.primevalworks.world.work.BaseInventoryIndex;
 import com.primevalworks.world.ownership.DinosaurOwnership;
 import com.primevalworks.world.egg.DinosaurEggSize;
@@ -28,7 +30,6 @@ import com.primevalworks.world.block.entity.ProcessorBlockEntity;
 import com.primevalworks.world.block.entity.AncientFurnaceBlockEntity;
 import com.primevalworks.world.block.CommandTableBlock;
 import com.primevalworks.world.block.TurbinePartBlock;
-import com.primevalworks.world.sound.PrimevalSoundPlayback;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.core.BlockPos;
@@ -112,13 +113,8 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     public static final int MUTATION_ALBINO = DinosaurMutationRules.ALBINO;
     public static final int MUTATION_SCHEMA = 2;
     private static final int MUTATION_MASK_ALLOWED = MUTATION_HUGE | MUTATION_ALBINO;
-    private static final double HUGE_STAT_MULTIPLIER = 1.20D;
-    private static final double ALBINO_STAT_MULTIPLIER = 1.40D;
-    private static final double ALBINO_HEALTH_MULTIPLIER = 0.80D;
-    private static final float HUGE_SCALE_MULTIPLIER = 1.18F;
     private static final int WORK_STATE_SCHEMA = 3;
     private static final int OWNERSHIP_SYNC_INTERVAL_TICKS = 600;
-    private static final int FOOD_BOX_HUNGER_THRESHOLD = 50;
     private static final int FOOD_BOX_BASE_FOOD_VALUE = 28;
     private static final double T_REX_MOUTH_REACH = 2.50D;
     private static final float T_REX_ATTACK_ARC_DEGREES = 34.0F;
@@ -352,6 +348,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     private boolean avoidDanger = true;
     private boolean workEnabled = true;
     private int workerCooldown;
+    private int workWorkstationCursor;
     private BlockPos workActionPos;
     private Vec3 workLockedPosition;
     private @Nullable CraftingOrder pendingCraftingOrder;
@@ -547,7 +544,8 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         float quality = getGeneticQuality() / 100.0F;
         double attackMultiplier = (0.90D + quality * 0.20D)
                 * getMutationStatMultiplier()
-                * DinosaurProgression.attackMultiplier(dinosaurLevel);
+                * DinosaurProgression.attackMultiplier(dinosaurLevel)
+                * PrimevalTuning.server().dinosaurDamage();
         double movementMultiplier = (0.94D + quality * 0.12D)
                 * getMutationStatMultiplier()
                 * DinosaurProgression.movementMultiplier(dinosaurLevel);
@@ -562,9 +560,10 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
 
     public static float expectedMaxHealth(DinosaurSpecies species, int quality, int mutationMask, int level) {
         double multiplier = 0.90D + Mth.clamp(quality, 0, 100) * 0.002D;
-        if ((mutationMask & MUTATION_HUGE) != 0) multiplier *= HUGE_STAT_MULTIPLIER;
-        if ((mutationMask & MUTATION_ALBINO) != 0) multiplier *= ALBINO_HEALTH_MULTIPLIER;
+        if ((mutationMask & MUTATION_HUGE) != 0) multiplier *= PrimevalTuning.server().hugeStats();
+        if ((mutationMask & MUTATION_ALBINO) != 0) multiplier *= PrimevalTuning.server().albinoHealth();
         multiplier *= DinosaurProgression.healthMultiplier(level);
+        multiplier *= PrimevalTuning.server().dinosaurHealth();
         return (float)(species.baseHealth() * multiplier);
     }
 
@@ -939,7 +938,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     public float getGeneticScale() {
         int quality = entityData.get(GENETIC_QUALITY);
         float baseScale = quality < 0 ? 1.0F : 0.90F + quality * 0.002F;
-        return baseScale * (hasHugeMutation() ? HUGE_SCALE_MULTIPLIER : 1.0F);
+        return baseScale * (hasHugeMutation() ? (float)PrimevalTuning.server().hugeScale() : 1.0F);
     }
 
     public boolean hasHugeMutation() {
@@ -961,8 +960,8 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
 
     public float getMutationStatMultiplier() {
         double multiplier = 1.0D;
-        if (hasHugeMutation()) multiplier *= HUGE_STAT_MULTIPLIER;
-        if (hasAlbinoMutation()) multiplier *= ALBINO_STAT_MULTIPLIER;
+        if (hasHugeMutation()) multiplier *= PrimevalTuning.server().hugeStats();
+        if (hasAlbinoMutation()) multiplier *= PrimevalTuning.server().albinoStats();
         return (float)multiplier;
     }
 
@@ -1214,14 +1213,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
 
     @Override
     protected void playStepSound(BlockPos pos, BlockState state) {
-        if (!getSpecies().heavyweight() || isSilent() || level().isClientSide()) return;
-        boolean apex = getSpecies() == DinosaurSpecies.TYRANNOSAURUS
-                || getSpecies() == DinosaurSpecies.SPINOSAURUS;
-        SoundEvent sound = apex ? SoundEvents.RAVAGER_STEP : SoundEvents.SNIFFER_STEP;
-        float sizePitch = Mth.clamp(1.0F / Mth.sqrt(Math.max(0.65F, getGeneticScale())), 0.72F, 1.06F);
-        float volume = (apex ? 0.30F : 0.18F) * (isSprinting() ? 1.12F : 1.0F);
-        PrimevalSoundPlayback.playFromEntity(this, sound, getSoundSource(), volume, sizePitch,
-                apex ? PrimevalSoundPlayback.LARGE_RADIUS : PrimevalSoundPlayback.MACHINE_RADIUS);
+        // Heavy contacts are emitted by authored animation markers so playback speed cannot desync them.
     }
 
     @Override
@@ -1346,6 +1338,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         this.avoidDanger = avoidDanger;
         workEnabled = true;
         workerCooldown = 0;
+        workWorkstationCursor = 0;
         navigation.stop();
         navigationTarget = null;
         stalledNavigationTicks = 0;
@@ -1685,6 +1678,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         output.putBoolean("PrimevalWorkAvoidDanger", avoidDanger);
         output.putBoolean("PrimevalWorkEnabled", workEnabled);
         output.putInt("PrimevalWorkerCooldown", Math.max(0, workerCooldown));
+        output.putInt("PrimevalWorkstationCursor", Math.max(0, workWorkstationCursor));
         output.putInt("PrimevalWorkAction", entityData.get(WORK_ACTION));
         output.putInt("PrimevalWorkActionProgress", entityData.get(WORK_ACTION_PROGRESS));
         output.putInt("PrimevalWorkActionDuration", entityData.get(WORK_ACTION_DURATION));
@@ -1773,6 +1767,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         avoidDanger = input.getBooleanOr("PrimevalWorkAvoidDanger", true);
         workEnabled = input.getBooleanOr("PrimevalWorkEnabled", commandTablePos != null);
         workerCooldown = Mth.clamp(input.getIntOr("PrimevalWorkerCooldown", 0), 0, 1_200);
+        workWorkstationCursor = Math.max(0, input.getIntOr("PrimevalWorkstationCursor", 0));
         int savedWorkAction = Mth.clamp(input.getIntOr("PrimevalWorkAction", 0), 0, 5);
         int savedWorkDuration = Mth.clamp(input.getIntOr("PrimevalWorkActionDuration", 0), 0, 72_000);
         int savedWorkProgress = Mth.clamp(input.getIntOr("PrimevalWorkActionProgress", 0), 0, savedWorkDuration);
@@ -2018,7 +2013,8 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                 entityData.get(PTERO_AIRSPEED)
         );
         float normalizedSpeed = Mth.clamp(
-                horizontalSpeed / (float)(PTERO_BOOST_SPEED * getMutationStatMultiplier()), 0.0F, 1.0F
+                horizontalSpeed / (float)(PTERO_BOOST_SPEED * getMutationStatMultiplier()
+                        * PrimevalTuning.server().pteranodonFlightSpeed()), 0.0F, 1.0F
         );
         if (mode == PTERO_FLIGHT_HOVERING) {
             return 0.92F;
@@ -2061,7 +2057,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                 && !isVehicle()
                 && !onExpedition
                 && getTarget() == null
-                && getHunger() >= FOOD_BOX_HUNGER_THRESHOLD
+                && getHunger() >= PrimevalTuning.server().foodBoxThreshold()
                 && !isInWater();
         if (isVehicle()) {
             if (isDinosaurSleeping()) entityData.set(DINOSAUR_SLEEPING, false);
@@ -2244,6 +2240,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
 
         int drainUnits = WorkSpecialtyRules.workMoodDrainUnitsPerTick(
                 isNightWorkWindow() ? 2 : workSchedule);
+        if (drainUnits <= 0) return;
         CommandTableBlockEntity table = commandTableEntity();
         if (table != null) {
             drainUnits = Math.max(1, Math.round(drainUnits * table.moodDrainMultiplier()));
@@ -2362,7 +2359,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     }
 
     private void runFireWork() {
-        BlockPos stationPos = choosePosition(workWorkstationPositions);
+        BlockPos stationPos = chooseWorkstationPosition();
         if (stationPos == null || !level().isLoaded(stationPos)) {
             cancelWorkAction();
             workerCooldown = 30;
@@ -2413,6 +2410,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                     stationPos.getX() + 0.5D, stationPos.getY() + 1.08D, stationPos.getZ() + 0.5D,
                     5, 0.22D, 0.10D, 0.22D, 0.01D);
             requestCappedHungerDrain();
+            advanceWorkstationCursor();
             workerCooldown = 4;
         }
     }
@@ -2444,12 +2442,13 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                         10, 0.22D, 0.12D, 0.22D, 0.025D);
             }
             requestCappedHungerDrain();
+            advanceWorkstationCursor();
             workerCooldown = 4;
         }
     }
 
     private void runEnergyWork() {
-        BlockPos turbinePos = choosePosition(workWorkstationPositions);
+        BlockPos turbinePos = chooseWorkstationPosition();
         if (turbinePos == null || !level().isLoaded(turbinePos)) {
             cancelWorkAction();
             workerCooldown = 30;
@@ -2491,6 +2490,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                         7, 0.3D, 0.18D, 0.3D, 0.015D);
             }
             if (generated) requestCappedHungerDrain();
+            if (generated) advanceWorkstationCursor();
             workerCooldown = generated ? 0 : 20;
         }
     }
@@ -2774,8 +2774,23 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         return workRoutePolicy == 0 ? null : orderedPositions(workFallbackPositions).stream().findFirst().orElse(null);
     }
 
+    private BlockPos chooseWorkstationPosition() {
+        List<BlockPos> ordered = new ArrayList<>(workWorkstationPositions);
+        ordered.sort(Comparator
+                .comparingInt((BlockPos pos) -> blockPriority(pos)).reversed()
+                .thenComparingLong(BlockPos::asLong));
+        if (ordered.isEmpty()) return null;
+        return ordered.get(Math.floorMod(workWorkstationCursor, ordered.size()));
+    }
+
+    private void advanceWorkstationCursor() {
+        if (workWorkstationPositions.size() > 1) {
+            workWorkstationCursor = Math.floorMod(workWorkstationCursor + 1, workWorkstationPositions.size());
+        }
+    }
+
     private void runCraftingWork() {
-        BlockPos stationPos = choosePosition(workWorkstationPositions);
+        BlockPos stationPos = chooseWorkstationPosition();
         if (stationPos == null || workItemFilters.isEmpty() || !level().isLoaded(stationPos)
                 || !(level().getBlockState(stationPos).getBlock() instanceof CraftingTableBlock)) {
             cancelWorkAction();
@@ -2830,6 +2845,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             remaining -= count;
         }
         requestCappedHungerDrain();
+        advanceWorkstationCursor();
         workerCooldown = 4;
         if (workRepeatMode == 2) {
             stopWorkOrder();
@@ -3310,7 +3326,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     }
 
     private boolean seekFoodWhenHungry() {
-        if (getHunger() >= FOOD_BOX_HUNGER_THRESHOLD || commandTablePos == null) {
+        if (getHunger() >= PrimevalTuning.server().foodBoxThreshold() || commandTablePos == null) {
             foodTargetPos = null;
             return false;
         }
@@ -3571,7 +3587,8 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                     10,
                     true,
                     false,
-                    (candidate, serverLevel) -> candidate.isAlive()
+                    (candidate, serverLevel) -> PrimevalTuning.server().hostileMobTargeting()
+                            && candidate.isAlive()
                             && insideBaseBoundary(candidate.position(), 6.0D)
             ));
         } else {
@@ -3916,7 +3933,9 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                 && !isInWater()
                 && !isSpinosaurusBreaching()) {
             return (float)getAttributeValue(Attributes.MOVEMENT_SPEED)
-                    * (isSpinosaurusLandSprinting() ? SPINO_LAND_SPRINT_MULTIPLIER : 1.10F);
+                    * (isSpinosaurusLandSprinting()
+                    ? SPINO_LAND_SPRINT_MULTIPLIER * (float)PrimevalTuning.server().spinosaurusSprintSpeed()
+                    : 1.10F);
         }
         return (float)getAttributeValue(Attributes.MOVEMENT_SPEED)
                 * (controller.isSprinting() ? 1.36F : 1.05F);
@@ -3978,8 +3997,9 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         boolean descending = riddenInput.y < -0.01D;
         boolean braking = riddenInput.z < -0.05D && !isPteranodonExhausted();
         double mountSpeedMultiplier = getMutationStatMultiplier();
-        double cruiseSpeed = PTERO_CRUISE_SPEED * mountSpeedMultiplier;
-        double boostSpeed = PTERO_BOOST_SPEED * mountSpeedMultiplier;
+        double configuredFlightSpeed = PrimevalTuning.server().pteranodonFlightSpeed();
+        double cruiseSpeed = PTERO_CRUISE_SPEED * mountSpeedMultiplier * configuredFlightSpeed;
+        double boostSpeed = PTERO_BOOST_SPEED * mountSpeedMultiplier * configuredFlightSpeed;
         float speedFactor = Mth.clamp(getPteranodonFlightSpeed() / (float)boostSpeed, 0.0F, 1.0F);
         float lookPitch = Mth.clamp(controller.getXRot(), -55.0F, 58.0F);
         boolean wasGliding = entityData.get(PTERO_FLIGHT_MODE) == PTERO_FLIGHT_GLIDING;
@@ -4200,8 +4220,9 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                     * (3.0F - 2.0F * spinosaurusThrottle);
             double mountMultiplier = getMutationStatMultiplier()
                     * DinosaurProgression.movementMultiplier(dinosaurLevel);
-            double maximumSpeed = SPINO_MAX_SWIM_SPEED * mountMultiplier;
-            double targetSpeed = Mth.lerp(speedProgress, SPINO_CRUISE_SPEED, maximumSpeed)
+            double configuredSwimSpeed = PrimevalTuning.server().spinosaurusSwimSpeed();
+            double maximumSpeed = SPINO_MAX_SWIM_SPEED * mountMultiplier * configuredSwimSpeed;
+            double targetSpeed = Mth.lerp(speedProgress, SPINO_CRUISE_SPEED * configuredSwimSpeed, maximumSpeed)
                     * spinosaurusThrottle;
 
             float controllerYaw = controller.getYRot();
@@ -4254,9 +4275,11 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             float exitPitch = Mth.clamp(controller.getXRot(), -58.0F, 32.0F);
             float upwardAngle = Mth.clamp(-exitPitch / 58.0F, 0.0F, 1.0F);
             double speed = Math.max(0.26D, current.length());
-            double speedRatio = Mth.clamp(speed / (SPINO_MAX_SWIM_SPEED * getMutationStatMultiplier()), 0.0D, 1.0D);
+            double configuredSwimSpeed = PrimevalTuning.server().spinosaurusSwimSpeed();
+            double speedRatio = Mth.clamp(speed / (SPINO_MAX_SWIM_SPEED * getMutationStatMultiplier()
+                    * configuredSwimSpeed), 0.0D, 1.0D);
             double horizontal = Mth.clamp(current.horizontalDistance(), 0.34D,
-                    SPINO_MAX_SWIM_SPEED * getMutationStatMultiplier());
+                    SPINO_MAX_SWIM_SPEED * getMutationStatMultiplier() * configuredSwimSpeed);
             double vertical = 0.34D + speedRatio * 0.72D + upwardAngle * 0.94D;
             Vec3 forward = Vec3.directionFromRotation(0.0F, getYRot()).normalize();
             setDeltaMovement(forward.scale(horizontal).add(0.0D, vertical, 0.0D));
@@ -4439,6 +4462,9 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         if (level().isClientSide()) {
             return;
         }
+        amount *= amount < 0.0F
+                ? (float)PrimevalTuning.server().pteranodonStaminaDrain()
+                : (float)PrimevalTuning.server().pteranodonStaminaRecovery();
         float stamina = Mth.clamp(getPteranodonStamina() + amount, 0.0F, PTERO_MAX_STAMINA);
         if (Math.abs(stamina - entityData.get(PTERO_STAMINA)) > 0.0001F) {
             entityData.set(PTERO_STAMINA, stamina);
@@ -4454,6 +4480,9 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
 
     private void adjustSpinosaurusLandStamina(float amount) {
         if (level().isClientSide() || getSpecies() != DinosaurSpecies.SPINOSAURUS) return;
+        amount *= amount < 0.0F
+                ? (float)PrimevalTuning.server().spinosaurusStaminaDrain()
+                : (float)PrimevalTuning.server().spinosaurusStaminaRecovery();
         float stamina = Mth.clamp(getSpinosaurusLandStamina() + amount,
                 0.0F, SPINO_MAX_LAND_STAMINA);
         if (Math.abs(stamina - entityData.get(SPINO_LAND_STAMINA)) > 0.0001F) {
@@ -4742,6 +4771,9 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                 if (dinosaur.usesWalkAnimation()) {
                     float landSpeed = Mth.clamp(0.50F + dinosaur.walkAnimation.speed() * 2.15F,
                             0.58F, dinosaur.isSpinosaurusLandSprinting() ? 2.35F : 1.45F);
+                    if (dinosaur.getControllingPassenger() == null) {
+                        landSpeed *= DinosaurAnimationEvents.unmountedSpinosaurusGaitSpeed();
+                    }
                     return playSpeciesAnimation(test, SPINO_WALK, landSpeed);
                 }
                 return playSpeciesAnimation(test, SPINO_IDLE, 1.0F);
@@ -4777,6 +4809,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                     : parasaurolophus ? PARASAUR_WALK
                     : PLACEHOLDER_WALK);
         });
+        movementController.setSoundKeyframeHandler(DinosaurAnimationEvents::handleFootstep);
         controllers.add(movementController);
         AnimationController<FieldDodoEntity> actionController = new AnimationController<FieldDodoEntity>("Action", 4, test -> {
             FieldDodoEntity dinosaur = test.animatable();
@@ -5298,7 +5331,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
 
         @Override
         public boolean canUse() {
-            if (onExpedition || isDinosaurSleeping() || getHunger() < FOOD_BOX_HUNGER_THRESHOLD
+            if (onExpedition || isDinosaurSleeping() || getHunger() < PrimevalTuning.server().foodBoxThreshold()
                     || getTarget() != null || getWorkAction() != 0
                     || commandTablePos != null && workEnabled && workJobIndex == 2
                     || commandTablePos != null && workEnabled && workerCooldown <= 10

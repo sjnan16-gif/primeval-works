@@ -1,5 +1,6 @@
 package com.primevalworks.world.block.entity;
 
+import com.primevalworks.config.PrimevalTuning;
 import com.primevalworks.registry.ModBlockEntities;
 import com.primevalworks.world.base.BaseEnergyRules;
 import com.primevalworks.world.damage.PrimevalDamageTypes;
@@ -89,7 +90,8 @@ public final class MagicTurretBlockEntity extends BlockEntity implements Targeti
 
     private void strike(ServerLevel level, BlockPos pos, LivingEntity target) {
         Vec3 pivot = Vec3.atCenterOf(pos).add(0.0D, PIVOT_HEIGHT - 0.5D, 0.0D);
-        target.hurtServer(level, PrimevalDamageTypes.magicTurret(level, pivot), DAMAGE_PER_HIT);
+        target.hurtServer(level, PrimevalDamageTypes.magicTurret(level, pivot),
+                DAMAGE_PER_HIT * (float)PrimevalTuning.server().turretDamage());
         releaseSpellBurst(level, pos, target);
         burstHitsRemaining--;
         if (burstHitsRemaining > 0 && target.isAlive()) {
@@ -133,7 +135,7 @@ public final class MagicTurretBlockEntity extends BlockEntity implements Targeti
         Vec3 origin = Vec3.atCenterOf(pos).add(0.0D, PIVOT_HEIGHT - 0.5D, 0.0D);
         return level.getEntitiesOfClass(
                         LivingEntity.class,
-                        new AABB(pos).inflate(RANGE),
+                        new AABB(pos).inflate(configuredRange()),
                         entity -> entity.isAlive() && entity instanceof Enemy
                                 && BaseEnergyRules.ownsPosition(level, pos, entity.position())
                 ).stream()
@@ -143,7 +145,8 @@ public final class MagicTurretBlockEntity extends BlockEntity implements Targeti
 
     private @Nullable LivingEntity currentTarget(ServerLevel level, BlockPos pos) {
         LivingEntity target = aim.target(level);
-        return target != null && target.distanceToSqr(Vec3.atCenterOf(pos)) <= RANGE * RANGE
+        return target != null && target.distanceToSqr(Vec3.atCenterOf(pos))
+                <= configuredRange() * configuredRange()
                 && target instanceof Enemy
                 && BaseEnergyRules.ownsPosition(level, pos, target.position()) ? target : null;
     }
@@ -153,6 +156,10 @@ public final class MagicTurretBlockEntity extends BlockEntity implements Targeti
         if (!aim.setTargetEntityId(id) || level == null) return;
         setChanged();
         level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 2);
+    }
+
+    private static double configuredRange() {
+        return RANGE * PrimevalTuning.server().turretRange();
     }
 
     @Override

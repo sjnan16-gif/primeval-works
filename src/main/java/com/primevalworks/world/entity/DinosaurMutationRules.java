@@ -1,5 +1,7 @@
 package com.primevalworks.world.entity;
 
+import com.primevalworks.config.PrimevalTuning;
+
 /** Birth-only dinosaur mutation rolls shared by wild, bred, and incubated eggs. */
 public final class DinosaurMutationRules {
     public static final int HUGE = 1;
@@ -25,18 +27,20 @@ public final class DinosaurMutationRules {
     }
 
     public static float hugeChance(boolean incubated) {
-        return incubated ? INCUBATED_HUGE_CHANCE : WILD_HUGE_CHANCE;
+        return incubated ? (float)PrimevalTuning.server().incubatedHugeChance()
+                : (float)PrimevalTuning.server().wildHugeChance();
     }
 
     public static float albinoChance(boolean incubated) {
-        return incubated ? INCUBATED_ALBINO_CHANCE : WILD_ALBINO_CHANCE;
+        return incubated ? (float)PrimevalTuning.server().incubatedAlbinoChance()
+                : (float)PrimevalTuning.server().wildAlbinoChance();
     }
 
     public static boolean inheritsTrait(boolean firstParent, boolean secondParent, float roll, float novelChance) {
         int parentCount = (firstParent ? 1 : 0) + (secondParent ? 1 : 0);
         float chance = switch (parentCount) {
-            case 1 -> ONE_PARENT_INHERITANCE_CHANCE;
-            case 2 -> TWO_PARENT_INHERITANCE_CHANCE;
+            case 1 -> (float)PrimevalTuning.server().oneParentInheritance();
+            case 2 -> (float)PrimevalTuning.server().twoParentInheritance();
             default -> novelChance;
         };
         return roll < chance;
@@ -45,11 +49,11 @@ public final class DinosaurMutationRules {
     public static int rollBred(int firstParentMask, int secondParentMask, float hugeRoll, float albinoRoll) {
         int mask = 0;
         if (inheritsTrait((firstParentMask & HUGE) != 0, (secondParentMask & HUGE) != 0,
-                hugeRoll, BRED_HUGE_CHANCE)) {
+                hugeRoll, (float)PrimevalTuning.server().bredHugeChance())) {
             mask |= HUGE;
         }
         if (inheritsTrait((firstParentMask & ALBINO) != 0, (secondParentMask & ALBINO) != 0,
-                albinoRoll, BRED_ALBINO_CHANCE)) {
+                albinoRoll, (float)PrimevalTuning.server().bredAlbinoChance())) {
             mask |= ALBINO;
         }
         return mask;

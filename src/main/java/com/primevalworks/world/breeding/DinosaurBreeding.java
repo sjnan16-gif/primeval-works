@@ -1,5 +1,6 @@
 package com.primevalworks.world.breeding;
 
+import com.primevalworks.config.PrimevalTuning;
 import com.primevalworks.registry.ModItems;
 import com.primevalworks.world.egg.DinosaurEggGenome;
 import com.primevalworks.world.egg.DinosaurEggSize;
@@ -95,8 +96,10 @@ public final class DinosaurBreeding {
             target.level().addFreshEntity(dropped);
         }
 
-        target.beginBreedingCooldown(BREEDING_COOLDOWN_TICKS);
-        partner.beginBreedingCooldown(BREEDING_COOLDOWN_TICKS);
+        long cooldown = Math.max(0L, Math.round(BREEDING_COOLDOWN_TICKS
+                * PrimevalTuning.server().breedingCooldown()));
+        target.beginBreedingCooldown(cooldown);
+        partner.beginBreedingCooldown(cooldown);
         target.feed(-8);
         partner.feed(-8);
         DinosaurOwnership.syncRecord(target);

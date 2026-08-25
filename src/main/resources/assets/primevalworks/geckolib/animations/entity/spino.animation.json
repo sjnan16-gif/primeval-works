@@ -1863,6 +1863,10 @@
 		"walk": {
 			"loop": true,
 			"animation_length": 0.7917,
+			"sound_effects": {
+				"0.3333": { "effect": "foot_right" },
+				"0.75": { "effect": "foot_left" }
+			},
 			"bones": {
 				"body": {
 					"rotation": {

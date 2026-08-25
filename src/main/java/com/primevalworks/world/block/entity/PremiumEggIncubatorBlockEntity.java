@@ -1,5 +1,6 @@
 package com.primevalworks.world.block.entity;
 
+import com.primevalworks.config.PrimevalTuning;
 import com.primevalworks.registry.ModBlockEntities;
 import com.primevalworks.world.block.CommandTableBlock;
 import com.primevalworks.world.egg.DinosaurEggSize;
@@ -137,7 +138,8 @@ public final class PremiumEggIncubatorBlockEntity extends BlockEntity implements
         ).writeTo(heldStack.copyWithCount(1));
         int mutationCount = Integer.bitCount(mutationMask);
         double genomeTime = 1.0D + (quality - 62) * 0.0025D + mutationCount * 0.12D;
-        requiredTicks = Math.max(size.baseIncubationTicks(), Mth.ceil(size.baseIncubationTicks() * genomeTime));
+        requiredTicks = Math.max(1, Mth.ceil(size.baseIncubationTicks() * genomeTime
+                / PrimevalTuning.server().incubatorSpeed()));
         progress = 0;
         owner = player.getUUID();
         commandTablePos = table.pos();

@@ -7,6 +7,8 @@ import com.primevalworks.world.block.CommandTableBlock;
 import com.primevalworks.world.block.TurbinePartBlock;
 import com.primevalworks.world.ownership.DinosaurOwnership;
 import com.primevalworks.world.work.WorkSpecialtyRules;
+import com.primevalworks.world.work.WorkTargetRules;
+import com.primevalworks.config.PrimevalTuning;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -285,7 +287,7 @@ public record AssignDodoWorkPayload(
     }
 
     private static boolean insideBase(BlockPos table, List<BlockPos> candidates, int baseRadius) {
-        return candidates.size() <= 8
+        return candidates.size() <= PrimevalTuning.server().targetsPerWorkOrder()
                 && candidates.stream().allMatch(pos -> insideBase(table, Optional.of(pos), baseRadius));
     }
 
@@ -321,14 +323,18 @@ public record AssignDodoWorkPayload(
                     && payload.sourcePositions.isEmpty()
                     && payload.destinationPositions.isEmpty()
                     && payload.fallbackPositions.isEmpty();
-            case 2 -> canonicalTurbinePositions(player, payload.workstationPositions).size() == 1
-                    && canonicalTurbinePositions(player, payload.workstationPositions).stream().allMatch(pos -> {
+            case 2 -> {
+                List<BlockPos> turbines = canonicalTurbinePositions(player, payload.workstationPositions);
+                yield WorkTargetRules.acceptsNonEmptyTargetCount(
+                        turbines.size(), PrimevalTuning.server().targetsPerWorkOrder())
+                    && turbines.stream().allMatch(pos -> {
                         var block = player.level().getBlockState(pos).getBlock();
                         return block == ModBlocks.WIND_TURBINE.get() || block == ModBlocks.WATER_TURBINE.get();
                     })
                     && payload.sourcePositions.isEmpty()
                     && payload.destinationPositions.isEmpty()
                     && payload.fallbackPositions.isEmpty();
+            }
             case 3 -> !payload.workstationPositions.isEmpty()
                     && payload.workstationPositions.stream().allMatch(pos ->
                     player.level().getBlockState(pos).getBlock() instanceof CraftingTableBlock)

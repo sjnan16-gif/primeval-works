@@ -1,5 +1,6 @@
 package com.primevalworks.world.entity;
 
+import com.primevalworks.config.PrimevalTuning;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.monster.Monster;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
@@ -24,6 +25,7 @@ public final class DinosaurThreatTargeting {
                 false,
                 false,
                 (candidate, serverLevel) -> candidate instanceof FieldDodoEntity dinosaur
+                        && PrimevalTuning.server().hostileMobTargeting()
                         && dinosaur.isAlive()
                         && !dinosaur.isOnExpedition()
         ));

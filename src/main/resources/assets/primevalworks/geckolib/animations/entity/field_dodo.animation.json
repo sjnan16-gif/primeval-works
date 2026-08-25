@@ -20,6 +20,10 @@
     "move.walk": {
       "loop": true,
       "animation_length": 0.9,
+      "sound_effects": {
+        "0.0": {"effect": "foot_right"},
+        "0.45": {"effect": "foot_left"}
+      },
       "bones": {
         "body": {
           "rotation": {"vector": [0, 0, "math.sin(query.anim_time * 400) * 3"]},

@@ -1,5 +1,6 @@
 package com.primevalworks.world.block.entity;
 
+import com.primevalworks.config.PrimevalTuning;
 import com.primevalworks.registry.ModBlockEntities;
 import com.primevalworks.world.base.BaseEnergyRules;
 import com.primevalworks.world.inventory.AncientFurnaceMenu;
@@ -75,8 +76,10 @@ public final class AncientFurnaceBlockEntity extends AbstractFurnaceBlockEntity 
             return;
         }
 
-        furnace.workAccumulator = Math.min(4.0F, furnace.workAccumulator + furnace.speedMultiplier());
-        int steps = Math.min(4, Mth.floor(furnace.workAccumulator));
+        int maximumSteps = Math.max(4, Mth.ceil(4.2F
+                * (float)PrimevalTuning.server().ancientFurnaceSpeed()));
+        furnace.workAccumulator = Math.min(maximumSteps, furnace.workAccumulator + furnace.speedMultiplier());
+        int steps = Math.min(maximumSteps, Mth.floor(furnace.workAccumulator));
         furnace.workAccumulator -= steps;
         furnace.runCookingSteps(level, pos, steps);
     }
@@ -126,12 +129,13 @@ public final class AncientFurnaceBlockEntity extends AbstractFurnaceBlockEntity 
     }
 
     public float energyPerSecond() {
+        float configured = (float)PrimevalTuning.server().machineEnergyUse();
         if (throttle <= DEFAULT_THROTTLE) {
             return Mth.lerp(throttle / DEFAULT_THROTTLE,
-                    MINIMUM_ENERGY_PER_SECOND, DEFAULT_ENERGY_PER_SECOND);
+                    MINIMUM_ENERGY_PER_SECOND, DEFAULT_ENERGY_PER_SECOND) * configured;
         }
         return Mth.lerp((throttle - DEFAULT_THROTTLE) / (1.0F - DEFAULT_THROTTLE),
-                DEFAULT_ENERGY_PER_SECOND, MAXIMUM_ENERGY_PER_SECOND);
+                DEFAULT_ENERGY_PER_SECOND, MAXIMUM_ENERGY_PER_SECOND) * configured;
     }
 
     @Override
@@ -140,10 +144,12 @@ public final class AncientFurnaceBlockEntity extends AbstractFurnaceBlockEntity 
     }
 
     public float speedMultiplier() {
+        float configured = (float)PrimevalTuning.server().ancientFurnaceSpeed();
         if (throttle <= DEFAULT_THROTTLE) {
-            return Mth.lerp(throttle / DEFAULT_THROTTLE, 0.75F, 1.0F);
+            return Mth.lerp(throttle / DEFAULT_THROTTLE, 0.75F, 1.0F) * configured;
         }
-        return Mth.lerp((throttle - DEFAULT_THROTTLE) / (1.0F - DEFAULT_THROTTLE), 1.0F, 4.2F);
+        return Mth.lerp((throttle - DEFAULT_THROTTLE) / (1.0F - DEFAULT_THROTTLE), 1.0F, 4.2F)
+                * configured;
     }
 
     @Override

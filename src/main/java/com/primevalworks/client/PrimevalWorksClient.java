@@ -23,6 +23,7 @@ import com.primevalworks.client.screen.EnergyNetworkScreen;
 import com.primevalworks.client.screen.AncientFurnaceScreen;
 import com.primevalworks.client.screen.DartTurretScreen;
 import com.primevalworks.client.render.entity.DartProjectileRenderer;
+import com.primevalworks.config.PrimevalConfig;
 import com.primevalworks.registry.ModBlocks;
 import com.primevalworks.registry.ModBlockEntities;
 import com.primevalworks.registry.ModEntities;
@@ -32,6 +33,7 @@ import com.primevalworks.network.payload.ClaimCommandTablePayload;
 import com.primevalworks.network.payload.MountedDinosaurAttackPayload;
 import com.primevalworks.world.entity.FieldDodoEntity;
 import com.primevalworks.world.block.CommandTableExtensionBlock;
+import com.primevalworks.world.entity.DinosaurAnimationEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -43,6 +45,7 @@ import net.minecraft.world.level.block.Block;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.ModContainer;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
@@ -56,10 +59,17 @@ import net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
+import net.neoforged.neoforge.client.gui.ConfigurationScreen;
+import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 
 @Mod(value = PrimevalWorks.MOD_ID, dist = Dist.CLIENT)
 public final class PrimevalWorksClient {
-    public PrimevalWorksClient(IEventBus modBus) {
+    public PrimevalWorksClient(IEventBus modBus, ModContainer container) {
+        container.registerExtensionPoint(IConfigScreenFactory.class,
+                (ignored, parent) -> new ConfigurationScreen(container, parent));
+        DinosaurAnimationEvents.installFootstepHandler(DinosaurFootstepEffects::onAnimationFootstep);
+        DinosaurAnimationEvents.installUnmountedSpinosaurusGaitSpeed(
+                () -> PrimevalConfig.CLIENT.unmountedSpinosaurusGaitSpeed.get());
         modBus.addListener(EntityRenderersEvent.RegisterRenderers.class, PrimevalWorksClient::registerRenderers);
         modBus.addListener(RegisterRenderPipelinesEvent.class,
                 event -> event.registerPipeline(WorksitePlannerScreen.XRAY_HIGHLIGHT_PIPELINE));
@@ -76,7 +86,6 @@ public final class PrimevalWorksClient {
         NeoForge.EVENT_BUS.addListener(SubmitCustomGeometryEvent.class, WorksitePlannerScreen::submitWorldGeometry);
         NeoForge.EVENT_BUS.addListener(SubmitCustomGeometryEvent.class, EnergyNetworkScreen::submitWorldGeometry);
         NeoForge.EVENT_BUS.addListener(SubmitCustomGeometryEvent.class, WorksiteIndicatorRenderer::submitGeometry);
-        NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, DinosaurFootstepEffects::tick);
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, PteranodonFlightFeedback::tickInput);
         NeoForge.EVENT_BUS.addListener(MovementInputUpdateEvent.class,
                 PteranodonFlightFeedback::preserveSpinosaurusLandSprint);

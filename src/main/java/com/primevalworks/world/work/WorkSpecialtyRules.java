@@ -1,5 +1,7 @@
 package com.primevalworks.world.work;
 
+import com.primevalworks.config.PrimevalTuning;
+
 public final class WorkSpecialtyRules {
     public static final int WORK_MOOD_DRAIN_UNITS_PER_POINT = 12_000;
     public static final int CHEST_EXTRACT_TICKS = 28;
@@ -64,7 +66,8 @@ public final class WorkSpecialtyRules {
         int risk = EXPEDITION_RISKS[clampTier(tier)][clampStars(stars)];
         if (!canAttemptExpedition(tier, stars)) return 100;
         float mutationBenefit = Math.max(1.0F, mutationMultiplier);
-        return Math.max(0, Math.round(risk / mutationBenefit));
+        return Math.max(0, Math.min(100, Math.round(risk / mutationBenefit
+                * (float)PrimevalTuning.server().expeditionRisk())));
     }
 
     public static boolean canAttemptExpedition(int tier, int stars) {
@@ -72,7 +75,8 @@ public final class WorkSpecialtyRules {
     }
 
     public static int expeditionRewardCount(int tier) {
-        return EXPEDITION_REWARDS[clampTier(tier)];
+        return Math.max(0, Math.round(EXPEDITION_REWARDS[clampTier(tier)]
+                * (float)PrimevalTuning.server().expeditionRewards()));
     }
 
     public static int efficiencyPercent(int stars) {
@@ -80,7 +84,8 @@ public final class WorkSpecialtyRules {
     }
 
     public static float energyPerSecond(int stars) {
-        return ENERGY_PER_SECOND[clampStars(stars)];
+        return ENERGY_PER_SECOND[clampStars(stars)]
+                * (float)PrimevalTuning.server().energyGeneration();
     }
 
     public static float energyPerSecond(int stars, int level) {
@@ -98,7 +103,8 @@ public final class WorkSpecialtyRules {
             default -> 1.0F;
         };
         float levelBonus = 1.0F + Math.min(0.20F, Math.max(0, level - 1) * 0.00203F);
-        int aptitudeLimit = Math.max(1, (int)Math.floor(maximumStackSize * specialtyFraction * levelBonus));
+        int aptitudeLimit = Math.max(1, (int)Math.floor(maximumStackSize * specialtyFraction * levelBonus
+                * PrimevalTuning.server().transportCapacity()));
         return Math.min(Math.min(requestedBatch, maximumStackSize), aptitudeLimit);
     }
 
@@ -106,11 +112,15 @@ public final class WorkSpecialtyRules {
         if (baseTicks <= 0) {
             return 1;
         }
-        return Math.max(1, (int) Math.ceil(baseTicks * 100.0D / efficiencyPercent(stars)));
+        return Math.max(1, (int) Math.ceil(baseTicks * 100.0D / efficiencyPercent(stars)
+                / PrimevalTuning.server().workSpeed()));
     }
 
     public static int workMoodDrainUnitsPerTick(int schedule) {
-        return schedule == 2 ? 46 : 20;
+        double rate = PrimevalTuning.server().moodDrainRate();
+        if (rate <= 0.0D) return 0;
+        double scheduleMultiplier = schedule == 2 ? PrimevalTuning.server().nightShiftMoodRate() : 1.0D;
+        return Math.max(1, (int)Math.round(20.0D * rate * scheduleMultiplier));
     }
 
     public static long expeditionDurationTicks(int tier, int stars) {
@@ -120,7 +130,8 @@ public final class WorkSpecialtyRules {
     public static long expeditionDurationTicks(int tier, int stars, float mutationMultiplier) {
         int minutes = EXPEDITION_DURATION_MINUTES[clampTier(tier)][clampStars(stars)];
         float mutationBenefit = Math.max(1.0F, mutationMultiplier);
-        return Math.max(1L, Math.round(minutes * 60.0D * 20.0D / mutationBenefit));
+        return Math.max(1L, Math.round(minutes * 60.0D * 20.0D / mutationBenefit
+                * PrimevalTuning.server().expeditionTime()));
     }
 
     public static int expeditionDurationMinutes(int tier, int stars) {

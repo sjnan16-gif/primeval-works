@@ -1,5 +1,6 @@
 package com.primevalworks.client.screen;
 
+import com.primevalworks.config.PrimevalConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
@@ -43,8 +44,10 @@ final class PrimevalUiSounds {
     }
 
     private static void play(SoundEvent sound, float pitch, float volume) {
+        if (!PrimevalConfig.CLIENT.uiSounds.get()) return;
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft == null || minecraft.getSoundManager() == null) return;
-        minecraft.getSoundManager().play(SimpleSoundInstance.forUI(sound, pitch, volume));
+        minecraft.getSoundManager().play(SimpleSoundInstance.forUI(
+                sound, pitch, volume * PrimevalConfig.CLIENT.uiSoundVolume.get().floatValue()));
     }
 }

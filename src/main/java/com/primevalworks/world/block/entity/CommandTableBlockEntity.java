@@ -1,5 +1,6 @@
 package com.primevalworks.world.block.entity;
 
+import com.primevalworks.config.PrimevalTuning;
 import com.geckolib.animatable.GeoBlockEntity;
 import com.geckolib.animatable.instance.AnimatableInstanceCache;
 import com.geckolib.animatable.manager.AnimatableManager;
@@ -326,7 +327,8 @@ public final class CommandTableBlockEntity extends BlockEntity implements GeoBlo
     }
 
     public float energyCapacity() {
-        return BASE_ENERGY_CAPACITY + level(BaseUpgrade.ENERGY_RESERVOIR) * 250.0F;
+        return (BASE_ENERGY_CAPACITY + level(BaseUpgrade.ENERGY_RESERVOIR) * 250.0F)
+                * (float)PrimevalTuning.server().energyStorage();
     }
 
     public float generationPerSecond() {

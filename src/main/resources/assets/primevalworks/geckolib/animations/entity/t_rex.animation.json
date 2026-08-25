@@ -590,6 +590,10 @@
 		"run": {
 			"loop": true,
 			"animation_length": 0.5,
+			"sound_effects": {
+				"0.1667": { "effect": "foot_right" },
+				"0.4167": { "effect": "foot_left" }
+			},
 			"bones": {
 				"body": {
 					"rotation": {
@@ -943,6 +947,10 @@
 		"walk": {
 			"loop": true,
 			"animation_length": 1.3333,
+			"sound_effects": {
+				"0.0": { "effect": "foot_right" },
+				"0.6667": { "effect": "foot_left" }
+			},
 			"bones": {
 				"body": {
 					"rotation": {
