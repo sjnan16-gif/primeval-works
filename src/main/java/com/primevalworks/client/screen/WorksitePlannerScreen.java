@@ -243,6 +243,8 @@ public final class WorksitePlannerScreen extends Screen {
     private long feedbackUntilNanos;
     private float renderTimeTicks;
     private boolean workStateReceived;
+    private boolean savePending;
+    private long saveRequestedNanos;
     private boolean resumingFromMachineMenu;
     private BaseMachineRoutingPayload machineRouting;
     private boolean machineRoutingOpen;
@@ -439,11 +441,21 @@ public final class WorksitePlannerScreen extends Screen {
                 : selections[0];
         screen.refreshPickerItems();
         screen.refreshSuitableBlocks();
+        if (screen.savePending) {
+            screen.savePending = false;
+            screen.closeSearchPicker();
+            screen.minecraft.setScreen(screen.parent);
+            return;
+        }
         screen.feedback(payload.enabled() ? "Saved work order loaded." : "Saved order loaded and ready to restart.");
     }
 
     @Override
     public void tick() {
+        if (savePending && Util.getNanos() - saveRequestedNanos > 2_500_000_000L) {
+            savePending = false;
+            feedback("The server did not accept that order. Check the message above, then try again.");
+        }
         scanWorkstationIndexStep(6_000);
         if (searchOpen && usesPlayerInventoryPicker()) {
             // The fire picker mirrors the player's live inventory. This is a tiny local copy and
@@ -510,6 +522,10 @@ public final class WorksitePlannerScreen extends Screen {
                     feedback("That inventory item is neither fuel nor a smeltable input.");
                     return true;
                 }
+                if (!usesPlayerInventoryPicker()) {
+                    selectSingleItemFilter(clickedEntry.stack);
+                    return true;
+                }
                 draggedBaseItem = clickedEntry;
                 feedback("Drag " + clickedEntry.stack.getHoverName().getString() + " to the " + filterSlotName().toLowerCase() + " slot.");
                 return true;
@@ -574,13 +590,14 @@ public final class WorksitePlannerScreen extends Screen {
             itemFilters.clear();
             itemFilter = "";
             refreshSuitableBlocks();
+            closeSearchPicker();
             feedback("This order now accepts any item found in its sources.");
             return true;
         }
         if (pinnedTool == PlannerTool.FILTER && jobIndex != 1 && help.filterTarget.contains(event.x(), event.y())) {
             feedback(itemFilters.isEmpty()
-                    ? "Open the compass and drag an item here."
-                    : "Drag another item here to replace " + shortIdentifier(itemFilters.getFirst()).toLowerCase() + ".");
+                    ? "Open the compass and click the item this order should handle."
+                    : "Click another item in the picker to replace " + shortIdentifier(itemFilters.getFirst()).toLowerCase() + ".");
             return true;
         }
         SpecialtyDockLayout dock = specialtyDockLayout((topDrawerReveal + leftDrawerReveal) * 0.5F);
@@ -712,13 +729,7 @@ public final class WorksitePlannerScreen extends Screen {
                 }
                 refreshSuitableBlocks();
             } else if (help.filterTarget.contains(event.x(), event.y())) {
-                String identifier = BuiltInRegistries.ITEM.getKey(draggedBaseItem.stack.getItem()).toString();
-                itemFilters.clear();
-                itemFilters.add(identifier);
-                itemFilter = identifier;
-                pinnedTool = PlannerTool.FILTER;
-                refreshSuitableBlocks();
-                feedback(draggedBaseItem.stack.getHoverName().getString() + " assigned to this work order.");
+                selectSingleItemFilter(draggedBaseItem.stack);
             } else {
                 feedback("Item not assigned. Drop it on the " + filterSlotName().toLowerCase() + " slot.");
             }
@@ -1196,7 +1207,9 @@ public final class WorksitePlannerScreen extends Screen {
                     graphics.setComponentTooltipForNextFrame(font(), List.of(
                             entry.stack.getHoverName().copy().withStyle(style -> style.withBold(true)),
                             Component.literal(inventoryPicker ? "Inventory stack: " + entry.totalCount : "Stored in base: " + entry.totalCount),
-                            Component.literal("Drag this item to the " + filterSlotName().toLowerCase() + " slot."),
+                            Component.literal(inventoryPicker
+                                    ? "Drag this item to the " + filterSlotName().toLowerCase() + " slot."
+                                    : "Click to choose this item for the work order."),
                             Component.literal(inventoryPicker ? "Template only - the item is not consumed." : "Automation moves the real stacks for you.")
                     ), mouseX, mouseY);
                 }
@@ -1717,8 +1730,8 @@ public final class WorksitePlannerScreen extends Screen {
             graphics.setComponentTooltipForNextFrame(font(), List.of(
                     Component.literal(filterSlotName()).withStyle(style -> style.withBold(true)),
                     Component.literal(selected.isEmpty()
-                            ? "Open the compass and drag an item here."
-                            : "Drag another base item here to replace " + selected.getHoverName().getString() + ".")
+                            ? "Open the compass and click an item to choose it."
+                            : "Click another item in the picker to replace " + selected.getHoverName().getString() + ".")
             ), mouseX, mouseY);
         }
     }
@@ -1810,6 +1823,17 @@ public final class WorksitePlannerScreen extends Screen {
         feedback(shortIdentifier(removed) + " removed from allowed " + kind + "s.");
     }
 
+    private void selectSingleItemFilter(ItemStack stack) {
+        if (stack.isEmpty()) return;
+        String identifier = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+        itemFilters.clear();
+        itemFilters.add(identifier);
+        itemFilter = identifier;
+        refreshSuitableBlocks();
+        closeSearchPicker();
+        feedback(stack.getHoverName().getString() + " assigned. The work order is ready to save.");
+    }
+
     private void activateTool(PlannerTool tool) {
         pressedTool = tool;
         pressedToolNanos = Util.getNanos();
@@ -1823,9 +1847,11 @@ public final class WorksitePlannerScreen extends Screen {
         }
         if (tool == PlannerTool.FILTER) {
             openSearchPicker();
-            feedback(itemFilters.isEmpty()
-                    ? "Choose an item type, then drag it to the highlighted slot."
-                    : "Choose another item type to replace the current filter.");
+            feedback(jobIndex == 1
+                    ? "Drag fuel or smelting inputs into the matching slots."
+                    : itemFilters.isEmpty()
+                            ? "Click the item type this order should handle."
+                            : "Click another item type to replace the current filter.");
             return;
         }
         switch (tool) {
@@ -3065,6 +3091,10 @@ public final class WorksitePlannerScreen extends Screen {
         if (positions(option).contains(pos)) {
             return true;
         }
+        if (jobIndex == 0 && (option == Selection.SOURCE && destinationPositions.contains(pos)
+                || option == Selection.DESTINATION && sourcePositions.contains(pos))) {
+            return false;
+        }
         if (isExpeditionSelection(option)) return false;
         if (option == Selection.WORKSTATION) {
             BlockState state = minecraft.level.getBlockState(pos);
@@ -3242,6 +3272,10 @@ public final class WorksitePlannerScreen extends Screen {
     }
 
     private void applyAssignment() {
+        if (savePending) {
+            feedback("Saving this work order...");
+            return;
+        }
         if (!workStateReceived) {
             feedback("Loading this dinosaur's saved work order...");
             return;
@@ -3274,8 +3308,10 @@ public final class WorksitePlannerScreen extends Screen {
                 exactItemMatch,
                 avoidDanger
         );
+        savePending = true;
+        saveRequestedNanos = Util.getNanos();
+        feedback("Saving this work order...");
         ClientPacketDistributor.sendToServer(payload);
-        minecraft.setScreen(parent);
     }
 
     private String missingRequiredSelection() {

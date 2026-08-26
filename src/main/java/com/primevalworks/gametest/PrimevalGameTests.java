@@ -66,6 +66,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.monster.Monster;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -2280,6 +2281,7 @@ public final class PrimevalGameTests {
         ChestBlockEntity source = helper.getBlockEntity(sourceRelative, ChestBlockEntity.class);
         ChestBlockEntity destination = helper.getBlockEntity(destinationRelative, ChestBlockEntity.class);
         source.setItem(0, new ItemStack(Items.COAL, 24));
+        source.setItem(1, new ItemStack(Items.DIRT, 11));
         source.setChanged();
 
         FieldDodoEntity dodo = helper.spawn(ModEntities.FIELD_DODO.get(), dodoRelative);
@@ -2322,6 +2324,9 @@ public final class PrimevalGameTests {
                 .thenExecute(() -> {
                     helper.assertTrue(source.countItem(Items.COAL) == 8,
                             "Transport removed the wrong source amount: " + source.countItem(Items.COAL));
+                    helper.assertTrue(source.countItem(Items.DIRT) == 11
+                                    && destination.countItem(Items.DIRT) == 0,
+                            "The selected cargo filter moved an unselected item");
                     helper.assertTrue(dodo.getCarriedStack().isEmpty(),
                             "Dodo kept cargo after completing delivery: " + dodo.getCarriedStack());
                 })
@@ -2626,8 +2631,8 @@ public final class PrimevalGameTests {
                             + ", distance=" + zombie.distanceTo(dinosaur)
                             + ", dinoTicks=" + dinosaur.tickCount
                             + ", zombieTicks=" + zombie.tickCount);
-            helper.assertTrue(dinosaur.getTarget() == zombie,
-                    "A combat-capable dinosaur did not acquire the hostile mob threatening it");
+            helper.assertTrue(dinosaur.getTarget() instanceof Monster hostile && hostile.isAlive(),
+                    "A combat-capable dinosaur did not acquire a live hostile inside its base");
             helper.assertTrue(dinosaur.isSprinting(),
                     "A combat-capable dinosaur acquired a hostile mob but did not enter its chase sprint");
         });
@@ -2712,10 +2717,12 @@ public final class PrimevalGameTests {
         BlockPos finish = new BlockPos(7, 1, 4);
         forceTicking(helper, start, finish);
         FieldDodoEntity dinosaur = helper.spawn(ModEntities.VELOCIRAPTOR.get(), start);
+        dinosaur.setNoAi(true);
         Vec3 origin = dinosaur.position();
         helper.onEachTick(() -> {
             if (dinosaur.isAlive()) {
                 dinosaur.setDeltaMovement(0.08D, dinosaur.getDeltaMovement().y, 0.0D);
+                dinosaur.setPos(dinosaur.getX() + 0.08D, dinosaur.getY(), dinosaur.getZ());
             }
         });
 

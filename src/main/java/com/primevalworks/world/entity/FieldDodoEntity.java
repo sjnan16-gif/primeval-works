@@ -412,6 +412,9 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     private float raptorMomentum;
     private int raptorPounceTicks;
     private int raptorTransportRunTicks;
+    private int raptorRunAnimationHoldTicks;
+    private float raptorAnimationSpeed = 0.76F;
+    private float raptorAnimationSpeedPrevious = 0.76F;
     private boolean raptorPounceContactConfirmed;
     private BlockPos foodTargetPos;
     private int foodSearchCooldown;
@@ -613,8 +616,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
 
     public boolean usesRunAnimation() {
         if (getSpecies() == DinosaurSpecies.VELOCIRAPTOR) {
-            return entityData.get(RAPTOR_RUNNING)
-                    && getDeltaMovement().horizontalDistanceSqr() > 0.0036D;
+            return entityData.get(RAPTOR_RUNNING);
         }
         return isMountedFlight() && getDeltaMovement().lengthSqr() > 0.012D
                 || runAnimationHoldTicks > 0 && walkAnimation.speed() > 0.025F;
@@ -1020,6 +1022,10 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
 
     public float getRaptorMomentum() {
         return getSpecies() == DinosaurSpecies.VELOCIRAPTOR ? raptorMomentum : 0.0F;
+    }
+
+    public float getRaptorAnimationSpeed(float partialTick) {
+        return Mth.lerp(partialTick, raptorAnimationSpeedPrevious, raptorAnimationSpeed);
     }
 
     public int getWorkAction() {
@@ -2079,6 +2085,15 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         } else if (runAnimationHoldTicks > 0) {
             runAnimationHoldTicks--;
         }
+        if (getSpecies() == DinosaurSpecies.VELOCIRAPTOR) {
+            raptorAnimationSpeedPrevious = raptorAnimationSpeed;
+            float horizontalSpeed = (float)getDeltaMovement().horizontalDistance();
+            float target = usesRunAnimation()
+                    ? Mth.clamp(0.78F + horizontalSpeed * 2.45F, 0.82F, 2.30F)
+                    : Mth.clamp(0.76F + horizontalSpeed * 1.85F, 0.76F, 1.34F);
+            float response = target > raptorAnimationSpeed ? 0.18F : 0.11F;
+            raptorAnimationSpeed = Mth.lerp(response, raptorAnimationSpeed, target);
+        }
     }
 
     private void tickSleepingState() {
@@ -2150,6 +2165,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             raptorMomentum = 0.0F;
             raptorPounceTicks = 0;
             raptorTransportRunTicks = 0;
+            raptorRunAnimationHoldTicks = 0;
             entityData.set(RAPTOR_RUNNING, false);
             return;
         }
@@ -2160,13 +2176,19 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                 getTarget() != null && getTarget().isAlive(),
                 raptorPounceTicks > 0
         );
-        boolean running = pursuitActive
+        boolean mayRun = pursuitActive
                 && !isDinosaurSleeping()
                 && getWorkAction() == 0
-                && (onGround() || raptorPounceTicks > 0)
-                && getDeltaMovement().horizontalDistanceSqr() > 0.0036D;
-        entityData.set(RAPTOR_RUNNING, running);
-        raptorMomentum = RaptorMomentumRules.nextMomentum(raptorMomentum, running);
+                && (onGround() || raptorPounceTicks > 0);
+        boolean advancing = mayRun && (raptorPounceTicks > 0
+                || getDeltaMovement().horizontalDistanceSqr() > 0.0016D);
+        if (advancing) {
+            raptorRunAnimationHoldTicks = 8;
+        } else if (raptorRunAnimationHoldTicks > 0) {
+            raptorRunAnimationHoldTicks--;
+        }
+        entityData.set(RAPTOR_RUNNING, mayRun && raptorRunAnimationHoldTicks > 0);
+        raptorMomentum = RaptorMomentumRules.nextMomentum(raptorMomentum, advancing);
     }
 
     private boolean isRaptorTransportPursuitActive() {
@@ -4924,12 +4946,8 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             if (dinosaur.usesRunAnimation()
                     && (dodo || tyrannosaurus || stegosaurus || parasaurolophus || velociraptor)) {
                 if (velociraptor) {
-                    float runSpeed = Mth.clamp(
-                            0.78F + (float)dinosaur.getDeltaMovement().horizontalDistance() * 2.45F,
-                            0.82F,
-                            2.30F
-                    );
-                    return playSpeciesAnimation(test, RAPTOR_RUN, runSpeed);
+                    return playSpeciesAnimation(test, RAPTOR_RUN,
+                            dinosaur.getRaptorAnimationSpeed(test.renderState().getPartialTick()));
                 }
                 return test.setAndContinue(dodo ? DODO_RUN
                         : tyrannosaurus ? T_REX_RUN
@@ -4937,12 +4955,8 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                         : PARASAUR_RUN);
             }
             if (velociraptor) {
-                float walkSpeed = Mth.clamp(
-                        0.76F + (float)dinosaur.getDeltaMovement().horizontalDistance() * 1.85F,
-                        0.76F,
-                        1.34F
-                );
-                return playSpeciesAnimation(test, RAPTOR_WALK, walkSpeed);
+                return playSpeciesAnimation(test, RAPTOR_WALK,
+                        dinosaur.getRaptorAnimationSpeed(test.renderState().getPartialTick()));
             }
             return test.setAndContinue(dodo ? DODO_WALK
                     : tyrannosaurus ? T_REX_WALK
@@ -5416,7 +5430,14 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             }
             float yawError = Math.abs(Mth.wrapDegrees(desiredYaw - getYRot()));
             float visibleBodyError = Math.abs(Mth.wrapDegrees(desiredYaw - yBodyRot));
-            if (yawError > 52.0F || visibleBodyError > 36.0F) {
+            if (getSpecies() == DinosaurSpecies.VELOCIRAPTOR) {
+                float turnScale = RaptorMomentumRules.turnSpeedMultiplier(yawError, visibleBodyError);
+                setSpeed(getSpeed() * turnScale);
+                zza *= turnScale;
+                Vec3 movement = getDeltaMovement();
+                double velocityScale = Mth.lerp(0.36D, 1.0D, turnScale);
+                setDeltaMovement(movement.x * velocityScale, movement.y, movement.z * velocityScale);
+            } else if (yawError > 52.0F || visibleBodyError > 36.0F) {
                 setSpeed(0.0F);
                 xxa = 0.0F;
                 zza = 0.0F;

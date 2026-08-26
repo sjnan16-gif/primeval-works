@@ -20,6 +20,13 @@ public final class RaptorMomentumRules {
         return 1.0F + clamp(momentum, 0.0F, 1.0F) * 0.48F * Math.max(0.0F, passiveStrength);
     }
 
+    public static float turnSpeedMultiplier(float yawError, float bodyError) {
+        float error = Math.max(Math.abs(yawError), Math.abs(bodyError) * 1.15F);
+        float normalized = clamp((error - 18.0F) / 72.0F, 0.0F, 1.0F);
+        float eased = normalized * normalized * (3.0F - 2.0F * normalized);
+        return 1.0F - eased * 0.44F;
+    }
+
     public static double pounceHorizontalSpeed(double currentSpeed, float passiveStrength) {
         return Math.max(currentSpeed, 0.54D + Math.min(1.55F, passiveStrength) * 0.08D);
     }

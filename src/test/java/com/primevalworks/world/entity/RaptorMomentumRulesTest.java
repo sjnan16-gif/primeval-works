@@ -29,4 +29,16 @@ final class RaptorMomentumRulesTest {
         assertTrue(RaptorMomentumRules.pursuitActive(false, true, false));
         assertTrue(RaptorMomentumRules.pursuitActive(false, false, true));
     }
+
+    @Test
+    void turningSlowsContinuouslyWithoutStoppingTheRaptor() {
+        assertEquals(1.0F, RaptorMomentumRules.turnSpeedMultiplier(12.0F, 8.0F), 0.0001F);
+        float mediumTurn = RaptorMomentumRules.turnSpeedMultiplier(48.0F, 34.0F);
+        float hardTurn = RaptorMomentumRules.turnSpeedMultiplier(90.0F, 70.0F);
+        assertTrue(mediumTurn < 1.0F && mediumTurn > hardTurn);
+        assertTrue(hardTurn >= 0.54F, "A hard turn must not zero velocity and restart the gait");
+        assertTrue(Math.abs(RaptorMomentumRules.turnSpeedMultiplier(48.0F, 34.0F)
+                - RaptorMomentumRules.turnSpeedMultiplier(49.0F, 34.0F)) < 0.03F,
+                "Adjacent yaw values must not cross a stepped braking threshold");
+    }
 }

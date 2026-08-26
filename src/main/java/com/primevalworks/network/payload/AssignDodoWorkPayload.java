@@ -312,6 +312,7 @@ public record AssignDodoWorkPayload(
         return switch (payload.jobIndex) {
             case 0 -> !payload.sourcePositions.isEmpty()
                     && !payload.destinationPositions.isEmpty()
+                    && WorkTargetRules.routesDoNotOverlap(payload.sourcePositions, payload.destinationPositions)
                     && payload.sourcePositions.stream().allMatch(pos -> isTransportSource(player, pos))
                     && payload.destinationPositions.stream().allMatch(pos -> isContainer(player, pos))
                     && payload.workstationPositions.isEmpty()
