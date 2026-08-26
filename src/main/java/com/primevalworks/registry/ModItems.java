@@ -27,14 +27,6 @@ public final class ModItems {
             "triceratops_spawn_egg",
             properties -> new DinosaurEggItem(properties.spawnEgg(ModEntities.TRICERATOPS.get()))
     );
-    public static final DeferredItem<SpawnEggItem> BRACHIOSAURUS_SPAWN_EGG = ITEMS.registerItem(
-            "brachiosaurus_spawn_egg",
-            properties -> new DinosaurEggItem(properties.spawnEgg(ModEntities.BRACHIOSAURUS.get()))
-    );
-    public static final DeferredItem<SpawnEggItem> DILOPHOSAURUS_SPAWN_EGG = ITEMS.registerItem(
-            "dilophosaurus_spawn_egg",
-            properties -> new DinosaurEggItem(properties.spawnEgg(ModEntities.DILOPHOSAURUS.get()))
-    );
     public static final DeferredItem<SpawnEggItem> VELOCIRAPTOR_SPAWN_EGG = ITEMS.registerItem(
             "velociraptor_spawn_egg",
             properties -> new DinosaurEggItem(properties.spawnEgg(ModEntities.VELOCIRAPTOR.get()))
@@ -46,10 +38,6 @@ public final class ModItems {
     public static final DeferredItem<SpawnEggItem> PARASAUROLOPHUS_SPAWN_EGG = ITEMS.registerItem(
             "parasaurolophus_spawn_egg",
             properties -> new DinosaurEggItem(properties.spawnEgg(ModEntities.PARASAUROLOPHUS.get()))
-    );
-    public static final DeferredItem<SpawnEggItem> ANKYLOSAURUS_SPAWN_EGG = ITEMS.registerItem(
-            "ankylosaurus_spawn_egg",
-            properties -> new DinosaurEggItem(properties.spawnEgg(ModEntities.ANKYLOSAURUS.get()))
     );
     public static final DeferredItem<SpawnEggItem> PTERANODON_SPAWN_EGG = ITEMS.registerItem(
             "pteranodon_spawn_egg",
@@ -63,15 +51,11 @@ public final class ModItems {
             "spinosaurus_spawn_egg",
             properties -> new DinosaurEggItem(properties.spawnEgg(ModEntities.SPINOSAURUS.get()))
     );
-    public static final DeferredItem<SpawnEggItem> PACHYCEPHALOSAURUS_SPAWN_EGG = ITEMS.registerItem(
-            "pachycephalosaurus_spawn_egg",
-            properties -> new DinosaurEggItem(properties.spawnEgg(ModEntities.PACHYCEPHALOSAURUS.get()))
-    );
     public static final List<DeferredItem<SpawnEggItem>> DINOSAUR_DEBUG_SPAWN_EGGS = List.of(
-            TYRANNOSAURUS_SPAWN_EGG, TRICERATOPS_SPAWN_EGG, BRACHIOSAURUS_SPAWN_EGG,
-            DILOPHOSAURUS_SPAWN_EGG, VELOCIRAPTOR_SPAWN_EGG, STEGOSAURUS_SPAWN_EGG,
-            PARASAUROLOPHUS_SPAWN_EGG, ANKYLOSAURUS_SPAWN_EGG, PTERANODON_SPAWN_EGG,
-            FIELD_DODO_SPAWN_EGG, SPINOSAURUS_SPAWN_EGG, PACHYCEPHALOSAURUS_SPAWN_EGG
+            TYRANNOSAURUS_SPAWN_EGG, TRICERATOPS_SPAWN_EGG,
+            VELOCIRAPTOR_SPAWN_EGG, STEGOSAURUS_SPAWN_EGG,
+            PARASAUROLOPHUS_SPAWN_EGG, PTERANODON_SPAWN_EGG,
+            FIELD_DODO_SPAWN_EGG, SPINOSAURUS_SPAWN_EGG
     );
     public static final List<DeferredItem<SpawnEggItem>> PLAYABLE_DINOSAUR_SPAWN_EGGS = List.of(
             TYRANNOSAURUS_SPAWN_EGG, TRICERATOPS_SPAWN_EGG, VELOCIRAPTOR_SPAWN_EGG,

@@ -1019,7 +1019,8 @@ public final class CompanionScreen extends Screen {
     }
 
     private String passiveDetail() {
-        return dodo.getSpecies().passiveDetail();
+        return dodo.getSpecies().passiveDetail()
+                + " Passive strength: " + Math.round(dodo.getPassiveStrength() * 100.0F) + "%.";
     }
 
     private void pressed(Action action) {

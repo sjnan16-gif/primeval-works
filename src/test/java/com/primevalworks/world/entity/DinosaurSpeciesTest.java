@@ -72,4 +72,22 @@ class DinosaurSpeciesTest {
         assertTrue(DinosaurSpecies.SPINOSAURUS.baseMovementSpeed()
                 > DinosaurSpecies.PTERANODON.baseMovementSpeed());
     }
+
+    @Test
+    void playableRosterContainsOnlyTheEightAuthoredDinosaurs() {
+        assertEquals(8, DinosaurSpecies.playableSpecies().size());
+        assertTrue(DinosaurSpecies.VELOCIRAPTOR.isPlayable());
+        assertTrue(DinosaurSpecies.SPINOSAURUS.isPlayable());
+        assertTrue(!DinosaurSpecies.BRACHIOSAURUS.isPlayable());
+        assertTrue(!DinosaurSpecies.DILOPHOSAURUS.isPlayable());
+        assertTrue(!DinosaurSpecies.ANKYLOSAURUS.isPlayable());
+        assertTrue(!DinosaurSpecies.PACHYCEPHALOSAURUS.isPlayable());
+    }
+
+    @Test
+    void velociraptorCanClimbTerrainAtChaseSpeed() {
+        assertTrue(DinosaurSpecies.VELOCIRAPTOR.stepHeight() >= 1.0F);
+        assertTrue(DinosaurSpecies.VELOCIRAPTOR.baseMovementSpeed()
+                > DinosaurSpecies.DODO.baseMovementSpeed());
+    }
 }

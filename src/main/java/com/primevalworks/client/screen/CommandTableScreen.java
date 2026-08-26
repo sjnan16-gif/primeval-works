@@ -632,19 +632,24 @@ public final class CommandTableScreen extends Screen {
     private void drawDepotHoverCard(GuiGraphicsExtractor graphics, Rect depot, Rect slot,
                                     DinosaurRosterPayload.Entry entry) {
         int width = Math.round(112 * layout().scale);
-        int height = Math.round(43 * layout().scale);
+        int height = Math.round(55 * layout().scale);
         int x = depot.right() + 4;
         if (x + width > this.width - 3) x = depot.x - width - 4;
         int y = Mth.clamp(slot.centerY() - height / 2, 3, this.height - height - 3);
         Rect card = new Rect(x, y, width, height);
-        Rect top = new Rect(card.x, card.y, card.width, Math.max(11, card.height / 3));
+        Rect top = new Rect(card.x, card.y, card.width, Math.max(11, Math.round(13 * layout().scale)));
         Rect body = new Rect(card.x, top.bottom() - 1, card.width, card.height - top.height + 1);
         blit(graphics, SPACE, top);
         blit(graphics, SPACE, body);
         thickButtonText(graphics, entry.name().toUpperCase(), inset(top, 3), GOLD);
         int health = Math.round(100.0F * entry.health() / Math.max(1.0F, entry.maxHealth()));
-        Rect first = new Rect(body.x + 3, body.y + 2, body.width - 6, Math.max(8, body.height / 2 - 1));
-        Rect second = new Rect(first.x, first.bottom(), first.width, Math.max(8, body.bottom() - first.bottom() - 2));
+        int rowHeight = Math.max(8, (body.height - 4) / 3);
+        Rect first = new Rect(body.x + 3, body.y + 2, body.width - 6, rowHeight);
+        Rect mutation = new Rect(first.x, first.bottom(), first.width, rowHeight);
+        Rect second = new Rect(first.x, mutation.bottom(), first.width,
+                Math.max(8, body.bottom() - mutation.bottom() - 2));
+        int mutationColor = entry.mutationMask() == 0 ? MUTED_DARK : GOLD;
+        thickButtonText(graphics, depotMutationLabel(entry.mutationMask()), mutation, mutationColor);
         if (entry.recoveryTicksRemaining() > 0L) {
             thickButtonText(graphics, "RECOVERING  " + recoveryTime(entry.recoveryTicksRemaining()), first, RED);
             thickButtonText(graphics, "RESTING IN WARD", second, MUTED_DARK);
@@ -660,6 +665,15 @@ public final class CommandTableScreen extends Screen {
         thickButtonText(graphics, "H " + entry.hunger(), hunger, GOLD);
         thickButtonText(graphics, "M " + entry.mood(), mood, GREEN);
         thickButtonText(graphics, "HP " + health, vitality, RED);
+    }
+
+    private static String depotMutationLabel(int mutationMask) {
+        boolean huge = (mutationMask & FieldDodoEntity.MUTATION_HUGE) != 0;
+        boolean albino = (mutationMask & FieldDodoEntity.MUTATION_ALBINO) != 0;
+        if (huge && albino) return "HUGE  +  ALBINO";
+        if (huge) return "HUGE MUTATION";
+        if (albino) return "ALBINO MUTATION";
+        return "NO MUTATION";
     }
 
     private void drawDraggedDinosaur(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float time) {

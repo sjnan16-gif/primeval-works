@@ -163,16 +163,14 @@ public final class DinosaurHatchReveal {
         return switch (DinosaurSpecies.byRegistryName(species)) {
             case TYRANNOSAURUS -> new ItemStack(ModItems.TYRANNOSAURUS_SPAWN_EGG.get());
             case TRICERATOPS -> new ItemStack(ModItems.TRICERATOPS_SPAWN_EGG.get());
-            case BRACHIOSAURUS -> new ItemStack(ModItems.BRACHIOSAURUS_SPAWN_EGG.get());
-            case DILOPHOSAURUS -> new ItemStack(ModItems.DILOPHOSAURUS_SPAWN_EGG.get());
             case VELOCIRAPTOR -> new ItemStack(ModItems.VELOCIRAPTOR_SPAWN_EGG.get());
             case STEGOSAURUS -> new ItemStack(ModItems.STEGOSAURUS_SPAWN_EGG.get());
             case PARASAUROLOPHUS -> new ItemStack(ModItems.PARASAUROLOPHUS_SPAWN_EGG.get());
-            case ANKYLOSAURUS -> new ItemStack(ModItems.ANKYLOSAURUS_SPAWN_EGG.get());
             case PTERANODON -> new ItemStack(ModItems.PTERANODON_SPAWN_EGG.get());
             case DODO -> new ItemStack(ModItems.FIELD_DODO_SPAWN_EGG.get());
             case SPINOSAURUS -> new ItemStack(ModItems.SPINOSAURUS_SPAWN_EGG.get());
-            case PACHYCEPHALOSAURUS -> new ItemStack(ModItems.PACHYCEPHALOSAURUS_SPAWN_EGG.get());
+            case BRACHIOSAURUS, DILOPHOSAURUS, ANKYLOSAURUS, PACHYCEPHALOSAURUS ->
+                    new ItemStack(ModItems.FIELD_DODO_SPAWN_EGG.get());
         };
     }
 

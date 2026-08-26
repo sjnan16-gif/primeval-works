@@ -1,1 +1,0 @@
-{"parent":"primevalworks:primeval/command_table","criteria":{"hatch":{"trigger":"minecraft:impossible"}},"display":{"icon":{"id":"primevalworks:ankylosaurus_spawn_egg"},"title":{"text":"Built Like a Boulder"},"description":{"text":"Hatch an Ankylosaurus."}},"requirements":[["hatch"]],"sends_telemetry_event":false}

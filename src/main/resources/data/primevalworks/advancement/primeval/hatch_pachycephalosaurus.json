@@ -1,1 +1,0 @@
-{"parent":"primevalworks:primeval/first_hatch","criteria":{"hatch":{"trigger":"minecraft:impossible"}},"display":{"icon":{"id":"primevalworks:pachycephalosaurus_spawn_egg"},"title":{"text":"Hard-Headed"},"description":{"text":"Hatch a Pachycephalosaurus."}},"requirements":[["hatch"]],"sends_telemetry_event":false}

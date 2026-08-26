@@ -31,6 +31,9 @@ public final class DinosaurHatching {
     }
 
     public static HatchResult hatchForPlayer(ServerPlayer player, Genome genome) {
+        if (!genome.species().isPlayable()) {
+            return HatchResult.failure(Component.literal("That dinosaur is not part of this build."));
+        }
         CommandTableBlock.ClaimedTable table = CommandTableBlock.getClaimedTable(player).orElse(null);
         if (table == null) {
             FieldDodoEntity dinosaur = createHatchling(player.level(), player.blockPosition(), player.getUUID(), genome);
@@ -50,6 +53,9 @@ public final class DinosaurHatching {
     }
 
     public static HatchResult hatchAtTable(ServerLevel level, BlockPos tablePos, UUID owner, Genome genome) {
+        if (!genome.species().isPlayable()) {
+            return HatchResult.failure(Component.literal("That dinosaur is not part of this build."));
+        }
         if (!level.getBlockState(tablePos).is(ModBlocks.COMMAND_TABLE.get())) {
             return HatchResult.failure(Component.translatable("message.primevalworks.egg.base_missing"));
         }

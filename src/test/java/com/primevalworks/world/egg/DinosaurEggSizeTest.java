@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class DinosaurEggSizeTest {
@@ -14,6 +15,31 @@ final class DinosaurEggSizeTest {
         double large = averageFragments(EggFragmentRules.LARGE, 14_000L);
         assertTrue(small < big && big < large,
                 "fragment averages must rise with egg size: " + small + ", " + big + ", " + large);
+    }
+
+    @Test
+    void threeWeightedPoolsCoverTheEightDinosaurRoster() {
+        for (var species : com.primevalworks.world.entity.DinosaurSpecies.playableSpecies()) {
+            assertTrue(DinosaurEggPoolRules.Pool.SMALL.contains(species)
+                            || DinosaurEggPoolRules.Pool.BIG.contains(species)
+                            || DinosaurEggPoolRules.Pool.LARGE.contains(species),
+                    species.registryName() + " is missing from every egg pool");
+        }
+        assertEquals(100, DinosaurEggPoolRules.Pool.SMALL.totalWeight());
+        assertEquals(100, DinosaurEggPoolRules.Pool.BIG.totalWeight());
+        assertEquals(100, DinosaurEggPoolRules.Pool.LARGE.totalWeight());
+    }
+
+    @Test
+    void raptorIsTheRarestResultWhereItCanHatch() {
+        int smallRaptor = DinosaurEggPoolRules.Pool.SMALL.weightFor(
+                com.primevalworks.world.entity.DinosaurSpecies.VELOCIRAPTOR);
+        int bigRaptor = DinosaurEggPoolRules.Pool.BIG.weightFor(
+                com.primevalworks.world.entity.DinosaurSpecies.VELOCIRAPTOR);
+        assertTrue(smallRaptor > 0 && smallRaptor < DinosaurEggPoolRules.Pool.SMALL.weightFor(
+                com.primevalworks.world.entity.DinosaurSpecies.PTERANODON));
+        assertTrue(bigRaptor > 0 && bigRaptor < DinosaurEggPoolRules.Pool.BIG.weightFor(
+                com.primevalworks.world.entity.DinosaurSpecies.PTERANODON));
     }
 
     private static double averageFragments(EggFragmentRules size, long rolls) {

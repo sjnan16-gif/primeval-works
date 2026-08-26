@@ -20,7 +20,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -67,7 +66,7 @@ public final class PrimevalCommands {
                                 .suggests((context, builder) -> SharedSuggestionProvider.suggest(
                                         java.util.stream.Stream.concat(
                                                 java.util.stream.Stream.of("all"),
-                                                Arrays.stream(DinosaurSpecies.values()).map(DinosaurSpecies::registryName)
+                                                DinosaurSpecies.playableSpecies().stream().map(DinosaurSpecies::registryName)
                                         ), builder
                                 ))
                                 .executes(context -> hatch(
@@ -153,10 +152,10 @@ public final class PrimevalCommands {
         ServerPlayer player = source.getPlayerOrException();
         if (requested.equalsIgnoreCase("all")) {
             int hatched = 0;
-            for (DinosaurSpecies species : DinosaurSpecies.values()) hatched += hatchOne(source, player, species);
+            for (DinosaurSpecies species : DinosaurSpecies.playableSpecies()) hatched += hatchOne(source, player, species);
             return hatched;
         }
-        DinosaurSpecies species = Arrays.stream(DinosaurSpecies.values())
+        DinosaurSpecies species = DinosaurSpecies.playableSpecies().stream()
                 .filter(candidate -> candidate.registryName().equalsIgnoreCase(requested)
                         || candidate.name().equalsIgnoreCase(requested)
                         || candidate == DinosaurSpecies.DODO && requested.equalsIgnoreCase("dodo")

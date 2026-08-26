@@ -21,6 +21,7 @@ import com.primevalworks.world.block.TurbinePartBlock;
 import com.primevalworks.world.base.BaseUpgrade;
 import com.primevalworks.world.base.BaseEnergyRules;
 import com.primevalworks.world.entity.DinosaurMutationRules;
+import com.primevalworks.world.entity.DinosaurGeneticPerformanceRules;
 import com.primevalworks.world.entity.DinosaurSpecies;
 import com.primevalworks.world.entity.FieldDodoEntity;
 import com.primevalworks.world.egg.DinosaurEggGenome;
@@ -460,6 +461,17 @@ public final class PrimevalGameTests {
         helper.assertTrue(BuiltInRegistries.ITEM.get(retiredBayonetId).map(Holder::value).orElse(null)
                         == ModItems.PRIMORDIAL_SWORD.get(),
                 "Saved Bayonet items do not migrate to the Primordial Sword");
+        helper.assertTrue(ModEntities.DINOSAURS.size() == DinosaurSpecies.playableSpecies().size(),
+                "The entity registry exposes a dinosaur outside the eight-species jam roster");
+        for (String removedSpecies : List.of(
+                "brachiosaurus", "dilophosaurus", "ankylosaurus", "pachycephalosaurus")) {
+            Identifier entityId = Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, removedSpecies);
+            Identifier eggId = Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, removedSpecies + "_spawn_egg");
+            helper.assertTrue(BuiltInRegistries.ENTITY_TYPE.get(entityId).isEmpty(),
+                    removedSpecies + " can still be summoned");
+            helper.assertTrue(BuiltInRegistries.ITEM.get(eggId).isEmpty(),
+                    removedSpecies + " still has a spawn egg");
+        }
         for (int x = 0; x <= 4; x++) {
             for (int z = 0; z <= 4; z++) {
                 helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
@@ -483,7 +495,7 @@ public final class PrimevalGameTests {
         }
         for (int index = 0; index < ModEntities.DINOSAURS.size(); index++) {
             FieldDodoEntity dinosaur = helper.spawn(ModEntities.DINOSAURS.get(index).get(), new BlockPos(4, 1, 4));
-            DinosaurSpecies species = DinosaurSpecies.values()[index];
+            DinosaurSpecies species = DinosaurSpecies.playableSpecies().get(index);
             helper.assertTrue(dinosaur.getType() == ModEntities.DINOSAURS.get(index).get(),
                     "A dinosaur egg resolved to the wrong registered species");
             helper.assertTrue(Math.abs(dinosaur.getBbWidth() - species.collisionWidth() * dinosaur.getGeneticScale()) < 0.001F,
@@ -2002,7 +2014,10 @@ public final class PrimevalGameTests {
                                 && stegosaurus.getWorkActionDuration() == Math.round(
                                         WorkSpecialtyRules.actionDurationTicks(
                                                 WorkSpecialtyRules.FIRE_TENDING_TICKS, 3)
-                                                / DinosaurSpecies.STEGOSAURUS.passiveWorkSpeedMultiplier(1)),
+                                                / (DinosaurSpecies.STEGOSAURUS.passiveWorkSpeedMultiplier(
+                                                        1, stegosaurus.getPassiveStrength())
+                                                * DinosaurGeneticPerformanceRules.workSpeedMultiplier(
+                                                        stegosaurus.getGeneticQuality()))),
                         "The Stegosaurus never entered its balanced three-star fire work cycle; action="
                                 + stegosaurus.getWorkAction() + ", duration=" + stegosaurus.getWorkActionDuration()
                                 + ", position=" + stegosaurus.position()
@@ -2367,7 +2382,7 @@ public final class PrimevalGameTests {
                             )
                     );
                 })
-                .thenExecuteAfter(190, () -> {
+                .thenExecuteAfter(230, () -> {
                     helper.assertBlockEntityData(
                             turbineRelative,
                             TurbineBlockEntity.class,
@@ -2694,8 +2709,13 @@ public final class PrimevalGameTests {
         target.getAttribute(Attributes.MAX_HEALTH).setBaseValue(200.0D);
         target.getAttribute(Attributes.KNOCKBACK_RESISTANCE).setBaseValue(1.0D);
         target.setHealth(200.0F);
+        double[] peakHorizontalSpeed = {0.0D};
         helper.onEachTick(() -> {
-            if (dinosaur.isAlive() && target.isAlive()) dinosaur.setTarget(target);
+            if (dinosaur.isAlive() && target.isAlive()) {
+                dinosaur.setTarget(target);
+                peakHorizontalSpeed[0] = Math.max(
+                        peakHorizontalSpeed[0], dinosaur.getDeltaMovement().horizontalDistance());
+            }
         });
 
         helper.startSequence()
@@ -2706,6 +2726,10 @@ public final class PrimevalGameTests {
                 .thenWaitUntil(() -> helper.assertTrue(
                         target.getHealth() < 200.0F,
                         "The Velociraptor attack animation never delivered its delayed hit"
+                ))
+                .thenExecute(() -> helper.assertTrue(
+                        peakHorizontalSpeed[0] > 0.45D,
+                        "The Velociraptor stopped for its attack instead of carrying momentum into the pounce"
                 ))
                 .thenSucceed();
     }

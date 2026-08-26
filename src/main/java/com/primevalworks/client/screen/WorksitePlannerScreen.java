@@ -2778,7 +2778,7 @@ public final class WorksitePlannerScreen extends Screen {
 
     private float leftDrawerExactX(float reveal) {
         float scale = plannerScale();
-        float openX = (width - PLANNER_TEXTURE_WIDTH * scale) * 0.5F;
+        float openX = 0.0F;
         float leftWidth = PLANNER_LEFT_WIDTH * scale;
         float tuckedX = -leftWidth + Math.max(2.0F, 2.0F * scale);
         return Mth.lerp(reveal, tuckedX, openX);

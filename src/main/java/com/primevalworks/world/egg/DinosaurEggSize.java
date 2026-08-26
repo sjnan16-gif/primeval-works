@@ -11,33 +11,22 @@ import net.minecraft.world.level.block.Block;
 import java.util.Optional;
 
 public enum DinosaurEggSize {
-    SMALL(400, EggFragmentRules.SMALL, new DinosaurSpecies[]{
-            DinosaurSpecies.DODO,
-            DinosaurSpecies.VELOCIRAPTOR,
-            DinosaurSpecies.PTERANODON
-    }),
-    BIG(800, EggFragmentRules.BIG, new DinosaurSpecies[]{
-            DinosaurSpecies.PARASAUROLOPHUS,
-            DinosaurSpecies.STEGOSAURUS,
-            DinosaurSpecies.TRICERATOPS
-    }),
-    LARGE(1200, EggFragmentRules.LARGE, new DinosaurSpecies[]{
-            DinosaurSpecies.TYRANNOSAURUS,
-            DinosaurSpecies.SPINOSAURUS
-    });
+    SMALL(400, EggFragmentRules.SMALL, DinosaurEggPoolRules.Pool.SMALL),
+    BIG(800, EggFragmentRules.BIG, DinosaurEggPoolRules.Pool.BIG),
+    LARGE(1200, EggFragmentRules.LARGE, DinosaurEggPoolRules.Pool.LARGE);
 
     private final int baseIncubationTicks;
     private final EggFragmentRules fragmentRules;
-    private final DinosaurSpecies[] species;
+    private final DinosaurEggPoolRules.Pool speciesPool;
 
     DinosaurEggSize(
             int baseIncubationTicks,
             EggFragmentRules fragmentRules,
-            DinosaurSpecies[] species
+            DinosaurEggPoolRules.Pool speciesPool
     ) {
         this.baseIncubationTicks = baseIncubationTicks;
         this.fragmentRules = fragmentRules;
-        this.species = species;
+        this.speciesPool = speciesPool;
     }
 
     public int baseIncubationTicks() {
@@ -45,7 +34,7 @@ public enum DinosaurEggSize {
     }
 
     public DinosaurSpecies randomSpecies(RandomSource random) {
-        return species[random.nextInt(species.length)];
+        return speciesPool.speciesForRoll(random.nextInt(speciesPool.totalWeight()));
     }
 
     public int fossilFragmentCount(RandomSource random) {
@@ -53,12 +42,15 @@ public enum DinosaurEggSize {
     }
 
     public boolean contains(DinosaurSpecies candidate) {
-        for (DinosaurSpecies member : species) {
-            if (member == candidate) {
-                return true;
-            }
-        }
-        return false;
+        return speciesPool.contains(candidate);
+    }
+
+    public int weightFor(DinosaurSpecies candidate) {
+        return speciesPool.weightFor(candidate);
+    }
+
+    public int totalWeight() {
+        return speciesPool.totalWeight();
     }
 
     public Item item() {
@@ -96,4 +88,5 @@ public enum DinosaurEggSize {
     public String translationKey() {
         return "egg_size.primevalworks." + name().toLowerCase();
     }
+
 }

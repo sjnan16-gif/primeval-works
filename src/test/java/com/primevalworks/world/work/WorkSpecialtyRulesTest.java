@@ -148,7 +148,7 @@ final class WorkSpecialtyRulesTest {
         assertEquals(active.length,
                 Arrays.stream(active).map(DinosaurSpecies::passiveTitle).distinct().count());
         assertTrue(DinosaurSpecies.TYRANNOSAURUS.passiveWorkSpeedMultiplier(1) > 1.0F);
-        assertTrue(DinosaurSpecies.VELOCIRAPTOR.passiveWorkSpeedMultiplier(0) > 1.0F);
+        assertEquals(1.0F, DinosaurSpecies.VELOCIRAPTOR.passiveWorkSpeedMultiplier(0));
         assertTrue(DinosaurSpecies.SPINOSAURUS.passiveWorkSpeedMultiplier(2) > 1.0F);
         assertEquals(1.0F, DinosaurSpecies.SPINOSAURUS.passiveWorkSpeedMultiplier(0));
     }

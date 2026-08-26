@@ -25,16 +25,12 @@ public final class ModEntities {
 
     public static final DeferredHolder<EntityType<?>, EntityType<FieldDodoEntity>> TYRANNOSAURUS = registerDinosaur(DinosaurSpecies.TYRANNOSAURUS);
     public static final DeferredHolder<EntityType<?>, EntityType<FieldDodoEntity>> TRICERATOPS = registerDinosaur(DinosaurSpecies.TRICERATOPS);
-    public static final DeferredHolder<EntityType<?>, EntityType<FieldDodoEntity>> BRACHIOSAURUS = registerDinosaur(DinosaurSpecies.BRACHIOSAURUS);
-    public static final DeferredHolder<EntityType<?>, EntityType<FieldDodoEntity>> DILOPHOSAURUS = registerDinosaur(DinosaurSpecies.DILOPHOSAURUS);
     public static final DeferredHolder<EntityType<?>, EntityType<FieldDodoEntity>> VELOCIRAPTOR = registerDinosaur(DinosaurSpecies.VELOCIRAPTOR);
     public static final DeferredHolder<EntityType<?>, EntityType<FieldDodoEntity>> STEGOSAURUS = registerDinosaur(DinosaurSpecies.STEGOSAURUS);
     public static final DeferredHolder<EntityType<?>, EntityType<FieldDodoEntity>> PARASAUROLOPHUS = registerDinosaur(DinosaurSpecies.PARASAUROLOPHUS);
-    public static final DeferredHolder<EntityType<?>, EntityType<FieldDodoEntity>> ANKYLOSAURUS = registerDinosaur(DinosaurSpecies.ANKYLOSAURUS);
     public static final DeferredHolder<EntityType<?>, EntityType<FieldDodoEntity>> PTERANODON = registerDinosaur(DinosaurSpecies.PTERANODON);
     public static final DeferredHolder<EntityType<?>, EntityType<FieldDodoEntity>> FIELD_DODO = registerDinosaur(DinosaurSpecies.DODO);
     public static final DeferredHolder<EntityType<?>, EntityType<FieldDodoEntity>> SPINOSAURUS = registerDinosaur(DinosaurSpecies.SPINOSAURUS);
-    public static final DeferredHolder<EntityType<?>, EntityType<FieldDodoEntity>> PACHYCEPHALOSAURUS = registerDinosaur(DinosaurSpecies.PACHYCEPHALOSAURUS);
     public static final DeferredHolder<EntityType<?>, EntityType<DartProjectileEntity>> DART_PROJECTILE =
             ENTITIES.register("dart_projectile", () -> EntityType.Builder.<DartProjectileEntity>of(
                             DartProjectileEntity::new, MobCategory.MISC)
@@ -45,8 +41,8 @@ public final class ModEntities {
                             Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "dart_projectile"))));
 
     public static final List<DeferredHolder<EntityType<?>, EntityType<FieldDodoEntity>>> DINOSAURS = List.of(
-            TYRANNOSAURUS, TRICERATOPS, BRACHIOSAURUS, DILOPHOSAURUS, VELOCIRAPTOR, STEGOSAURUS,
-            PARASAUROLOPHUS, ANKYLOSAURUS, PTERANODON, FIELD_DODO, SPINOSAURUS, PACHYCEPHALOSAURUS
+            TYRANNOSAURUS, TRICERATOPS, VELOCIRAPTOR, STEGOSAURUS,
+            PARASAUROLOPHUS, PTERANODON, FIELD_DODO, SPINOSAURUS
     );
 
     private static DeferredHolder<EntityType<?>, EntityType<FieldDodoEntity>> registerDinosaur(DinosaurSpecies species) {
@@ -70,25 +66,22 @@ public final class ModEntities {
         return switch (species) {
             case TYRANNOSAURUS -> TYRANNOSAURUS.get();
             case TRICERATOPS -> TRICERATOPS.get();
-            case BRACHIOSAURUS -> BRACHIOSAURUS.get();
-            case DILOPHOSAURUS -> DILOPHOSAURUS.get();
             case VELOCIRAPTOR -> VELOCIRAPTOR.get();
             case STEGOSAURUS -> STEGOSAURUS.get();
             case PARASAUROLOPHUS -> PARASAUROLOPHUS.get();
-            case ANKYLOSAURUS -> ANKYLOSAURUS.get();
             case PTERANODON -> PTERANODON.get();
             case DODO -> FIELD_DODO.get();
             case SPINOSAURUS -> SPINOSAURUS.get();
-            case PACHYCEPHALOSAURUS -> PACHYCEPHALOSAURUS.get();
+            case BRACHIOSAURUS, DILOPHOSAURUS, ANKYLOSAURUS, PACHYCEPHALOSAURUS -> FIELD_DODO.get();
         };
     }
 
     public static void register(IEventBus modBus) {
         ENTITIES.register(modBus);
         modBus.<EntityAttributeCreationEvent>addListener(event -> {
-            DinosaurSpecies[] species = DinosaurSpecies.values();
             for (int index = 0; index < DINOSAURS.size(); index++) {
-                event.put(DINOSAURS.get(index).get(), attributesFor(species[index]));
+                event.put(DINOSAURS.get(index).get(),
+                        attributesFor(DinosaurSpecies.playableSpecies().get(index)));
             }
         });
     }
