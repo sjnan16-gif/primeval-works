@@ -11,12 +11,12 @@ import java.util.regex.Pattern;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class BlockPreviewAssetsTest {
-    private static final Pattern MODEL_REFERENCE = Pattern.compile("\\\"model\\\"\\s*:\\s*\\\"([^\\\"]+)\\\"");
+    private static final Pattern MODEL_REFERENCE = Pattern.compile("\\\"(?:model|base)\\\"\\s*:\\s*\\\"([^\\\"]+)\\\"");
     private static final List<String> BLOCK_ITEMS = List.of(
             "command_table", "food_box", "wind_turbine", "water_turbine",
             "reinforced_piston", "sticky_reinforced_piston", "laser_observer", "ancient_barrel",
             "dart_turret", "processor", "ancient_furnace",
-            "ancient_spell_stone", "magic_turret", "spinosaurus_head", "premium_egg_incubator",
+            "ancient_spell_stone", "laser_turret", "spinosaurus_head", "premium_egg_incubator",
             "small_dinosaur_egg", "big_dinosaur_egg", "large_dinosaur_egg"
     );
 

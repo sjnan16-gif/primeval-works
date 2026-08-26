@@ -35,7 +35,7 @@ import org.jspecify.annotations.Nullable;
 import java.util.Comparator;
 import java.util.UUID;
 
-public final class MagicTurretBlockEntity extends BlockEntity implements TargetingTurret, GeoBlockEntity {
+public final class LaserTurretBlockEntity extends BlockEntity implements TargetingTurret, GeoBlockEntity {
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("idle");
     private static final RawAnimation FIRING = RawAnimation.begin().thenLoop("firing");
     static final int BURST_HITS = 4;
@@ -45,8 +45,8 @@ public final class MagicTurretBlockEntity extends BlockEntity implements Targeti
     private static final double RANGE = 24.0D;
     public static final double PIVOT_HEIGHT = 0.98D;
     public static final float MUZZLE_OFFSET = 1.34F;
-    private static final DustParticleOptions SPELL_GLOW = new DustParticleOptions(0xA95CFF, 0.9F);
-    private static final DustParticleOptions SPELL_CORE = new DustParticleOptions(0xFFF7FF, 0.46F);
+    private static final DustParticleOptions LASER_GLOW = new DustParticleOptions(0xFF3038, 0.9F);
+    private static final DustParticleOptions LASER_CORE = new DustParticleOptions(0xFFF2EA, 0.46F);
 
     private final TurretAimController aim = new TurretAimController();
     private final AnimatableInstanceCache animationCache = GeckoLibUtil.createInstanceCache(this);
@@ -56,11 +56,11 @@ public final class MagicTurretBlockEntity extends BlockEntity implements Targeti
     private int burstStep;
     private @Nullable UUID burstTarget;
 
-    public MagicTurretBlockEntity(BlockPos pos, BlockState state) {
-        super(ModBlockEntities.MAGIC_TURRET.get(), pos, state);
+    public LaserTurretBlockEntity(BlockPos pos, BlockState state) {
+        super(ModBlockEntities.LASER_TURRET.get(), pos, state);
     }
 
-    public static void serverTick(ServerLevel level, BlockPos pos, BlockState state, MagicTurretBlockEntity turret) {
+    public static void serverTick(ServerLevel level, BlockPos pos, BlockState state, LaserTurretBlockEntity turret) {
         if (!BaseEnergyRules.isConnected(level, pos)) {
             turret.setTarget(null);
             turret.cancelBurst();
@@ -106,7 +106,7 @@ public final class MagicTurretBlockEntity extends BlockEntity implements Targeti
             cancelBurst();
             return;
         }
-        target.hurtServer(level, PrimevalDamageTypes.magicTurret(level, pivot),
+        target.hurtServer(level, PrimevalDamageTypes.laserTurret(level, pivot),
                 DAMAGE_PER_HIT * (float)PrimevalTuning.server().turretDamage());
         releaseSpellBurst(level, pos, target);
         burstHitsRemaining--;
@@ -127,7 +127,7 @@ public final class MagicTurretBlockEntity extends BlockEntity implements Targeti
         burstTarget = null;
     }
 
-    public static void clientTick(Level level, BlockPos pos, BlockState state, MagicTurretBlockEntity turret) {
+    public static void clientTick(Level level, BlockPos pos, BlockState state, LaserTurretBlockEntity turret) {
         turret.aim.clientTick(level, pos, PIVOT_HEIGHT);
     }
 
@@ -139,12 +139,12 @@ public final class MagicTurretBlockEntity extends BlockEntity implements Targeti
         Vec3 pivot = Vec3.atCenterOf(pos).add(0.0D, PIVOT_HEIGHT - 0.5D, 0.0D);
         Vec3 direction = target.getEyePosition().subtract(pivot).normalize();
         Vec3 focus = pivot.add(direction.scale(MUZZLE_OFFSET));
-        level.sendParticles(SPELL_GLOW, focus.x, focus.y, focus.z,
+        level.sendParticles(LASER_GLOW, focus.x, focus.y, focus.z,
                 8, 0.08D, 0.08D, 0.08D, 0.015D);
-        level.sendParticles(SPELL_CORE, focus.x, focus.y, focus.z,
+        level.sendParticles(LASER_CORE, focus.x, focus.y, focus.z,
                 4, 0.035D, 0.035D, 0.035D, 0.008D);
         Vec3 impact = target.getEyePosition();
-        level.sendParticles(SPELL_GLOW, impact.x, impact.y, impact.z,
+        level.sendParticles(LASER_GLOW, impact.x, impact.y, impact.z,
                 16, target.getBbWidth() * 0.22D, target.getBbHeight() * 0.12D,
                 target.getBbWidth() * 0.22D, 0.035D);
         level.sendParticles(ParticleTypes.END_ROD, impact.x, impact.y, impact.z,
@@ -201,7 +201,7 @@ public final class MagicTurretBlockEntity extends BlockEntity implements Targeti
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<MagicTurretBlockEntity>("Turret", 4, state ->
+        controllers.add(new AnimationController<LaserTurretBlockEntity>("Turret", 4, state ->
                 state.setAndContinue(hasVisualTarget() ? FIRING : IDLE)));
     }
 

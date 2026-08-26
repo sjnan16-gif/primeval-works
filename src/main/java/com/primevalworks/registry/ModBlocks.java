@@ -16,7 +16,7 @@ import com.primevalworks.world.block.TurbineBlock;
 import com.primevalworks.world.block.TurbinePartBlock;
 import com.primevalworks.world.block.DinosaurEggBlock;
 import com.primevalworks.world.block.DartTurretBlock;
-import com.primevalworks.world.block.MagicTurretBlock;
+import com.primevalworks.world.block.LaserTurretBlock;
 import com.primevalworks.world.block.SpinosaurusHeadBlock;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Block;
@@ -110,10 +110,10 @@ public final class ModBlocks {
             properties -> new PoweredMachineBlock(properties.mapColor(MapColor.COLOR_PURPLE).strength(7.0F)
                     .noOcclusion().lightLevel(state -> 8).sound(SoundType.AMETHYST))
     );
-    public static final DeferredBlock<Block> MAGIC_TURRET = BLOCKS.registerBlock(
-            "magic_turret",
-            properties -> new MagicTurretBlock(properties.mapColor(MapColor.COLOR_PURPLE).strength(7.0F)
-                    .noOcclusion().lightLevel(state -> 7).sound(SoundType.AMETHYST)));
+    public static final DeferredBlock<Block> LASER_TURRET = BLOCKS.registerBlock(
+            "laser_turret",
+            properties -> new LaserTurretBlock(properties.mapColor(MapColor.METAL).strength(7.0F)
+                    .noOcclusion().lightLevel(state -> 7).sound(SoundType.METAL)));
     public static final DeferredBlock<Block> SPINOSAURUS_HEAD = BLOCKS.registerBlock(
             "spinosaurus_head",
             properties -> new SpinosaurusHeadBlock(properties.mapColor(MapColor.COLOR_BROWN).strength(5.0F)
@@ -159,8 +159,8 @@ public final class ModBlocks {
 
     public static void register(IEventBus modBus) {
         BLOCKS.addAlias(
-                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "laser_turret"),
-                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "magic_turret")
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "magic_turret"),
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "laser_turret")
         );
         BLOCKS.addAlias(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "enhanced_rail"),

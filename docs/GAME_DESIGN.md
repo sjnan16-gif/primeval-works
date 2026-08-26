@@ -299,7 +299,7 @@ A Compressed Core Buffer stores a short reserve measured in power-ticks. It brid
 - **Ancient Vault** — 81 normal 64-stack slots arranged as three UI pages. It integrates with base ownership and power. It does not create illegal 128-count stacks that break hopper and mod compatibility.
 - **Dart Turret** — Power 3, consumes dino-crafted darts, supports guardians rather than replacing them.
 - **Sanctuary Beacon** — late-game base spawn suppression with explicit exclusions.
-- **Magic Turret** — endgame spell-metal defense. It draws heavy base power only while locked onto a hostile and needs an Ancient Spell Stone, a Dart Turret, compressed materials, and refined spell metal to craft.
+- **Laser Turret** — endgame powered defense. It draws heavy base power only while locked onto a hostile and needs a Spinosaurus Head, Laser Observer, Redstone Blocks, compressed materials, and refined Ancient Metal to craft.
 
 ### Engineering backlog
 

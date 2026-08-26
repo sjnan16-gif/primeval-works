@@ -4,15 +4,15 @@ import com.geckolib.constant.dataticket.DataTicket;
 import com.geckolib.model.GeoModel;
 import com.geckolib.renderer.base.GeoRenderState;
 import com.primevalworks.PrimevalWorks;
-import com.primevalworks.world.block.entity.MagicTurretBlockEntity;
+import com.primevalworks.world.block.entity.LaserTurretBlockEntity;
 import net.minecraft.resources.Identifier;
 
-public final class MagicTurretGeoModel extends GeoModel<MagicTurretBlockEntity> {
+public final class LaserTurretGeoModel extends GeoModel<LaserTurretBlockEntity> {
     public static final DataTicket<Boolean> FIRING =
-            DataTicket.create("primevalworks_magic_turret_firing", Boolean.class);
-    private static final Identifier MODEL = asset("block/magic_turret");
-    private static final Identifier STATIC_TEXTURE = texture("magic_turret");
-    private static final Identifier FIRING_TEXTURE = texture("magic_turret_firing");
+            DataTicket.create("primevalworks_laser_turret_firing", Boolean.class);
+    private static final Identifier MODEL = asset("block/laser_turret");
+    private static final Identifier STATIC_TEXTURE = texture("laser_turret");
+    private static final Identifier FIRING_TEXTURE = texture("laser_turret_firing");
 
     @Override
     public Identifier getModelResource(GeoRenderState renderState) {
@@ -25,7 +25,7 @@ public final class MagicTurretGeoModel extends GeoModel<MagicTurretBlockEntity> 
     }
 
     @Override
-    public Identifier getAnimationResource(MagicTurretBlockEntity animatable) {
+    public Identifier getAnimationResource(LaserTurretBlockEntity animatable) {
         return MODEL;
     }
 

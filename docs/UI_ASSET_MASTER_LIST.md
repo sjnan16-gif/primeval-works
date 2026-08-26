@@ -68,7 +68,7 @@ container machines. Do not make one routing PNG per block.
 
 Canvas: **427 x 240**, transparent outside the panel.
 
-This is one reusable status screen for Dart Turret and Ancient Spell Stone. The Magic Turret
+This is one reusable status screen for Dart Turret and Ancient Spell Stone. The Laser Turret
 intentionally has no right-click screen; its target, powered state, beam and shot feedback are visible in-world.
 The block name, energy state, target/range, ammunition and blocked reason are dynamic.
 

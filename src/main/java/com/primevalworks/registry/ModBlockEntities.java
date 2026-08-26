@@ -9,7 +9,7 @@ import com.primevalworks.world.block.entity.TurbineBlockEntity;
 import com.primevalworks.world.block.entity.PremiumEggIncubatorBlockEntity;
 import com.primevalworks.world.block.entity.ProcessorBlockEntity;
 import com.primevalworks.world.block.entity.DartTurretBlockEntity;
-import com.primevalworks.world.block.entity.MagicTurretBlockEntity;
+import com.primevalworks.world.block.entity.LaserTurretBlockEntity;
 import com.primevalworks.world.block.entity.LaserObserverBlockEntity;
 import com.primevalworks.world.block.entity.SpinosaurusHeadBlockEntity;
 import net.minecraft.core.registries.Registries;
@@ -65,10 +65,10 @@ public final class ModBlockEntities {
                     DartTurretBlockEntity::new,
                     ModBlocks.DART_TURRET.get()
             ));
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MagicTurretBlockEntity>> MAGIC_TURRET =
-            BLOCK_ENTITIES.register("magic_turret", () -> new BlockEntityType<>(
-                    MagicTurretBlockEntity::new,
-                    ModBlocks.MAGIC_TURRET.get()
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<LaserTurretBlockEntity>> LASER_TURRET =
+            BLOCK_ENTITIES.register("laser_turret", () -> new BlockEntityType<>(
+                    LaserTurretBlockEntity::new,
+                    ModBlocks.LASER_TURRET.get()
             ));
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SpinosaurusHeadBlockEntity>> SPINOSAURUS_HEAD =
             BLOCK_ENTITIES.register("spinosaurus_head", () -> new BlockEntityType<>(
@@ -85,8 +85,8 @@ public final class ModBlockEntities {
 
     public static void register(IEventBus modBus) {
         BLOCK_ENTITIES.addAlias(
-                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "laser_turret"),
-                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "magic_turret")
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "magic_turret"),
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "laser_turret")
         );
         BLOCK_ENTITIES.register(modBus);
     }

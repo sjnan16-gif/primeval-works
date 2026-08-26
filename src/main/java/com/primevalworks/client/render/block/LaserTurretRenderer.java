@@ -8,9 +8,9 @@ import com.geckolib.renderer.base.RenderPassInfo;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
-import com.primevalworks.client.model.block.MagicTurretGeoModel;
+import com.primevalworks.client.model.block.LaserTurretGeoModel;
 import com.primevalworks.world.block.BeamLineOfSight;
-import com.primevalworks.world.block.entity.MagicTurretBlockEntity;
+import com.primevalworks.world.block.entity.LaserTurretBlockEntity;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
@@ -23,41 +23,41 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
-public final class MagicTurretRenderer<R extends BlockEntityRenderState & GeoRenderState>
-        extends GeoBlockRenderer<MagicTurretBlockEntity, R> {
+public final class LaserTurretRenderer<R extends BlockEntityRenderState & GeoRenderState>
+        extends GeoBlockRenderer<LaserTurretBlockEntity, R> {
     private static final DataTicket<Float> AIM_YAW =
-            DataTicket.create("primevalworks_magic_turret_yaw", Float.class);
+            DataTicket.create("primevalworks_laser_turret_yaw", Float.class);
     private static final DataTicket<Float> AIM_PITCH =
-            DataTicket.create("primevalworks_magic_turret_pitch", Float.class);
+            DataTicket.create("primevalworks_laser_turret_pitch", Float.class);
     private static final DataTicket<Float> BEAM_LENGTH =
-            DataTicket.create("primevalworks_magic_turret_beam_length", Float.class);
+            DataTicket.create("primevalworks_laser_turret_beam_length", Float.class);
     private static final DataTicket<Float> ANIMATION_TIME =
-            DataTicket.create("primevalworks_magic_turret_animation_time", Float.class);
+            DataTicket.create("primevalworks_laser_turret_animation_time", Float.class);
     private static final Identifier BEAM_TEXTURE = Identifier.fromNamespaceAndPath(
             "minecraft", "textures/block/white_concrete.png");
     private static final int[] BEAM_COLORS = {
-            0x59501782,
-            0x867B2BC4,
-            0xB6AD66F0,
-            0xDCE3C8FF,
+            0x59A20E12,
+            0x86E3262E,
+            0xB6FF5A54,
+            0xDCFFD0C8,
             0xFFFFFFFF
     };
     private static final float[] BEAM_WIDTHS = {0.112F, 0.082F, 0.056F, 0.032F, 0.013F};
     private static final UvRegion FULL_UV = new UvRegion(0.0F, 0.0F, 1.0F, 1.0F);
 
-    public MagicTurretRenderer(BlockEntityRendererProvider.Context context) {
-        super(context, new MagicTurretGeoModel());
+    public LaserTurretRenderer(BlockEntityRendererProvider.Context context) {
+        super(context, new LaserTurretGeoModel());
     }
 
     @Override
-    public void addRenderData(MagicTurretBlockEntity turret, Void relatedObject,
+    public void addRenderData(LaserTurretBlockEntity turret, Void relatedObject,
                               R renderState, float partialTick) {
         float yaw = turret.aimYaw(partialTick);
         float pitch = turret.aimPitch(partialTick);
         LivingEntity target = turret.getLevel() == null ? null : turret.renderTarget(turret.getLevel());
         renderState.addGeckolibData(AIM_YAW, yaw);
         renderState.addGeckolibData(AIM_PITCH, pitch);
-        renderState.addGeckolibData(MagicTurretGeoModel.FIRING, target != null);
+        renderState.addGeckolibData(LaserTurretGeoModel.FIRING, target != null);
         renderState.addGeckolibData(ANIMATION_TIME,
                 turret.getLevel() == null ? partialTick : turret.getLevel().getGameTime() + partialTick);
         renderState.addGeckolibData(BEAM_LENGTH,
@@ -69,7 +69,7 @@ public final class MagicTurretRenderer<R extends BlockEntityRenderState & GeoRen
         float yaw = renderPassInfo.getOrDefaultGeckolibData(AIM_YAW, 0.0F);
         float pitch = renderPassInfo.getOrDefaultGeckolibData(AIM_PITCH, 0.0F);
         snapshots.ifPresent("head", bone -> {
-            bone.setRotY(bone.getRotY() + yaw * Mth.DEG_TO_RAD);
+            bone.setRotY(bone.getRotY() - yaw * Mth.DEG_TO_RAD);
             bone.setRotZ(bone.getRotZ() - pitch * Mth.DEG_TO_RAD);
         });
     }
@@ -81,7 +81,7 @@ public final class MagicTurretRenderer<R extends BlockEntityRenderState & GeoRen
 
         PoseStack poseStack = renderPassInfo.poseStack();
         poseStack.pushPose();
-        poseStack.translate(0.5F, MagicTurretBlockEntity.PIVOT_HEIGHT, 0.5F);
+        poseStack.translate(0.5F, LaserTurretBlockEntity.PIVOT_HEIGHT, 0.5F);
         poseStack.mulPose(Axis.YP.rotationDegrees(
                 renderPassInfo.getOrDefaultGeckolibData(AIM_YAW, 0.0F)));
         poseStack.mulPose(Axis.XP.rotationDegrees(
@@ -90,10 +90,10 @@ public final class MagicTurretRenderer<R extends BlockEntityRenderState & GeoRen
         poseStack.popPose();
     }
 
-    private static float visibleBeamLength(MagicTurretBlockEntity turret, LivingEntity target,
+    private static float visibleBeamLength(LaserTurretBlockEntity turret, LivingEntity target,
                                            float yaw, float pitch, float partialTick) {
         Vec3 pivot = Vec3.atLowerCornerOf(turret.getBlockPos()).add(
-                0.5D, MagicTurretBlockEntity.PIVOT_HEIGHT, 0.5D);
+                0.5D, LaserTurretBlockEntity.PIVOT_HEIGHT, 0.5D);
         Vec3 targetEye = target.getEyePosition(partialTick);
         double targetDistance = targetEye.distanceTo(pivot);
         double yawRadians = yaw * Mth.DEG_TO_RAD;
@@ -108,7 +108,7 @@ public final class MagicTurretRenderer<R extends BlockEntityRenderState & GeoRen
         double visibleDistance = pivot.distanceTo(sightStart)
                 + BeamLineOfSight.visibleDistance(turret.getLevel(), sightStart, renderedEnd);
         return (float)Math.max(0.0D,
-                Math.min(targetDistance, visibleDistance) - MagicTurretBlockEntity.MUZZLE_OFFSET);
+                Math.min(targetDistance, visibleDistance) - LaserTurretBlockEntity.MUZZLE_OFFSET);
     }
 
     private static void renderBeam(RenderPassInfo<?> state, PoseStack poseStack,
@@ -121,8 +121,8 @@ public final class MagicTurretRenderer<R extends BlockEntityRenderState & GeoRen
                     RenderTypes.entityTranslucentEmissive(BEAM_TEXTURE),
                     (matrix, vertices) -> renderSquarePrism(
                             matrix, vertices, width,
-                            -MagicTurretBlockEntity.MUZZLE_OFFSET,
-                            -MagicTurretBlockEntity.MUZZLE_OFFSET - beamLength,
+                            -LaserTurretBlockEntity.MUZZLE_OFFSET,
+                            -LaserTurretBlockEntity.MUZZLE_OFFSET - beamLength,
                             color)
             );
         }
@@ -135,9 +135,9 @@ public final class MagicTurretRenderer<R extends BlockEntityRenderState & GeoRen
                 RenderTypes.entityTranslucentEmissive(BEAM_TEXTURE),
                 (matrix, vertices) -> {
                     for (float travelled = phase; travelled < beamLength; travelled += spacing) {
-                        float segmentStart = -MagicTurretBlockEntity.MUZZLE_OFFSET - travelled;
+                        float segmentStart = -LaserTurretBlockEntity.MUZZLE_OFFSET - travelled;
                         float segmentEnd = Math.max(
-                                -MagicTurretBlockEntity.MUZZLE_OFFSET - beamLength,
+                                -LaserTurretBlockEntity.MUZZLE_OFFSET - beamLength,
                                 segmentStart - 0.11F);
                         renderSquareCollar(matrix, vertices, 0.118F, 0.023F,
                                 segmentStart, segmentEnd, 0xD9E9D5FF);
@@ -204,7 +204,7 @@ public final class MagicTurretRenderer<R extends BlockEntityRenderState & GeoRen
     }
 
     @Override
-    public AABB getRenderBoundingBox(MagicTurretBlockEntity turret) {
+    public AABB getRenderBoundingBox(LaserTurretBlockEntity turret) {
         BlockPos pos = turret.getBlockPos();
         return new AABB(pos).inflate(25.0D);
     }

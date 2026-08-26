@@ -256,7 +256,7 @@ public final class PrimevalConfig {
             hostileMobTargeting = bool(builder, "hostileMobTargeting", true,
                     "Lets hostile mobs and combat-capable dinosaurs notice each other inside a base.");
             turretDamage = decimal(builder, "turretDamage", 1.0D, 0.0D, 10.0D,
-                    "Scales Dart and Magic Turret damage.");
+                    "Scales Dart and Laser Turret damage.");
             turretRange = decimal(builder, "turretRange", 1.0D, 0.25D, 4.0D,
                     "Scales target range for both defensive turrets.");
             builder.pop();

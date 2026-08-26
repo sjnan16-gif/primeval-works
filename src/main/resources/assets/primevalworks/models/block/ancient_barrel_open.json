@@ -1,8 +1,8 @@
 {
   "parent": "minecraft:block/block",
   "textures": {
-    "barrel": "primevalworks:block/ancient_barrel",
-    "particle": "primevalworks:block/ancient_barrel"
+    "barrel": "primevalworks:block/ancient_barrel_open",
+    "particle": "primevalworks:block/ancient_barrel_open"
   },
   "elements": [{
     "from": [0, 0, 0],
