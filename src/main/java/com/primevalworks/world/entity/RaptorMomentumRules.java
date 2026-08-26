@@ -12,6 +12,10 @@ public final class RaptorMomentumRules {
         return clamp(current + change, 0.0F, 1.0F);
     }
 
+    public static boolean pursuitActive(boolean transporting, boolean hunting, boolean pouncing) {
+        return transporting || hunting || pouncing;
+    }
+
     public static float movementMultiplier(float momentum, float passiveStrength) {
         return 1.0F + clamp(momentum, 0.0F, 1.0F) * 0.48F * Math.max(0.0F, passiveStrength);
     }

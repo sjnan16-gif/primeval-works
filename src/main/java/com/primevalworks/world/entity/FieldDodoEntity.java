@@ -284,6 +284,10 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             FieldDodoEntity.class,
             EntityDataSerializers.INT
     );
+    private static final EntityDataAccessor<Boolean> RAPTOR_RUNNING = SynchedEntityData.defineId(
+            FieldDodoEntity.class,
+            EntityDataSerializers.BOOLEAN
+    );
     private static final EntityDataAccessor<Integer> GENETIC_QUALITY = SynchedEntityData.defineId(
             FieldDodoEntity.class,
             EntityDataSerializers.INT
@@ -407,6 +411,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     private long pendingAttackContactTick = Long.MAX_VALUE;
     private float raptorMomentum;
     private int raptorPounceTicks;
+    private int raptorTransportRunTicks;
     private boolean raptorPounceContactConfirmed;
     private BlockPos foodTargetPos;
     private int foodSearchCooldown;
@@ -607,9 +612,11 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     }
 
     public boolean usesRunAnimation() {
-        return (getSpecies() == DinosaurSpecies.VELOCIRAPTOR
-                && getDeltaMovement().horizontalDistanceSqr() > 0.030D)
-                || isMountedFlight() && getDeltaMovement().lengthSqr() > 0.012D
+        if (getSpecies() == DinosaurSpecies.VELOCIRAPTOR) {
+            return entityData.get(RAPTOR_RUNNING)
+                    && getDeltaMovement().horizontalDistanceSqr() > 0.0036D;
+        }
+        return isMountedFlight() && getDeltaMovement().lengthSqr() > 0.012D
                 || runAnimationHoldTicks > 0 && walkAnimation.speed() > 0.025F;
     }
 
@@ -1633,6 +1640,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         builder.define(SPINO_LAND_EXHAUSTED, false);
         builder.define(DEFEAT_TRANSFER_TIME, 0);
         builder.define(ATTACK_ANIMATION_TICKS, 0);
+        builder.define(RAPTOR_RUNNING, false);
         builder.define(GENETIC_QUALITY, -1);
         builder.define(MUTATION_MASK, 0);
         builder.define(ORIGINAL_PIGMENT_RESTORED, false);
@@ -2141,15 +2149,35 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         if (getSpecies() != DinosaurSpecies.VELOCIRAPTOR) {
             raptorMomentum = 0.0F;
             raptorPounceTicks = 0;
+            raptorTransportRunTicks = 0;
+            entityData.set(RAPTOR_RUNNING, false);
             return;
         }
         if (raptorPounceTicks > 0) raptorPounceTicks--;
-        boolean running = !isDinosaurSleeping()
+        if (raptorTransportRunTicks > 0) raptorTransportRunTicks--;
+        boolean pursuitActive = RaptorMomentumRules.pursuitActive(
+                isRaptorTransportPursuitActive(),
+                getTarget() != null && getTarget().isAlive(),
+                raptorPounceTicks > 0
+        );
+        boolean running = pursuitActive
+                && !isDinosaurSleeping()
                 && getWorkAction() == 0
                 && (onGround() || raptorPounceTicks > 0)
-                && getDeltaMovement().horizontalDistanceSqr() > 0.0036D
-                && (!navigation.isDone() || getTarget() != null || raptorPounceTicks > 0);
+                && getDeltaMovement().horizontalDistanceSqr() > 0.0036D;
+        entityData.set(RAPTOR_RUNNING, running);
         raptorMomentum = RaptorMomentumRules.nextMomentum(raptorMomentum, running);
+    }
+
+    private boolean isRaptorTransportPursuitActive() {
+        return raptorTransportRunTicks > 0
+                && workEnabled
+                && workJobIndex == 0
+                && commandTablePos != null
+                && !onExpedition
+                && workerCooldown <= 0
+                && getHunger() >= PrimevalTuning.server().foodBoxThreshold()
+                && scheduleAllowsWork();
     }
 
     private void tickThreatAwareness() {
@@ -2684,6 +2712,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             return;
         }
         if (!closeTo(sourceTarget.pos)) {
+            markRaptorTransportRoute();
             moveTo(sourceTarget.pos);
             return;
         }
@@ -2762,6 +2791,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         }
         Container destination = target.container;
         if (!closeTo(target.pos)) {
+            markRaptorTransportRoute();
             moveTo(target.pos);
             return;
         }
@@ -3007,6 +3037,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             if (target == null) continue;
             if (distanceToSqr(target) > 2.25D) {
                 cancelWorkAction();
+                markRaptorTransportRoute();
                 navigation.moveTo(target, 1.05D);
                 return true;
             }
@@ -3035,6 +3066,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         if (target == null) return false;
         if (distanceToSqr(target) > 2.25D) {
             cancelWorkAction();
+            markRaptorTransportRoute();
             navigation.moveTo(target, movementSpeedForWork());
             return true;
         }
@@ -3559,6 +3591,12 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         if (navigation.isDone() || tickCount % 10 == 0) {
             Vec3 approach = workApproachPoint(pos);
             navigation.moveTo(approach.x, pos.getY(), approach.z, speed);
+        }
+    }
+
+    private void markRaptorTransportRoute() {
+        if (getSpecies() == DinosaurSpecies.VELOCIRAPTOR && workEnabled && workJobIndex == 0) {
+            raptorTransportRunTicks = 3;
         }
     }
 
@@ -5348,7 +5386,11 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         public void tick() {
             boolean movingTo = operation == Operation.MOVE_TO;
             double authoredSpeedModifier = speedModifier;
-            if (movingTo && getSpecies() == DinosaurSpecies.VELOCIRAPTOR) {
+            if (movingTo && getSpecies() == DinosaurSpecies.VELOCIRAPTOR
+                    && RaptorMomentumRules.pursuitActive(
+                            isRaptorTransportPursuitActive(),
+                            getTarget() != null && getTarget().isAlive(),
+                            raptorPounceTicks > 0)) {
                 speedModifier *= RaptorMomentumRules.movementMultiplier(
                         raptorMomentum, getPassiveStrength());
             }

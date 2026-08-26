@@ -21,4 +21,12 @@ final class RaptorMomentumRulesTest {
         assertTrue(RaptorMomentumRules.pounceHorizontalSpeed(0.80D, 1.0F) >= 0.80D);
         assertTrue(RaptorMomentumRules.pounceVerticalSpeed(1.0F) > 0.45D);
     }
+
+    @Test
+    void pursuitOnlyActivatesForTransportAndCombat() {
+        assertTrue(!RaptorMomentumRules.pursuitActive(false, false, false));
+        assertTrue(RaptorMomentumRules.pursuitActive(true, false, false));
+        assertTrue(RaptorMomentumRules.pursuitActive(false, true, false));
+        assertTrue(RaptorMomentumRules.pursuitActive(false, false, true));
+    }
 }

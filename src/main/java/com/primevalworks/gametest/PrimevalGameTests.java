@@ -96,6 +96,9 @@ public final class PrimevalGameTests {
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> VELOCIRAPTOR_ATTACK_LANDS_ON_CONTACT =
             TEST_FUNCTIONS.register("velociraptor_attack_lands_on_contact",
                     () -> PrimevalGameTests::velociraptorAttackLandsOnContact);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> VELOCIRAPTOR_WALKS_WITHOUT_PURSUIT =
+            TEST_FUNCTIONS.register("velociraptor_walks_without_pursuit",
+                    () -> PrimevalGameTests::velociraptorWalksWithoutPursuit);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> SPINOSAURUS_CLEARS_CLOSE_TARGET =
             TEST_FUNCTIONS.register("spinosaurus_clears_close_target", () -> PrimevalGameTests::spinosaurusClearsCloseTarget);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> NIGHT_SHIFT_DRAINS_MOOD =
@@ -225,6 +228,11 @@ public final class PrimevalGameTests {
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "velociraptor_attack_lands_on_contact"),
                 new FunctionGameTestInstance(VELOCIRAPTOR_ATTACK_LANDS_ON_CONTACT.getKey(),
                         isolatedTestData(event, "raptor_combat"))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "velociraptor_walks_without_pursuit"),
+                new FunctionGameTestInstance(VELOCIRAPTOR_WALKS_WITHOUT_PURSUIT.getKey(),
+                        isolatedTestData(event, "raptor_walk"))
         );
         event.registerTest(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "spinosaurus_clears_close_target"),
@@ -2690,6 +2698,35 @@ public final class PrimevalGameTests {
                             yawError <= 42.0F,
                             "The Tyrannosaurus bit without facing the target; yaw error=" + yawError
                     );
+                })
+                .thenSucceed();
+    }
+
+    private static void velociraptorWalksWithoutPursuit(GameTestHelper helper) {
+        for (int x = 0; x <= 8; x++) {
+            for (int z = 0; z <= 8; z++) {
+                helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+            }
+        }
+        BlockPos start = new BlockPos(1, 1, 4);
+        BlockPos finish = new BlockPos(7, 1, 4);
+        forceTicking(helper, start, finish);
+        FieldDodoEntity dinosaur = helper.spawn(ModEntities.VELOCIRAPTOR.get(), start);
+        Vec3 origin = dinosaur.position();
+        helper.onEachTick(() -> {
+            if (dinosaur.isAlive()) {
+                dinosaur.setDeltaMovement(0.08D, dinosaur.getDeltaMovement().y, 0.0D);
+            }
+        });
+
+        helper.startSequence()
+                .thenExecuteAfter(50, () -> {
+                    helper.assertTrue(dinosaur.position().subtract(origin).horizontalDistance() > 0.75D,
+                            "The Velociraptor ordinary-walk check never moved");
+                    helper.assertTrue(dinosaur.getRaptorMomentum() <= 0.001F,
+                            "Ordinary walking incorrectly built Pursuit momentum");
+                    helper.assertTrue(!dinosaur.usesRunAnimation(),
+                            "Ordinary walking incorrectly selected the run animation");
                 })
                 .thenSucceed();
     }
