@@ -202,10 +202,7 @@ public final class FieldDodoRenderer<R extends LivingEntityRenderState & GeoRend
                 && !renderState.isInvisible) {
             return RenderTypes.entityTranslucentEmissive(texture);
         }
-        if ((profile.assetName().equals("pteranodon")
-                 || profile.assetName().equals("parasaurolophus")
-                 || profile.assetName().equals("tyrannosaurus")
-                 || profile.assetName().equals("spino")) && !renderState.isInvisible) {
+        if (!renderState.isInvisible) {
             return RenderTypes.entityCutoutCull(texture);
         }
         return super.getRenderType(renderState, texture);

@@ -1,5 +1,6 @@
 {
   "credit": "Made with Blockbench",
+  "parent": "minecraft:block/block",
   "texture_size": [64, 64],
   "textures": {
     "table": "primevalworks:block/dino_command_table",

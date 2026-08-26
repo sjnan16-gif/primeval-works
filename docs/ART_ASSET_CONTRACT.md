@@ -342,7 +342,7 @@ Rules:
 - Provide a particle texture.
 - Avoid dozens of tiny decorative cuboids on frequently repeated blocks.
 - If the collision is not a full cube, include a screenshot showing the intended collision boxes or name collision groups `collision_01`, `collision_02`, etc. Those groups are reference-only and will not render.
-- Check inventory/ground/hand display transforms in Blockbench for blocks with a special item silhouette.
+- Ordinary block items inherit Minecraft's `block/block` display transforms. Do not add per-model GUI/ground/hand rotations to compensate for bad source centering; fix the source bounds and facing instead. Only a deliberately non-block-like silhouette may receive an reviewed item-only transform.
 
 ## Animated machine models
 
@@ -363,6 +363,8 @@ Current authored machine exceptions are frozen to their delivered exports:
 
 - Wind Turbine source: `art/blocks/wind_turbine/wind_turbine.bbmodel`; runtime geometry `geometry.wind_turbine`; static bone `bb_main`; rotor bone `spinnything`; looping clip `spin`; 128x128 base and upgraded atlases with identical UVs.
 - Processor source: `art/blocks/processor/processor.bbmodel`; one static 16x16x16 cube using the authored 64x64 per-face UV atlas. It stays a vanilla block model because it has no moving part.
+
+Zero-thickness planes are valid for sails, wings, teeth, fins, and machine panels, but the two authored sides occupy the same plane. Every Gecko dinosaur and animated machine therefore renders through an alpha-cutout, back-face-culled pass. Do not switch one species or machine back to a non-culling/translucent base pass; the coincident front and back textures will blend or flicker.
 
 Required animation IDs:
 

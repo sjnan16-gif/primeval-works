@@ -14,6 +14,7 @@ import com.primevalworks.world.block.entity.LaserTurretBlockEntity;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
@@ -62,6 +63,11 @@ public final class LaserTurretRenderer<R extends BlockEntityRenderState & GeoRen
                 turret.getLevel() == null ? partialTick : turret.getLevel().getGameTime() + partialTick);
         renderState.addGeckolibData(BEAM_LENGTH,
                 target == null ? 0.0F : visibleBeamLength(turret, target, yaw, pitch, partialTick));
+    }
+
+    @Override
+    public RenderType getRenderType(R renderState, Identifier texture) {
+        return RenderTypes.entityCutoutCull(texture);
     }
 
     @Override

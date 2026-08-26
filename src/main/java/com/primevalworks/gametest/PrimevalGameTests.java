@@ -2457,7 +2457,15 @@ public final class PrimevalGameTests {
                         dodo.getWorkAction() == 3,
                         "The energy dino never entered its authored work pose"
                 ))
-                .thenExecute(() -> heldPosition[0] = dodo.position())
+                .thenExecute(() -> {
+                    heldPosition[0] = dodo.position();
+                    helper.assertBlockEntityData(
+                            turbineRelative,
+                            TurbineBlockEntity.class,
+                            TurbineBlockEntity::isWorkerActive,
+                            () -> Component.literal("The turbine rotor did not start with its active worker")
+                    );
+                })
                 .thenExecuteAfter(120, () -> {
                     helper.assertTrue(
                             dodo.position().distanceToSqr(heldPosition[0]) < 0.0001D,
@@ -2496,6 +2504,13 @@ public final class PrimevalGameTests {
                             )
                     );
                 })
+                .thenExecute(dodo::discard)
+                .thenExecuteAfter(8, () -> helper.assertBlockEntityData(
+                        turbineRelative,
+                        TurbineBlockEntity.class,
+                        blockEntity -> !blockEntity.isWorkerActive(),
+                        () -> Component.literal("The turbine rotor kept running after its worker left")
+                ))
                 .thenSucceed();
     }
 

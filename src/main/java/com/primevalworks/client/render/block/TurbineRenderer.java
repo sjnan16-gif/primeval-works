@@ -7,8 +7,11 @@ import com.primevalworks.world.block.entity.TurbineBlockEntity;
 import com.primevalworks.world.block.TurbineBlock;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.AABB;
 
 public final class TurbineRenderer<R extends BlockEntityRenderState & GeoRenderState>
@@ -24,6 +27,11 @@ public final class TurbineRenderer<R extends BlockEntityRenderState & GeoRenderS
                 TurbineBlock.isWindTurbine(turbine.getBlockState()));
         renderState.addGeckolibData(TurbineGeoModel.UPGRADED,
                 TurbineBlock.isUpgradedWindTurbine(turbine.getBlockState()));
+    }
+
+    @Override
+    public RenderType getRenderType(R renderState, Identifier texture) {
+        return RenderTypes.entityCutoutCull(texture);
     }
 
     @Override

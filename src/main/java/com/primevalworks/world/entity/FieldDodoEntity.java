@@ -2602,7 +2602,8 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             return;
         }
         CommandTableBlockEntity table = commandTableEntity();
-        if (table != null && turbine.hasValidEnvironment()) {
+        boolean activelyGenerating = turbine.markWorkerActive();
+        if (table != null && activelyGenerating) {
             table.receiveGeneratedEnergy(WorkSpecialtyRules.energyPerSecond(
                             getSpecialtyStars(2), dinosaurLevel)
                     * getMutationStatMultiplier()
