@@ -41,4 +41,16 @@ final class RaptorMomentumRulesTest {
                 - RaptorMomentumRules.turnSpeedMultiplier(49.0F, 34.0F)) < 0.03F,
                 "Adjacent yaw values must not cross a stepped braking threshold");
     }
+
+    @Test
+    void highMomentumSteeringIsStableInsteadOfOvercorrecting() {
+        float lowSpeedResponse = RaptorMomentumRules.steeringResponse(0.0F, 60.0F);
+        float fullSpeedResponse = RaptorMomentumRules.steeringResponse(1.0F, 60.0F);
+        assertTrue(fullSpeedResponse < lowSpeedResponse,
+                "A fast Raptor should carve a stable arc instead of snapping across its path");
+        assertTrue(fullSpeedResponse >= 0.085F && lowSpeedResponse <= 0.28F);
+        assertTrue(Math.abs(RaptorMomentumRules.steeringResponse(1.0F, 60.0F)
+                - RaptorMomentumRules.steeringResponse(1.0F, 61.0F)) < 0.01F,
+                "Small path-node changes must not flip steering strength between ticks");
+    }
 }

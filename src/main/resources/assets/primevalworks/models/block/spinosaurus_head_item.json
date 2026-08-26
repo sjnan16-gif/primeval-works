@@ -1,0 +1,21 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "skin": "minecraft:block/dark_prismarine",
+    "crest": "minecraft:block/red_nether_bricks",
+    "jaw": "minecraft:block/deepslate_tiles",
+    "particle": "minecraft:block/dark_prismarine"
+  },
+  "elements": [
+    {"from":[2,6,6],"to":[14,15,16],"faces":{"down":{"texture":"#jaw"},"up":{"texture":"#crest"},"north":{"texture":"#skin"},"south":{"texture":"#skin"},"west":{"texture":"#skin"},"east":{"texture":"#skin"}}},
+    {"from":[4,7,0],"to":[12,13,9],"faces":{"down":{"texture":"#jaw"},"up":{"texture":"#skin"},"north":{"texture":"#skin"},"south":{"texture":"#skin"},"west":{"texture":"#skin"},"east":{"texture":"#skin"}}},
+    {"from":[4,4,0],"to":[12,7,9],"faces":{"down":{"texture":"#jaw"},"up":{"texture":"#jaw"},"north":{"texture":"#jaw"},"south":{"texture":"#jaw"},"west":{"texture":"#jaw"},"east":{"texture":"#jaw"}}}
+  ],
+  "display": {
+    "gui":{"rotation":[30,225,0],"translation":[0,0,0],"scale":[0.78,0.78,0.78]},
+    "ground":{"translation":[0,3,0],"scale":[0.35,0.35,0.35]},
+    "fixed":{"rotation":[0,180,0],"scale":[0.65,0.65,0.65]},
+    "thirdperson_righthand":{"rotation":[75,45,0],"translation":[0,2.5,0],"scale":[0.45,0.45,0.45]},
+    "firstperson_righthand":{"rotation":[0,45,0],"translation":[0,2,0],"scale":[0.55,0.55,0.55]}
+  }
+}

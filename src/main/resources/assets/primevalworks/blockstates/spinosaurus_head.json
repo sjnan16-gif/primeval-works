@@ -1,0 +1,1 @@
+{"variants":{"facing=north":{"model":"primevalworks:block/spinosaurus_head"},"facing=east":{"model":"primevalworks:block/spinosaurus_head","y":90},"facing=south":{"model":"primevalworks:block/spinosaurus_head","y":180},"facing=west":{"model":"primevalworks:block/spinosaurus_head","y":270}}}

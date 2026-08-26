@@ -2,6 +2,7 @@ package com.primevalworks.world.work;
 
 import com.primevalworks.config.PrimevalTuning;
 import com.primevalworks.registry.ModItems;
+import com.primevalworks.world.entity.SpinosaurusTrophyRules;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -57,7 +58,9 @@ public final class ExpeditionRewards {
                     reward(() -> ModItems.TYRANNOSAURUS_TOOTH.get(), 1, 2, 3),
                     reward(() -> ModItems.SILK.get(), 3, 6, 3),
                     reward(() -> ModItems.FOSSIL_FRAGMENT.get(), 1, 3, 2),
-                    reward(() -> ModItems.NESTING_TREAT.get(), 1, 2, 2)
+                    reward(() -> ModItems.NESTING_TREAT.get(), 1, 2, 2),
+                    rareReward(() -> ModItems.SPINOSAURUS_HEAD.get(), 1, 1,
+                            SpinosaurusTrophyRules.frontierExpeditionChance())
             ))
     );
 
@@ -80,13 +83,12 @@ public final class ExpeditionRewards {
         Map<Item, ItemStack> combined = new LinkedHashMap<>();
         for (int roll = 0; roll < rolls; roll++) {
             Reward reward = choose(definition.rewards(), random);
-            Item item = reward.item().get();
-            int count = reward.minimum() + random.nextInt(reward.maximum() - reward.minimum() + 1);
-            combined.compute(item, (ignored, existing) -> {
-                if (existing == null) return new ItemStack(item, count);
-                existing.grow(count);
-                return existing;
-            });
+            add(combined, reward, random);
+        }
+        for (Reward reward : definition.rewards()) {
+            if (reward.rareChance() > 0.0F && random.nextFloat() < reward.rareChance()) {
+                add(combined, reward, random);
+            }
         }
         return new ArrayList<>(combined.values());
     }
@@ -97,7 +99,7 @@ public final class ExpeditionRewards {
             case 1 -> "Sulfur, feathers, fossils, hardwood, coal";
             case 2 -> "Silk, sulfur, nesting treats, wing fragments, cores, rare metal";
             case 3 -> "Teeth, wings, nesting treats, cores, ancient metal";
-            default -> "Ancient ore, cores, rare compressed cores, trophies, nesting treats";
+            default -> "Ancient ore, cores, rare compressed cores, trophies, nesting treats, rare Spino heads";
         };
     }
 
@@ -105,19 +107,37 @@ public final class ExpeditionRewards {
         int totalWeight = rewards.stream().mapToInt(Reward::weight).sum();
         int value = random.nextInt(totalWeight);
         for (Reward reward : rewards) {
+            if (reward.weight() <= 0) continue;
             value -= reward.weight();
             if (value < 0) return reward;
         }
-        return rewards.getLast();
+        return rewards.stream()
+                .filter(reward -> reward.weight() > 0)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Expedition has no weighted rewards"));
+    }
+
+    private static void add(Map<Item, ItemStack> combined, Reward reward, RandomSource random) {
+        Item item = reward.item().get();
+        int count = reward.minimum() + random.nextInt(reward.maximum() - reward.minimum() + 1);
+        combined.compute(item, (ignored, existing) -> {
+            if (existing == null) return new ItemStack(item, count);
+            existing.grow(count);
+            return existing;
+        });
     }
 
     private static Reward reward(Supplier<Item> item, int minimum, int maximum, int weight) {
-        return new Reward(item, minimum, maximum, weight);
+        return new Reward(item, minimum, maximum, weight, 0.0F);
+    }
+
+    private static Reward rareReward(Supplier<Item> item, int minimum, int maximum, float chance) {
+        return new Reward(item, minimum, maximum, 0, chance);
     }
 
     public record Tier(String name, int rolls, List<Reward> rewards) {
     }
 
-    public record Reward(Supplier<Item> item, int minimum, int maximum, int weight) {
+    public record Reward(Supplier<Item> item, int minimum, int maximum, int weight, float rareChance) {
     }
 }

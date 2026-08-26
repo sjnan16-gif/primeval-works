@@ -94,6 +94,8 @@ public final class ModItems {
             ITEMS.registerSimpleBlockItem("ancient_spell_stone", ModBlocks.ANCIENT_SPELL_STONE);
     public static final DeferredItem<BlockItem> MAGIC_TURRET =
             ITEMS.registerSimpleBlockItem("magic_turret", ModBlocks.MAGIC_TURRET);
+    public static final DeferredItem<BlockItem> SPINOSAURUS_HEAD =
+            ITEMS.registerSimpleBlockItem("spinosaurus_head", ModBlocks.SPINOSAURUS_HEAD);
     public static final DeferredItem<BlockItem> PREMIUM_EGG_INCUBATOR =
             ITEMS.registerSimpleBlockItem("premium_egg_incubator", ModBlocks.PREMIUM_EGG_INCUBATOR);
     public static final DeferredItem<Item> PTERANODON_SADDLE = ITEMS.registerItem(

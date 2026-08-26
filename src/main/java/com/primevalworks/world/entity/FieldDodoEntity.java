@@ -1241,6 +1241,10 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             spawnAtLocation(serverLevel,
                     new ItemStack(ModItems.TYRANNOSAURUS_TOOTH.get(), 1 + random.nextInt(2)));
         }
+        if (species == DinosaurSpecies.SPINOSAURUS
+                && SpinosaurusTrophyRules.rollsManualKillDrop(random)) {
+            spawnAtLocation(serverLevel, new ItemStack(ModItems.SPINOSAURUS_HEAD.get()));
+        }
     }
 
     @Override
@@ -3610,7 +3614,9 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             stalledNavigationTicks = 0;
             return;
         }
-        if (navigation.isDone() || tickCount % 10 == 0) {
+        boolean raptorTransportRun = getSpecies() == DinosaurSpecies.VELOCIRAPTOR
+                && isRaptorTransportPursuitActive();
+        if (navigation.isDone() || (!raptorTransportRun && tickCount % 10 == 0)) {
             Vec3 approach = workApproachPoint(pos);
             navigation.moveTo(approach.x, pos.getY(), approach.z, speed);
         }
@@ -5436,7 +5442,29 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                 zza *= turnScale;
                 Vec3 movement = getDeltaMovement();
                 double velocityScale = Mth.lerp(0.36D, 1.0D, turnScale);
-                setDeltaMovement(movement.x * velocityScale, movement.y, movement.z * velocityScale);
+                double horizontalSpeed = movement.horizontalDistance() * velocityScale;
+                double desiredX = targetX - getX();
+                double desiredZ = targetZ - getZ();
+                double desiredLength = Math.sqrt(desiredX * desiredX + desiredZ * desiredZ);
+                if (horizontalSpeed > 1.0E-5D && desiredLength > 1.0E-5D) {
+                    double currentX = movement.x / Math.max(1.0E-5D, movement.horizontalDistance());
+                    double currentZ = movement.z / Math.max(1.0E-5D, movement.horizontalDistance());
+                    desiredX /= desiredLength;
+                    desiredZ /= desiredLength;
+                    float response = RaptorMomentumRules.steeringResponse(raptorMomentum, yawError);
+                    double steeredX = Mth.lerp(response, currentX, desiredX);
+                    double steeredZ = Mth.lerp(response, currentZ, desiredZ);
+                    double steeredLength = Math.sqrt(steeredX * steeredX + steeredZ * steeredZ);
+                    if (steeredLength > 1.0E-5D) {
+                        setDeltaMovement(
+                                steeredX / steeredLength * horizontalSpeed,
+                                movement.y,
+                                steeredZ / steeredLength * horizontalSpeed
+                        );
+                    }
+                } else {
+                    setDeltaMovement(movement.x * velocityScale, movement.y, movement.z * velocityScale);
+                }
             } else if (yawError > 52.0F || visibleBodyError > 36.0F) {
                 setSpeed(0.0F);
                 xxa = 0.0F;
@@ -5453,6 +5481,10 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                 zza *= 0.42F;
                 Vec3 movement = getDeltaMovement();
                 setDeltaMovement(movement.x * 0.35D, movement.y, movement.z * 0.35D);
+            }
+
+            if (getSpecies() == DinosaurSpecies.VELOCIRAPTOR) {
+                return;
             }
 
             Vec3 movement = getDeltaMovement();

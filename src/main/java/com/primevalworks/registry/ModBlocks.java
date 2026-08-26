@@ -17,6 +17,7 @@ import com.primevalworks.world.block.TurbinePartBlock;
 import com.primevalworks.world.block.DinosaurEggBlock;
 import com.primevalworks.world.block.DartTurretBlock;
 import com.primevalworks.world.block.MagicTurretBlock;
+import com.primevalworks.world.block.SpinosaurusHeadBlock;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
@@ -113,6 +114,10 @@ public final class ModBlocks {
             "magic_turret",
             properties -> new MagicTurretBlock(properties.mapColor(MapColor.COLOR_PURPLE).strength(7.0F)
                     .noOcclusion().lightLevel(state -> 7).sound(SoundType.AMETHYST)));
+    public static final DeferredBlock<Block> SPINOSAURUS_HEAD = BLOCKS.registerBlock(
+            "spinosaurus_head",
+            properties -> new SpinosaurusHeadBlock(properties.mapColor(MapColor.COLOR_BROWN).strength(5.0F)
+                    .noOcclusion().sound(SoundType.BONE_BLOCK)));
     public static final DeferredBlock<Block> PREMIUM_EGG_INCUBATOR = BLOCKS.registerBlock(
             "premium_egg_incubator",
             properties -> new PremiumEggIncubatorBlock(properties.mapColor(MapColor.QUARTZ).strength(5.0F)

@@ -11,6 +11,7 @@ import com.primevalworks.world.block.entity.ProcessorBlockEntity;
 import com.primevalworks.world.block.entity.DartTurretBlockEntity;
 import com.primevalworks.world.block.entity.MagicTurretBlockEntity;
 import com.primevalworks.world.block.entity.LaserObserverBlockEntity;
+import com.primevalworks.world.block.entity.SpinosaurusHeadBlockEntity;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -68,6 +69,11 @@ public final class ModBlockEntities {
             BLOCK_ENTITIES.register("magic_turret", () -> new BlockEntityType<>(
                     MagicTurretBlockEntity::new,
                     ModBlocks.MAGIC_TURRET.get()
+            ));
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SpinosaurusHeadBlockEntity>> SPINOSAURUS_HEAD =
+            BLOCK_ENTITIES.register("spinosaurus_head", () -> new BlockEntityType<>(
+                    SpinosaurusHeadBlockEntity::new,
+                    ModBlocks.SPINOSAURUS_HEAD.get()
             ));
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<LaserObserverBlockEntity>> LASER_OBSERVER =
             BLOCK_ENTITIES.register("laser_observer", () -> new BlockEntityType<>(

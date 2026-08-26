@@ -1,5 +1,11 @@
 package com.primevalworks.world.block.entity;
 
+import com.geckolib.animatable.GeoBlockEntity;
+import com.geckolib.animatable.instance.AnimatableInstanceCache;
+import com.geckolib.animatable.manager.AnimatableManager;
+import com.geckolib.animation.AnimationController;
+import com.geckolib.animation.RawAnimation;
+import com.geckolib.util.GeckoLibUtil;
 import com.primevalworks.config.PrimevalTuning;
 import com.primevalworks.registry.ModBlockEntities;
 import com.primevalworks.world.base.BaseEnergyRules;
@@ -29,17 +35,21 @@ import org.jspecify.annotations.Nullable;
 import java.util.Comparator;
 import java.util.UUID;
 
-public final class MagicTurretBlockEntity extends BlockEntity implements TargetingTurret {
+public final class MagicTurretBlockEntity extends BlockEntity implements TargetingTurret, GeoBlockEntity {
+    private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("idle");
+    private static final RawAnimation FIRING = RawAnimation.begin().thenLoop("firing");
     static final int BURST_HITS = 4;
     static final int BURST_STEP_TICKS = 5;
     static final float DAMAGE_PER_HIT = 5.0F;
     private static final int RECOVERY_TICKS = 20;
     private static final double RANGE = 24.0D;
-    private static final double PIVOT_HEIGHT = 0.75D;
+    public static final double PIVOT_HEIGHT = 0.98D;
+    public static final float MUZZLE_OFFSET = 1.34F;
     private static final DustParticleOptions SPELL_GLOW = new DustParticleOptions(0xA95CFF, 0.9F);
     private static final DustParticleOptions SPELL_CORE = new DustParticleOptions(0xFFF7FF, 0.46F);
 
     private final TurretAimController aim = new TurretAimController();
+    private final AnimatableInstanceCache animationCache = GeckoLibUtil.createInstanceCache(this);
     private int cooldown;
     private int targetRefresh;
     private int burstHitsRemaining;
@@ -121,10 +131,14 @@ public final class MagicTurretBlockEntity extends BlockEntity implements Targeti
         turret.aim.clientTick(level, pos, PIVOT_HEIGHT);
     }
 
+    public boolean hasVisualTarget() {
+        return level != null && renderTarget(level) != null;
+    }
+
     private void releaseSpellBurst(ServerLevel level, BlockPos pos, LivingEntity target) {
         Vec3 pivot = Vec3.atCenterOf(pos).add(0.0D, PIVOT_HEIGHT - 0.5D, 0.0D);
         Vec3 direction = target.getEyePosition().subtract(pivot).normalize();
-        Vec3 focus = pivot.add(direction.scale(0.58D));
+        Vec3 focus = pivot.add(direction.scale(MUZZLE_OFFSET));
         level.sendParticles(SPELL_GLOW, focus.x, focus.y, focus.z,
                 8, 0.08D, 0.08D, 0.08D, 0.015D);
         level.sendParticles(SPELL_CORE, focus.x, focus.y, focus.z,
@@ -183,6 +197,17 @@ public final class MagicTurretBlockEntity extends BlockEntity implements Targeti
     @Override
     public TurretAimController aimController() {
         return aim;
+    }
+
+    @Override
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+        controllers.add(new AnimationController<MagicTurretBlockEntity>("Turret", 4, state ->
+                state.setAndContinue(hasVisualTarget() ? FIRING : IDLE)));
+    }
+
+    @Override
+    public AnimatableInstanceCache getAnimatableInstanceCache() {
+        return animationCache;
     }
 
     @Override

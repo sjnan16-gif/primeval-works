@@ -27,6 +27,12 @@ public final class RaptorMomentumRules {
         return 1.0F - eased * 0.44F;
     }
 
+    public static float steeringResponse(float momentum, float yawError) {
+        float speedStability = 1.0F - clamp(momentum, 0.0F, 1.0F) * 0.52F;
+        float turnDemand = clamp(Math.abs(yawError) / 90.0F, 0.0F, 1.0F);
+        return clamp((0.18F + turnDemand * 0.10F) * speedStability, 0.085F, 0.28F);
+    }
+
     public static double pounceHorizontalSpeed(double currentSpeed, float passiveStrength) {
         return Math.max(currentSpeed, 0.54D + Math.min(1.55F, passiveStrength) * 0.08D);
     }

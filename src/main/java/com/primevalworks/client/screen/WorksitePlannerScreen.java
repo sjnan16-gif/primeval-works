@@ -1547,7 +1547,9 @@ public final class WorksitePlannerScreen extends Screen {
                 graphics.setComponentTooltipForNextFrame(font(), List.of(
                         preview.getHoverName().copy().withStyle(style -> style.withBold(true)),
                         Component.literal("Possible stack: " + count),
-                        Component.literal("One of " + expedition.rolls() + " reward rolls.")
+                        Component.literal(reward.rareChance() > 0.0F
+                                ? "A very rare find outside the normal reward rolls."
+                                : "One of " + expedition.rolls() + " reward rolls.")
                 ), mouseX, mouseY);
             }
         }

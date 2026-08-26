@@ -4,10 +4,11 @@
   "key": {
     "A": "primevalworks:ancient_spell_ingot",
     "C": "primevalworks:compressed_core",
-    "D": "primevalworks:dart_turret",
+    "H": "primevalworks:spinosaurus_head",
     "M": "primevalworks:compressed_ancient_metal_ingot",
+    "R": "minecraft:redstone_block",
     "S": "primevalworks:ancient_spell_stone"
   },
-  "pattern": ["ASA", "CMC", "ADA"],
+  "pattern": ["MHM", "RSR", "ACA"],
   "result": {"id": "primevalworks:magic_turret"}
 }

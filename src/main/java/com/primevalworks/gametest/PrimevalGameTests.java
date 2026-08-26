@@ -493,6 +493,7 @@ public final class PrimevalGameTests {
                 ModBlocks.ANCIENT_BARREL.get(), ModBlocks.DART_TURRET.get(),
                 ModBlocks.PROCESSOR.get(), ModBlocks.ANCIENT_FURNACE.get(),
                 ModBlocks.ANCIENT_SPELL_STONE.get(), ModBlocks.MAGIC_TURRET.get(),
+                ModBlocks.SPINOSAURUS_HEAD.get(),
                 ModBlocks.PREMIUM_EGG_INCUBATOR.get(),
                 ModBlocks.SMALL_DINOSAUR_EGG.get(), ModBlocks.BIG_DINOSAUR_EGG.get(),
                 ModBlocks.LARGE_DINOSAUR_EGG.get()
@@ -2153,7 +2154,8 @@ public final class PrimevalGameTests {
                 ModItems.CORE.get(),
                 ModItems.NESTING_TREAT.get(),
                 ModItems.RAW_ANCIENT_SPELL_INGOT.get(),
-                ModItems.COMPRESSED_CORE.get()
+                ModItems.COMPRESSED_CORE.get(),
+                ModItems.SPINOSAURUS_HEAD.get()
         )) {
             helper.assertTrue(java.util.stream.IntStream.range(0, 5)
                             .mapToObj(ExpeditionRewards::tier)
@@ -2184,6 +2186,10 @@ public final class PrimevalGameTests {
                         .anyMatch(reward -> reward.item().get() == ModItems.COMPRESSED_CORE.get()
                                 && reward.weight() == 1),
                 "The rarest expedition lacks its very rare Compressed Core jackpot");
+        helper.assertTrue(ExpeditionRewards.tier(4).rewards().stream()
+                        .anyMatch(reward -> reward.item().get() == ModItems.SPINOSAURUS_HEAD.get()
+                                && reward.weight() == 0 && reward.rareChance() > 0.0F),
+                "The Primordial Frontier lacks its exceptional Spinosaurus Head find");
         for (var craftedOutput : List.of(
                 ModItems.ANCIENT_METAL_INGOT.get(),
                 ModItems.ANCIENT_SPELL_INGOT.get(),
@@ -2635,6 +2641,8 @@ public final class PrimevalGameTests {
                     "A combat-capable dinosaur did not acquire a live hostile inside its base");
             helper.assertTrue(dinosaur.isSprinting(),
                     "A combat-capable dinosaur acquired a hostile mob but did not enter its chase sprint");
+            zombie.discard();
+            dinosaur.discard();
         });
     }
 
@@ -2703,6 +2711,10 @@ public final class PrimevalGameTests {
                             yawError <= 42.0F,
                             "The Tyrannosaurus bit without facing the target; yaw error=" + yawError
                     );
+                })
+                .thenExecute(() -> {
+                    zombie.discard();
+                    dinosaur.discard();
                 })
                 .thenSucceed();
     }
@@ -2775,6 +2787,10 @@ public final class PrimevalGameTests {
                         peakHorizontalSpeed[0] > 0.45D,
                         "The Velociraptor stopped for its attack instead of carrying momentum into the pounce"
                 ))
+                .thenExecute(() -> {
+                    target.discard();
+                    dinosaur.discard();
+                })
                 .thenSucceed();
     }
 
@@ -2989,6 +3005,10 @@ public final class PrimevalGameTests {
                         threat.position().subtract(initialThreatPosition).horizontalDistanceSqr() > 0.01D
                                 || threat.getDeltaMovement().horizontalDistanceSqr() > 0.01D,
                         "The Spinosaurus did not apply a clearing impulse to a crowding target"))
+                .thenExecute(() -> {
+                    threat.discard();
+                    spinosaurus.discard();
+                })
                 .thenSucceed();
     }
 
