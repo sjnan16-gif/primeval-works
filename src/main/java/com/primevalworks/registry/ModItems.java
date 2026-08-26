@@ -12,7 +12,6 @@ import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import com.primevalworks.world.item.DinosaurEggItem;
 import com.primevalworks.world.item.DinosaurEggBlockItem;
-import com.primevalworks.world.item.LaserTurretBlockItem;
 
 import java.util.List;
 
@@ -93,8 +92,8 @@ public final class ModItems {
             ITEMS.registerSimpleBlockItem("ancient_furnace", ModBlocks.ANCIENT_FURNACE);
     public static final DeferredItem<BlockItem> ANCIENT_SPELL_STONE =
             ITEMS.registerSimpleBlockItem("ancient_spell_stone", ModBlocks.ANCIENT_SPELL_STONE);
-    public static final DeferredItem<LaserTurretBlockItem> LASER_TURRET = ITEMS.registerItem(
-            "laser_turret", properties -> new LaserTurretBlockItem(ModBlocks.LASER_TURRET.get(), properties));
+    public static final DeferredItem<BlockItem> LASER_TURRET =
+            ITEMS.registerSimpleBlockItem("laser_turret", ModBlocks.LASER_TURRET);
     public static final DeferredItem<BlockItem> SPINOSAURUS_HEAD =
             ITEMS.registerSimpleBlockItem("spinosaurus_head", ModBlocks.SPINOSAURUS_HEAD);
     public static final DeferredItem<BlockItem> PREMIUM_EGG_INCUBATOR =

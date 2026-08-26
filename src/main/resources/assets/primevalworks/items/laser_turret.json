@@ -1,7 +1,1 @@
-{
-  "model": {
-    "type": "minecraft:special",
-    "base": "primevalworks:block/laser_turret_item",
-    "model": {"type": "geckolib:geckolib"}
-  }
-}
+{"model":{"type":"minecraft:model","model":"primevalworks:block/laser_turret_item"}}

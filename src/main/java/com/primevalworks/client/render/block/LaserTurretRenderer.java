@@ -69,7 +69,7 @@ public final class LaserTurretRenderer<R extends BlockEntityRenderState & GeoRen
         float yaw = renderPassInfo.getOrDefaultGeckolibData(AIM_YAW, 0.0F);
         float pitch = renderPassInfo.getOrDefaultGeckolibData(AIM_PITCH, 0.0F);
         snapshots.ifPresent("head", bone -> {
-            bone.setRotY(bone.getRotY() - yaw * Mth.DEG_TO_RAD);
+            bone.setRotY(bone.getRotY() + yaw * Mth.DEG_TO_RAD);
             bone.setRotZ(bone.getRotZ() - pitch * Mth.DEG_TO_RAD);
         });
     }
