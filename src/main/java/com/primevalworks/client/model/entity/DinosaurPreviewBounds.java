@@ -12,6 +12,7 @@ public record DinosaurPreviewBounds(float width, float height, float depth) {
             case "t_rex" -> new DinosaurPreviewBounds(2.0F, 3.25F, 6.19F);
             case "stegosaurus" -> new DinosaurPreviewBounds(1.75F, 2.88F, 5.94F);
             case "parasaurolophus" -> new DinosaurPreviewBounds(1.50F, 3.32F, 6.29F);
+            case "velociraptor" -> new DinosaurPreviewBounds(0.77F, 1.55F, 3.47F);
             case "pteranodon" -> new DinosaurPreviewBounds(2.60F, 2.25F, 4.88F);
             case "spino" -> new DinosaurPreviewBounds(2.03F, 5.05F, 10.06F);
             default -> new DinosaurPreviewBounds(

@@ -5,7 +5,7 @@ public enum DinosaurSpecies {
     TRICERATOPS("triceratops", 1.45F, 1.80F, 1.00F, 7.5F, 480, 1.55F, Diet.HERBIVORE, 80.0D, 10.0D, 0.24D),
     BRACHIOSAURUS("brachiosaurus", 1.50F, 3.20F, 1.50F, 5.5F, 280, 2.60F, Diet.HERBIVORE, 130.0D, 5.0D, 0.18D),
     DILOPHOSAURUS("dilophosaurus", 0.80F, 1.40F, 0.85F, 11.0F, 620, 1.15F, Diet.CARNIVORE, 30.0D, 6.0D, 0.24D),
-    VELOCIRAPTOR("velociraptor", 0.75F, 1.25F, 0.85F, 14.0F, 680, 1.00F, Diet.CARNIVORE, 28.0D, 7.0D, 0.30D),
+    VELOCIRAPTOR("velociraptor", 0.77F, 1.55F, 0.85F, 14.0F, 680, 1.00F, Diet.CARNIVORE, 28.0D, 7.0D, 0.30D),
     STEGOSAURUS("stegosaurus", 1.75F, 2.88F, 1.05F, 6.5F, 440, 1.70F, Diet.HERBIVORE, 85.0D, 11.0D, 0.24D),
     PARASAUROLOPHUS("parasaurolophus", 1.16F, 3.31F, 1.10F, 8.5F, 500, 1.50F, Diet.HERBIVORE, 52.0D, 4.0D, 0.24D),
     ANKYLOSAURUS("ankylosaurus", 1.20F, 1.25F, 0.90F, 6.5F, 520, 1.40F, Diet.HERBIVORE, 95.0D, 10.0D, 0.24D),

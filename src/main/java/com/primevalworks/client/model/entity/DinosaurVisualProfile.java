@@ -46,6 +46,11 @@ public record DinosaurVisualProfile(
                     "parasaurolophus", texture("parasaurolophus"), texture("parasaurolophus_blink"),
                     1.0F, 0.0F, 1.0F, 3.55F, 1.14F, 1.50F, 3.32F, "Head", "Head2", 0.62F
             );
+            case "velociraptor" -> new DinosaurVisualProfile(
+                    "velociraptor", texture("velociraptor"), texture("velociraptor_blink"),
+                    1.0F, 0.0F, 0.56F, 1.78F, 0.88F, 0.77F, 1.55F,
+                    "head2", "lowerjaw", 0.48F
+            );
             case "ankylosaurus" -> placeholder(0.98F, 0.72F, 1.62F);
             case "pteranodon" -> new DinosaurVisualProfile(
                     "pteranodon", texture("pteranodon"), texture("pteranodon_blink"),

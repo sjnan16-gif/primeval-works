@@ -149,6 +149,8 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     private static final float SPINO_LAND_STAMINA_RECOVERY = 0.34F;
     private static final float SPINO_LAND_EXHAUSTION_RECOVERY = 18.0F;
     private static final int SPINO_MOUNTED_ATTACK_COOLDOWN_TICKS = 22;
+    private static final int RAPTOR_ATTACK_ANIMATION_TICKS = 12;
+    private static final int RAPTOR_DAMAGE_DELAY_TICKS = 6;
     private static final RawAnimation DODO_IDLE = RawAnimation.begin().thenLoop("idle");
     private static final RawAnimation DODO_WALK = RawAnimation.begin().thenLoop("Walk");
     private static final RawAnimation DODO_RUN = RawAnimation.begin().thenLoop("run");
@@ -176,6 +178,12 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     private static final RawAnimation PARASAUR_RUN = RawAnimation.begin().thenLoop("run");
     private static final RawAnimation PARASAUR_WORK = RawAnimation.begin().thenLoop("work");
     private static final RawAnimation PARASAUR_SLEEP = RawAnimation.begin().thenLoop("sleep");
+    private static final RawAnimation RAPTOR_IDLE = RawAnimation.begin().thenLoop("idle");
+    private static final RawAnimation RAPTOR_WALK = RawAnimation.begin().thenLoop("walk");
+    private static final RawAnimation RAPTOR_RUN = RawAnimation.begin().thenLoop("run");
+    private static final RawAnimation RAPTOR_WORK = RawAnimation.begin().thenLoop("work");
+    private static final RawAnimation RAPTOR_SLEEP = RawAnimation.begin().thenLoop("sleep");
+    private static final RawAnimation RAPTOR_ATTACK = RawAnimation.begin().thenPlay("attack");
     private static final RawAnimation SPINO_IDLE = RawAnimation.begin().thenLoop("idle");
     private static final RawAnimation SPINO_WALK = RawAnimation.begin().thenLoop("walk");
     private static final RawAnimation SPINO_WORK = RawAnimation.begin().thenLoop("work");
@@ -4722,6 +4730,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             boolean stegosaurus = species.equals("stegosaurus");
             boolean pteranodon = species.equals("pteranodon");
             boolean parasaurolophus = species.equals("parasaurolophus");
+            boolean velociraptor = species.equals("velociraptor");
             boolean spinosaurus = species.equals("spinosaurus");
             if (pteranodon) {
                 test.controller().setTransitionTicks(9);
@@ -4778,35 +4787,43 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                 }
                 return playSpeciesAnimation(test, SPINO_IDLE, 1.0F);
             }
-            if (dinosaur.isDinosaurSleeping() && (dodo || tyrannosaurus || stegosaurus || parasaurolophus)) {
+            if (dinosaur.isDinosaurSleeping()
+                    && (dodo || tyrannosaurus || stegosaurus || parasaurolophus || velociraptor)) {
                 return test.setAndContinue(dodo ? DODO_SLEEP
                         : tyrannosaurus ? T_REX_SLEEP
                         : stegosaurus ? STEGO_SLEEP
-                        : PARASAUR_SLEEP);
+                        : parasaurolophus ? PARASAUR_SLEEP
+                        : RAPTOR_SLEEP);
             }
-            if (dinosaur.getWorkAction() > 0 && (dodo || tyrannosaurus || stegosaurus || parasaurolophus)) {
+            if (dinosaur.getWorkAction() > 0
+                    && (dodo || tyrannosaurus || stegosaurus || parasaurolophus || velociraptor)) {
                 return test.setAndContinue(dodo ? DODO_WORK
                         : tyrannosaurus ? T_REX_WORK
                         : stegosaurus ? STEGO_WORK
-                        : PARASAUR_WORK);
+                        : parasaurolophus ? PARASAUR_WORK
+                        : RAPTOR_WORK);
             }
             if (!dinosaur.usesWalkAnimation()) {
                 return test.setAndContinue(dodo ? DODO_IDLE
                         : tyrannosaurus ? T_REX_IDLE
                         : stegosaurus ? STEGO_IDLE
                         : parasaurolophus ? PARASAUR_IDLE
+                        : velociraptor ? RAPTOR_IDLE
                         : PLACEHOLDER_IDLE);
             }
-            if (dinosaur.usesRunAnimation() && (dodo || tyrannosaurus || stegosaurus || parasaurolophus)) {
+            if (dinosaur.usesRunAnimation()
+                    && (dodo || tyrannosaurus || stegosaurus || parasaurolophus || velociraptor)) {
                 return test.setAndContinue(dodo ? DODO_RUN
                         : tyrannosaurus ? T_REX_RUN
                         : stegosaurus ? STEGO_RUN
-                        : PARASAUR_RUN);
+                        : parasaurolophus ? PARASAUR_RUN
+                        : RAPTOR_RUN);
             }
             return test.setAndContinue(dodo ? DODO_WALK
                     : tyrannosaurus ? T_REX_WALK
                     : stegosaurus ? STEGO_WALK
                     : parasaurolophus ? PARASAUR_WALK
+                    : velociraptor ? RAPTOR_WALK
                     : PLACEHOLDER_WALK);
         });
         movementController.setSoundKeyframeHandler(DinosaurAnimationEvents::handleFootstep);
@@ -4821,6 +4838,10 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             if (dinosaur.getSpecies() == DinosaurSpecies.SPINOSAURUS
                     && dinosaur.entityData.get(ATTACK_ANIMATION_TICKS) > 0) {
                 return test.setAndContinue(SPINO_ATTACK);
+            }
+            if (dinosaur.getSpecies() == DinosaurSpecies.VELOCIRAPTOR
+                    && dinosaur.entityData.get(ATTACK_ANIMATION_TICKS) > 0) {
+                return test.setAndContinue(RAPTOR_ATTACK);
             }
             return PlayState.STOP;
         });
@@ -4934,7 +4955,13 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                     && getSensing().hasLineOfSight(target)) {
                 attackCooldownTicks = adjustedTickDelay(20);
                 swing(InteractionHand.MAIN_HAND);
-                doHurtTarget(getServerLevel(FieldDodoEntity.this), target);
+                if (getSpecies() == DinosaurSpecies.VELOCIRAPTOR) {
+                    pendingAttackTargetId = target.getId();
+                    pendingAttackContactTick = level().getGameTime() + RAPTOR_DAMAGE_DELAY_TICKS;
+                    entityData.set(ATTACK_ANIMATION_TICKS, RAPTOR_ATTACK_ANIMATION_TICKS);
+                } else {
+                    doHurtTarget(getServerLevel(FieldDodoEntity.this), target);
+                }
             }
         }
 

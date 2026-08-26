@@ -24,7 +24,7 @@ Nesting Treats provide controlled breeding:
 - Both parents lose 8 hunger and begin a ten-minute cooldown.
 - Nesting Treats craft in pairs from Berries, Silk, Gold, a vanilla Egg, and a Fossil Fragment. They also appear from Deep Wilds and harder expeditions.
 
-Authored entity assets are currently wired for Tyrannosaurus, Field Dodo, Pteranodon, Stegosaurus, Parasaurolophus, and Spinosaurus. The remaining species use temporary models while keeping their authored species stats, diet, hitbox, movement, and work profile.
+Authored entity assets are currently wired for Tyrannosaurus, Field Dodo, Velociraptor, Pteranodon, Stegosaurus, Parasaurolophus, and Spinosaurus. Triceratops is the only active-roster species still using a temporary model; inactive compatibility species remain hidden from normal progression until their art is ready.
 
 ## Base and utility blocks
 

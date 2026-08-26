@@ -310,16 +310,23 @@ public final class FieldDodoRenderer<R extends LivingEntityRenderState & GeoRend
             String rightLegBone = profile.assetName().equals("dodo") ? "Rightleg"
                     : profile.assetName().equals("stegosaurus") ? "Frontrightleg"
                     : profile.assetName().equals("pteranodon") ? "Rightleg"
-                    : profile.assetName().equals("spino") ? "rightleg" : "leg_right";
+                    : profile.assetName().equals("spino") || profile.assetName().equals("velociraptor")
+                            ? "rightleg" : "leg_right";
             String leftLegBone = profile.assetName().equals("dodo") ? "Leftleg"
                     : profile.assetName().equals("stegosaurus") ? "Frontleftleg"
                     : profile.assetName().equals("pteranodon") ? "Leftleg"
-                    : profile.assetName().equals("spino") ? "leftleg" : "leg_left";
+                    : profile.assetName().equals("spino") || profile.assetName().equals("velociraptor")
+                            ? "leftleg" : "leg_left";
             snapshots.ifPresent(bodyBone, bone -> {
                 bone.setRotY(bone.getRotY() - bodyLead * 0.72F * Mth.DEG_TO_RAD);
                 bone.setRotZ(bone.getRotZ() + bodyLead * 0.08F * Mth.DEG_TO_RAD);
             });
             snapshots.ifPresent(tailBone, bone -> bone.setRotY(bone.getRotY() + tailYaw * 0.62F * Mth.DEG_TO_RAD));
+            if (profile.assetName().equals("velociraptor")) {
+                snapshots.ifPresent("segment2", bone -> bone.setRotY(
+                        bone.getRotY() + tailTipYaw * 0.62F * Mth.DEG_TO_RAD
+                ));
+            }
             snapshots.ifPresent(rightLegBone, bone -> bone.setRotX(bone.getRotX() + turnStep * 8.0F * Mth.DEG_TO_RAD));
             snapshots.ifPresent(leftLegBone, bone -> bone.setRotX(bone.getRotX() - turnStep * 8.0F * Mth.DEG_TO_RAD));
             if (profile.assetName().equals("pteranodon")) {

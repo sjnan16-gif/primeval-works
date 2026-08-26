@@ -92,6 +92,9 @@ public final class PrimevalGameTests {
             TEST_FUNCTIONS.register("hostile_targets_base_dinosaur", () -> PrimevalGameTests::hostileTargetsBaseDinosaur);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> TYRANNOSAURUS_HUNTS_FROM_MOUTH_RANGE =
             TEST_FUNCTIONS.register("tyrannosaurus_hunts_from_mouth_range", () -> PrimevalGameTests::tyrannosaurusHuntsFromMouthRange);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> VELOCIRAPTOR_ATTACK_LANDS_ON_CONTACT =
+            TEST_FUNCTIONS.register("velociraptor_attack_lands_on_contact",
+                    () -> PrimevalGameTests::velociraptorAttackLandsOnContact);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> SPINOSAURUS_CLEARS_CLOSE_TARGET =
             TEST_FUNCTIONS.register("spinosaurus_clears_close_target", () -> PrimevalGameTests::spinosaurusClearsCloseTarget);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> NIGHT_SHIFT_DRAINS_MOOD =
@@ -216,6 +219,11 @@ public final class PrimevalGameTests {
         event.registerTest(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "tyrannosaurus_hunts_from_mouth_range"),
                 new FunctionGameTestInstance(TYRANNOSAURUS_HUNTS_FROM_MOUTH_RANGE.getKey(), isolatedTestData(event, "combat_spacing"))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "velociraptor_attack_lands_on_contact"),
+                new FunctionGameTestInstance(VELOCIRAPTOR_ATTACK_LANDS_ON_CONTACT.getKey(),
+                        isolatedTestData(event, "raptor_combat"))
         );
         event.registerTest(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "spinosaurus_clears_close_target"),
@@ -2668,6 +2676,37 @@ public final class PrimevalGameTests {
                             "The Tyrannosaurus bit without facing the target; yaw error=" + yawError
                     );
                 })
+                .thenSucceed();
+    }
+
+    private static void velociraptorAttackLandsOnContact(GameTestHelper helper) {
+        for (int x = 0; x <= 8; x++) {
+            for (int z = 0; z <= 8; z++) {
+                helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+            }
+        }
+        BlockPos dinosaurRelative = new BlockPos(4, 1, 4);
+        BlockPos targetRelative = new BlockPos(5, 1, 4);
+        forceTicking(helper, dinosaurRelative, targetRelative);
+        FieldDodoEntity dinosaur = helper.spawn(ModEntities.VELOCIRAPTOR.get(), dinosaurRelative);
+        var target = helper.spawn(EntityType.HUSK, targetRelative);
+        target.setNoAi(true);
+        target.getAttribute(Attributes.MAX_HEALTH).setBaseValue(200.0D);
+        target.getAttribute(Attributes.KNOCKBACK_RESISTANCE).setBaseValue(1.0D);
+        target.setHealth(200.0F);
+        helper.onEachTick(() -> {
+            if (dinosaur.isAlive() && target.isAlive()) dinosaur.setTarget(target);
+        });
+
+        helper.startSequence()
+                .thenExecuteAfter(4, () -> helper.assertTrue(
+                        target.getHealth() == 200.0F,
+                        "The Velociraptor dealt damage before the authored bite reached contact"
+                ))
+                .thenWaitUntil(() -> helper.assertTrue(
+                        target.getHealth() < 200.0F,
+                        "The Velociraptor attack animation never delivered its delayed hit"
+                ))
                 .thenSucceed();
     }
 

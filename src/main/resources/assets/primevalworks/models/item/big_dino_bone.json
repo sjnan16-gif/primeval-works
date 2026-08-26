@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "primevalworks:item/fossil_fragment"
+    "layer0": "primevalworks:item/big_dino_bone"
   }
 }

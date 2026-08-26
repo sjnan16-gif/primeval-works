@@ -20,6 +20,8 @@ class DinosaurSpeciesTest {
         assertEquals(3.31F, DinosaurSpecies.PARASAUROLOPHUS.collisionHeight());
         assertEquals(2.03F, DinosaurSpecies.SPINOSAURUS.collisionWidth());
         assertEquals(5.05F, DinosaurSpecies.SPINOSAURUS.collisionHeight());
+        assertEquals(0.77F, DinosaurSpecies.VELOCIRAPTOR.collisionWidth());
+        assertEquals(1.55F, DinosaurSpecies.VELOCIRAPTOR.collisionHeight());
     }
 
     @Test

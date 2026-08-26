@@ -102,7 +102,7 @@ These are stylized gameplay sizes, not museum-scale recreations. The base must r
 | Triceratops | 2.00 / 32 | 3.2 blocks | 1.45 × 1.80 |
 | Brachiosaurus | 4.00 / 64 | 4.2 blocks | 1.50 × 3.20 |
 | Dilophosaurus | 1.60 / 26 | 2.4 blocks | 0.80 × 1.40 |
-| Velociraptor | 1.40 / 22 | 2.2 blocks | 0.75 × 1.25 |
+| Velociraptor | 1.55 / 24.75 | 3.47 blocks | 0.77 × 1.55 |
 | Stegosaurus | 2.88 / 46 | 5.94 blocks | 1.75 × 2.88 |
 | Parasaurolophus | 3.31 / 53 | authored model length | 1.16 x 3.31 |
 | Ankylosaurus | 1.45 / 23 | 2.7 blocks | 1.20 × 1.25 |
