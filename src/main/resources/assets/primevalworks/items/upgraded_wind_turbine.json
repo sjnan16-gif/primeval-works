@@ -1,6 +1,7 @@
 {
   "model": {
-    "type": "minecraft:model",
-    "model": "primevalworks:item/upgraded_wind_turbine"
+    "type": "minecraft:special",
+    "base": "primevalworks:item/upgraded_wind_turbine",
+    "model": {"type": "geckolib:geckolib"}
   }
 }

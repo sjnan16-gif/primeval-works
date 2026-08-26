@@ -12,6 +12,7 @@ import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import com.primevalworks.world.item.DinosaurEggItem;
 import com.primevalworks.world.item.DinosaurEggBlockItem;
+import com.primevalworks.world.item.TurbineBlockItem;
 
 import java.util.List;
 
@@ -72,12 +73,15 @@ public final class ModItems {
             ITEMS.registerSimpleBlockItem("command_table", ModBlocks.COMMAND_TABLE);
     public static final DeferredItem<BlockItem> FOOD_BOX =
             ITEMS.registerSimpleBlockItem("food_box", ModBlocks.FOOD_BOX);
-    public static final DeferredItem<BlockItem> WIND_TURBINE =
-            ITEMS.registerSimpleBlockItem("wind_turbine", ModBlocks.WIND_TURBINE);
-    public static final DeferredItem<BlockItem> UPGRADED_WIND_TURBINE =
-            ITEMS.registerSimpleBlockItem("upgraded_wind_turbine", ModBlocks.UPGRADED_WIND_TURBINE);
-    public static final DeferredItem<BlockItem> WATER_TURBINE =
-            ITEMS.registerSimpleBlockItem("water_turbine", ModBlocks.WATER_TURBINE);
+    public static final DeferredItem<BlockItem> WIND_TURBINE = ITEMS.registerItem(
+            "wind_turbine", properties -> new TurbineBlockItem(
+                    ModBlocks.WIND_TURBINE.get(), properties, TurbineBlockItem.Variant.WIND));
+    public static final DeferredItem<BlockItem> UPGRADED_WIND_TURBINE = ITEMS.registerItem(
+            "upgraded_wind_turbine", properties -> new TurbineBlockItem(
+                    ModBlocks.UPGRADED_WIND_TURBINE.get(), properties, TurbineBlockItem.Variant.UPGRADED_WIND));
+    public static final DeferredItem<BlockItem> WATER_TURBINE = ITEMS.registerItem(
+            "water_turbine", properties -> new TurbineBlockItem(
+                    ModBlocks.WATER_TURBINE.get(), properties, TurbineBlockItem.Variant.WATER));
     public static final DeferredItem<BlockItem> REINFORCED_PISTON =
             ITEMS.registerSimpleBlockItem("reinforced_piston", ModBlocks.REINFORCED_PISTON);
     public static final DeferredItem<BlockItem> STICKY_REINFORCED_PISTON =

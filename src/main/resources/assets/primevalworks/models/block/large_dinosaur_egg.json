@@ -1,5 +1,5 @@
 {
-  "parent": "minecraft:block/block",
+  "parent": "primevalworks:item/template_dinosaur_egg",
   "textures": {
     "shell": "minecraft:block/tuff",
     "marking": "minecraft:block/polished_blackstone",

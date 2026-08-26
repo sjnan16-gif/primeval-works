@@ -342,7 +342,7 @@ Rules:
 - Provide a particle texture.
 - Avoid dozens of tiny decorative cuboids on frequently repeated blocks.
 - If the collision is not a full cube, include a screenshot showing the intended collision boxes or name collision groups `collision_01`, `collision_02`, etc. Those groups are reference-only and will not render.
-- Ordinary block items inherit Minecraft's `block/block` display transforms. Do not add per-model GUI/ground/hand rotations to compensate for bad source centering; fix the source bounds and facing instead. Only a deliberately non-block-like silhouette may receive an reviewed item-only transform.
+- Full-cube block items inherit Minecraft's `block/block` display transforms. A deliberately non-cube silhouette may use one reviewed item-only presentation template, following vanilla skull/bed/chest-style handling, so it fills inventory, hand, ground, frame, and planner previews without altering its placed geometry. Never change the world model to fix an item preview, and never replace an authored animated machine with a primitive inventory placeholder.
 
 ## Animated machine models
 
@@ -373,7 +373,7 @@ animation.<block_id>.idle
 animation.<block_id>.working
 ```
 
-Additional one-shots such as `open`, `close`, `complete`, `fire`, or `hatch` are approved per block. Animated machines still need a simple static item presentation; do not rely on a world block-entity renderer in inventory UI.
+Additional one-shots such as `open`, `close`, `complete`, `fire`, or `hatch` are approved per block. Animated machines need an explicit still item presentation. When the silhouette depends on authored Gecko geometry, the item may render that exact geometry without registering a controller; it must not inherit the world's active animation state.
 
 ## Item and GUI art
 

@@ -1,5 +1,5 @@
 {
-  "parent": "minecraft:block/block",
+  "parent": "primevalworks:item/template_compact_block",
   "ambientocclusion": false,
   "textures": {
     "turret": "primevalworks:block/laser_turret",

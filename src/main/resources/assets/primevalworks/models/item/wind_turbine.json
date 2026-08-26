@@ -1,15 +1,6 @@
 {
   "parent": "minecraft:block/block",
   "textures": {
-    "metal": "minecraft:block/copper_block",
-    "dark": "minecraft:block/weathered_copper",
-    "particle": "minecraft:block/copper_block"
-  },
-  "elements": [
-    {"from":[6,0,6],"to":[10,2,10],"faces":{"down":{"texture":"#dark"},"up":{"texture":"#metal"},"north":{"texture":"#dark"},"south":{"texture":"#dark"},"west":{"texture":"#dark"},"east":{"texture":"#dark"}}},
-    {"from":[7,2,7],"to":[9,11,9],"faces":{"down":{"texture":"#dark"},"up":{"texture":"#metal"},"north":{"texture":"#metal"},"south":{"texture":"#metal"},"west":{"texture":"#metal"},"east":{"texture":"#metal"}}},
-    {"from":[6,10,6],"to":[10,14,10],"faces":{"down":{"texture":"#dark"},"up":{"texture":"#metal"},"north":{"texture":"#metal"},"south":{"texture":"#metal"},"west":{"texture":"#dark"},"east":{"texture":"#dark"}}},
-    {"from":[0,11,7],"to":[16,13,9],"faces":{"down":{"texture":"#dark"},"up":{"texture":"#metal"},"north":{"texture":"#metal"},"south":{"texture":"#metal"},"west":{"texture":"#dark"},"east":{"texture":"#dark"}}},
-    {"from":[7,4,7],"to":[9,16,9],"faces":{"down":{"texture":"#dark"},"up":{"texture":"#metal"},"north":{"texture":"#metal"},"south":{"texture":"#metal"},"west":{"texture":"#dark"},"east":{"texture":"#dark"}}}
-  ]
+    "particle": "primevalworks:block/wind_turbine"
+  }
 }

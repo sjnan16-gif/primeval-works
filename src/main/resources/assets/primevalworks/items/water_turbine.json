@@ -1,1 +1,7 @@
-{ "model": { "type": "minecraft:model", "model": "primevalworks:item/water_turbine" } }
+{
+  "model": {
+    "type": "minecraft:special",
+    "base": "primevalworks:item/water_turbine",
+    "model": {"type": "geckolib:geckolib"}
+  }
+}
