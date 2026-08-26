@@ -94,7 +94,7 @@ public final class TurbineBlock extends BaseEntityBlock implements SimpleWaterlo
     }
 
     public void assemble(Level level, BlockPos masterPos, BlockState state) {
-        boolean wind = state.is(ModBlocks.WIND_TURBINE.get());
+        boolean wind = isWindTurbine(state);
         Direction facing = state.getValue(FACING);
         for (PartOffset offset : parts(state)) {
             BlockPos target = partPos(masterPos, state, offset);
@@ -180,6 +180,19 @@ public final class TurbineBlock extends BaseEntityBlock implements SimpleWaterlo
 
     public static List<PartOffset> parts(BlockState state) {
         return state.is(ModBlocks.WATER_TURBINE.get()) ? WATER_PARTS : WIND_PARTS;
+    }
+
+    public static boolean isWindTurbine(BlockState state) {
+        return state.is(ModBlocks.WIND_TURBINE.get())
+                || state.is(ModBlocks.UPGRADED_WIND_TURBINE.get());
+    }
+
+    public static boolean isUpgradedWindTurbine(BlockState state) {
+        return state.is(ModBlocks.UPGRADED_WIND_TURBINE.get());
+    }
+
+    public static boolean isTurbine(BlockState state) {
+        return isWindTurbine(state) || state.is(ModBlocks.WATER_TURBINE.get());
     }
 
     public static BlockPos partPos(BlockPos masterPos, BlockState state, PartOffset offset) {

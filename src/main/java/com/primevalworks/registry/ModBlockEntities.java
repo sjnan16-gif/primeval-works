@@ -48,6 +48,7 @@ public final class ModBlockEntities {
             BLOCK_ENTITIES.register("turbine", () -> new BlockEntityType<>(
                     TurbineBlockEntity::new,
                     ModBlocks.WIND_TURBINE.get(),
+                    ModBlocks.UPGRADED_WIND_TURBINE.get(),
                     ModBlocks.WATER_TURBINE.get()
             ));
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PremiumEggIncubatorBlockEntity>> PREMIUM_EGG_INCUBATOR =

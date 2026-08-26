@@ -2562,7 +2562,7 @@ public final class WorksitePlannerScreen extends Screen {
                 if (state.getBlock() instanceof AbstractFurnaceBlock || state.is(ModBlocks.PROCESSOR.get())) {
                     discovered |= addDistinctAndReport(indexedFireWorkstations, found);
                 }
-                if (state.is(ModBlocks.WIND_TURBINE.get()) || state.is(ModBlocks.WATER_TURBINE.get())) {
+                if (TurbineBlock.isTurbine(state)) {
                     discovered |= addDistinctAndReport(indexedEnergyWorkstations, found);
                 } else if (state.is(ModBlocks.TURBINE_PART.get())) {
                     BlockPos master = TurbinePartBlock.masterPos(found, state);
@@ -3102,7 +3102,7 @@ public final class WorksitePlannerScreen extends Screen {
             BlockState state = minecraft.level.getBlockState(pos);
             return switch (jobIndex) {
                 case 1 -> state.getBlock() instanceof AbstractFurnaceBlock || state.is(ModBlocks.PROCESSOR.get());
-                case 2 -> state.is(ModBlocks.WIND_TURBINE.get()) || state.is(ModBlocks.WATER_TURBINE.get());
+                case 2 -> TurbineBlock.isTurbine(state);
                 case 3 -> state.getBlock() instanceof CraftingTableBlock;
                 default -> false;
             };
@@ -3544,7 +3544,7 @@ public final class WorksitePlannerScreen extends Screen {
                 bounds = blockBounds(master);
             }
         }
-        if (state.is(ModBlocks.WIND_TURBINE.get()) || state.is(ModBlocks.WATER_TURBINE.get())) {
+        if (TurbineBlock.isTurbine(state)) {
             for (BlockPos part : TurbineBlock.structurePositions(pos, state)) bounds = bounds.minmax(blockBounds(part));
         }
         BlockPos connected = connectedChestPosition(pos);
@@ -4082,7 +4082,7 @@ public final class WorksitePlannerScreen extends Screen {
                 state = minecraft.level.getBlockState(master);
             }
         }
-        if (state.is(ModBlocks.WIND_TURBINE.get()) || state.is(ModBlocks.WATER_TURBINE.get())) {
+        if (TurbineBlock.isTurbine(state)) {
             for (BlockPos part : TurbineBlock.structurePositions(pos, state)) {
                 renderHighlight(pose, submits, part, color, width, camera);
             }

@@ -5,6 +5,7 @@ import com.primevalworks.registry.ModBlocks;
 import com.primevalworks.world.entity.FieldDodoEntity;
 import com.primevalworks.world.block.CommandTableBlock;
 import com.primevalworks.world.block.TurbinePartBlock;
+import com.primevalworks.world.block.TurbineBlock;
 import com.primevalworks.world.ownership.DinosaurOwnership;
 import com.primevalworks.world.work.WorkSpecialtyRules;
 import com.primevalworks.world.work.WorkTargetRules;
@@ -329,8 +330,7 @@ public record AssignDodoWorkPayload(
                 yield WorkTargetRules.acceptsNonEmptyTargetCount(
                         turbines.size(), PrimevalTuning.server().targetsPerWorkOrder())
                     && turbines.stream().allMatch(pos -> {
-                        var block = player.level().getBlockState(pos).getBlock();
-                        return block == ModBlocks.WIND_TURBINE.get() || block == ModBlocks.WATER_TURBINE.get();
+                        return TurbineBlock.isTurbine(player.level().getBlockState(pos));
                     })
                     && payload.sourcePositions.isEmpty()
                     && payload.destinationPositions.isEmpty()

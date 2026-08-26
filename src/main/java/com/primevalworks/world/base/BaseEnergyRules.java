@@ -3,6 +3,7 @@ package com.primevalworks.world.base;
 import com.primevalworks.config.PrimevalTuning;
 import com.primevalworks.registry.ModBlocks;
 import com.primevalworks.world.block.CommandTableBlock;
+import com.primevalworks.world.block.TurbineBlock;
 import com.primevalworks.world.block.entity.AncientFurnaceBlockEntity;
 import com.primevalworks.world.block.entity.ActiveEnergyConsumer;
 import com.primevalworks.world.block.entity.CommandTableBlockEntity;
@@ -32,8 +33,7 @@ public final class BaseEnergyRules {
     }
 
     public static boolean isGenerator(BlockState state) {
-        Block block = state.getBlock();
-        return block == ModBlocks.WIND_TURBINE.get() || block == ModBlocks.WATER_TURBINE.get();
+        return TurbineBlock.isTurbine(state);
     }
 
     public static int demandPerSecond(BlockState state) {

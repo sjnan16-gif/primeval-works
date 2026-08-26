@@ -17,6 +17,8 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 public final class TurbineBlockEntity extends BlockEntity implements GeoBlockEntity {
+    public static final float BASIC_WIND_OUTPUT_MULTIPLIER = 0.6F;
+    public static final float UPGRADED_WIND_OUTPUT_MULTIPLIER = 1.0F;
     private static final RawAnimation SPIN = RawAnimation.begin().thenLoop("spin");
     private final AnimatableInstanceCache animationCache = GeckoLibUtil.createInstanceCache(this);
     private int generationPulseCount;
@@ -40,7 +42,7 @@ public final class TurbineBlockEntity extends BlockEntity implements GeoBlockEnt
             }
             return true;
         }
-        if (getBlockState().is(ModBlocks.WIND_TURBINE.get())) {
+        if (TurbineBlock.isWindTurbine(getBlockState())) {
             // The rotor occupies the first three blocks above its master. Checking those
             // cells for air made every assembled wind turbine invalidate itself.
             return level.getBlockState(worldPosition.above(4)).isAir();
@@ -55,8 +57,11 @@ public final class TurbineBlockEntity extends BlockEntity implements GeoBlockEnt
     }
 
     public float generationMultiplier() {
-        return getBlockState().is(ModBlocks.WATER_TURBINE.get())
-                ? (float)PrimevalTuning.server().waterTurbineOutput() : 1.0F;
+        if (getBlockState().is(ModBlocks.WATER_TURBINE.get())) {
+            return (float)PrimevalTuning.server().waterTurbineOutput();
+        }
+        return TurbineBlock.isUpgradedWindTurbine(getBlockState())
+                ? UPGRADED_WIND_OUTPUT_MULTIPLIER : BASIC_WIND_OUTPUT_MULTIPLIER;
     }
 
     public int getGenerationPulseCount() {

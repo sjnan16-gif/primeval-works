@@ -28,7 +28,8 @@ public final class PrimevalItemTooltips {
             case "large_dinosaur_egg" -> "Hatches a large dinosaur.";
             case "command_table" -> "Controls your dinosaur base.";
             case "food_box" -> "Automatically feeds hungry dinosaurs.";
-            case "wind_turbine" -> "Generates base energy.";
+            case "wind_turbine" -> "A basic wind-powered generator.";
+            case "upgraded_wind_turbine" -> "Generates wind energy at full output.";
             case "water_turbine" -> "Generates energy in water.";
             case "reinforced_piston" -> "A base-powered piston.";
             case "sticky_reinforced_piston" -> "A sticky base-powered piston.";
@@ -54,7 +55,7 @@ public final class PrimevalItemTooltips {
             case "sulfur" -> "Ancient Metal catalyst.";
             case "big_dino_bone" -> "Large dinosaur trophy.";
             case "small_dino_bone" -> "Small dinosaur trophy.";
-            case "pteranodon_wing_fragment" -> "Pteranodon crafting trophy.";
+            case "pteranodon_wing_fragment" -> "Upgrades a Wind Turbine in the Processor.";
             case "tyrannosaurus_tooth" -> "Tyrannosaurus crafting trophy.";
             case "dodo_feather" -> "Light crafting material.";
             case "core" -> "Rare Processor material.";

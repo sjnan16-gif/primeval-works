@@ -3,8 +3,8 @@ package com.primevalworks.client.render.block;
 import com.geckolib.renderer.GeoBlockRenderer;
 import com.geckolib.renderer.base.GeoRenderState;
 import com.primevalworks.client.model.block.TurbineGeoModel;
-import com.primevalworks.registry.ModBlocks;
 import com.primevalworks.world.block.entity.TurbineBlockEntity;
+import com.primevalworks.world.block.TurbineBlock;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
 import net.minecraft.core.BlockPos;
@@ -21,7 +21,9 @@ public final class TurbineRenderer<R extends BlockEntityRenderState & GeoRenderS
     public void addRenderData(TurbineBlockEntity turbine, Void relatedObject,
                               R renderState, float partialTick) {
         renderState.addGeckolibData(TurbineGeoModel.WIND,
-                turbine.getBlockState().is(ModBlocks.WIND_TURBINE.get()));
+                TurbineBlock.isWindTurbine(turbine.getBlockState()));
+        renderState.addGeckolibData(TurbineGeoModel.UPGRADED,
+                TurbineBlock.isUpgradedWindTurbine(turbine.getBlockState()));
     }
 
     @Override
@@ -29,7 +31,7 @@ public final class TurbineRenderer<R extends BlockEntityRenderState & GeoRenderS
         BlockPos pos = turbine.getBlockPos();
         Direction facing = turbine.getBlockState().getValue(com.primevalworks.world.block.TurbineBlock.FACING);
         boolean widthRunsEastWest = facing.getAxis() == Direction.Axis.Z;
-        if (turbine.getBlockState().is(ModBlocks.WIND_TURBINE.get())) {
+        if (TurbineBlock.isWindTurbine(turbine.getBlockState())) {
             return widthRunsEastWest
                     ? new AABB(pos.getX() - 1.0D, pos.getY(), pos.getZ(),
                             pos.getX() + 2.0D, pos.getY() + 4.0D, pos.getZ() + 1.0D)

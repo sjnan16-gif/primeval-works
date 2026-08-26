@@ -74,6 +74,8 @@ public final class ModItems {
             ITEMS.registerSimpleBlockItem("food_box", ModBlocks.FOOD_BOX);
     public static final DeferredItem<BlockItem> WIND_TURBINE =
             ITEMS.registerSimpleBlockItem("wind_turbine", ModBlocks.WIND_TURBINE);
+    public static final DeferredItem<BlockItem> UPGRADED_WIND_TURBINE =
+            ITEMS.registerSimpleBlockItem("upgraded_wind_turbine", ModBlocks.UPGRADED_WIND_TURBINE);
     public static final DeferredItem<BlockItem> WATER_TURBINE =
             ITEMS.registerSimpleBlockItem("water_turbine", ModBlocks.WATER_TURBINE);
     public static final DeferredItem<BlockItem> REINFORCED_PISTON =

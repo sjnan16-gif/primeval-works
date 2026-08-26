@@ -1,0 +1,8 @@
+{
+  "parent": "primevalworks:item/wind_turbine",
+  "textures": {
+    "metal": "minecraft:block/exposed_copper",
+    "dark": "minecraft:block/weathered_copper",
+    "particle": "primevalworks:block/wind_turbine_upgraded"
+  }
+}

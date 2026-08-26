@@ -24,6 +24,8 @@ public final class ProcessorRecipes {
                     ModItems.REINFORCED_PISTON.get(), 260),
             recipe("sticky_reinforced_piston", ModItems.REINFORCED_PISTON.get(), Items.SLIME_BALL,
                     ModItems.STICKY_REINFORCED_PISTON.get(), 180),
+            recipe("upgraded_wind_turbine", ModItems.WIND_TURBINE.get(), ModItems.PTERANODON_WING_FRAGMENT.get(),
+                    ModItems.UPGRADED_WIND_TURBINE.get(), 300),
             recipe("ancient_furnace", Items.BLAST_FURNACE, ModItems.COMPRESSED_ANCIENT_METAL_INGOT.get(),
                     ModItems.ANCIENT_FURNACE.get(), 360)
     );

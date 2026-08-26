@@ -30,6 +30,7 @@ import com.primevalworks.world.block.entity.ProcessorBlockEntity;
 import com.primevalworks.world.block.entity.AncientFurnaceBlockEntity;
 import com.primevalworks.world.block.CommandTableBlock;
 import com.primevalworks.world.block.TurbinePartBlock;
+import com.primevalworks.world.block.TurbineBlock;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.core.BlockPos;
@@ -2586,8 +2587,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             BlockPos master = TurbinePartBlock.masterPos(turbinePos, turbineState);
             if (TurbinePartBlock.isExpectedMaster(level(), master, turbineState)) turbinePos = master;
         }
-        var block = level().getBlockState(turbinePos).getBlock();
-        if (block != ModBlocks.WIND_TURBINE.get() && block != ModBlocks.WATER_TURBINE.get()) {
+        if (!TurbineBlock.isTurbine(level().getBlockState(turbinePos))) {
             cancelWorkAction();
             workerCooldown = 30;
             return;

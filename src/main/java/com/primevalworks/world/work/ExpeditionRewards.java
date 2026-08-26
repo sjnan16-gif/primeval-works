@@ -35,7 +35,6 @@ public final class ExpeditionRewards {
                     reward(() -> ModItems.SULFUR.get(), 2, 4, 5),
                     reward(() -> ModItems.FOSSIL_FRAGMENT.get(), 1, 2, 4),
                     reward(() -> ModItems.NESTING_TREAT.get(), 1, 1, 2),
-                    reward(() -> ModItems.PTERANODON_WING_FRAGMENT.get(), 1, 1, 2),
                     reward(() -> ModItems.CORE.get(), 1, 2, 4),
                     reward(() -> ModItems.RAW_ANCIENT_METAL_INGOT.get(), 1, 1, 1)
             )),
@@ -97,7 +96,7 @@ public final class ExpeditionRewards {
         return switch (Math.max(0, Math.min(4, tier))) {
             case 0 -> "Berries, feathers, seeds, fossil fragments";
             case 1 -> "Sulfur, feathers, fossils, hardwood, coal";
-            case 2 -> "Silk, sulfur, nesting treats, wing fragments, cores, rare metal";
+            case 2 -> "Silk, sulfur, nesting treats, cores, rare metal";
             case 3 -> "Teeth, wings, nesting treats, cores, ancient metal";
             default -> "Ancient ore, cores, rare compressed cores, trophies, nesting treats, rare Spino heads";
         };

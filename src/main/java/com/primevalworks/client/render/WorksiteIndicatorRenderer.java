@@ -77,7 +77,7 @@ public final class WorksiteIndicatorRenderer {
 
     public static AABB indicatorBounds(Level level, BlockPos pos) {
         BlockState state = level.getBlockState(pos);
-        if (state.is(ModBlocks.WIND_TURBINE.get()) || state.is(ModBlocks.WATER_TURBINE.get())) {
+        if (TurbineBlock.isTurbine(state)) {
             AABB combined = null;
             for (BlockPos part : TurbineBlock.structurePositions(pos, state)) {
                 AABB partBounds = blockBounds(level, part);

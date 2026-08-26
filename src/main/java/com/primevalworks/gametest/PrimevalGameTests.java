@@ -32,6 +32,7 @@ import com.primevalworks.world.inventory.FoodBoxMenu;
 import com.primevalworks.world.work.BaseInventoryIndex;
 import com.primevalworks.world.work.ExpeditionRewards;
 import com.primevalworks.world.work.WorkSpecialtyRules;
+import com.primevalworks.world.processor.ProcessorRecipes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
@@ -160,6 +161,8 @@ public final class PrimevalGameTests {
             TEST_FUNCTIONS.register("player_kill_permanently_removes_dinosaur", () -> PrimevalGameTests::playerKillPermanentlyRemovesDinosaur);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> PROCESSOR_COMPRESSES_CORE =
             TEST_FUNCTIONS.register("processor_compresses_core", () -> PrimevalGameTests::processorCompressesCore);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> WIND_TURBINE_UPGRADE_PATH =
+            TEST_FUNCTIONS.register("wind_turbine_upgrade_path", () -> PrimevalGameTests::windTurbineUpgradePath);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> PROCESSOR_FINISHES_WITHOUT_WORKER =
             TEST_FUNCTIONS.register("processor_finishes_without_worker", () -> PrimevalGameTests::processorFinishesWithoutWorker);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> PROCESSOR_TRANSPORT_ROUND_TRIP =
@@ -357,6 +360,11 @@ public final class PrimevalGameTests {
                 new FunctionGameTestInstance(PROCESSOR_COMPRESSES_CORE.getKey(), isolatedTestData(event, "processor_core"))
         );
         event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "wind_turbine_upgrade_path"),
+                new FunctionGameTestInstance(WIND_TURBINE_UPGRADE_PATH.getKey(),
+                        isolatedTestData(event, "wind_turbine_upgrade"))
+        );
+        event.registerTest(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "processor_finishes_without_worker"),
                 new FunctionGameTestInstance(PROCESSOR_FINISHES_WITHOUT_WORKER.getKey(),
                         isolatedTestData(event, "processor_natural_cycle"))
@@ -489,7 +497,8 @@ public final class PrimevalGameTests {
         Block[] blocks = {
                 ModBlocks.REINFORCED_PISTON.get(),
                 ModBlocks.STICKY_REINFORCED_PISTON.get(),
-                ModBlocks.WIND_TURBINE.get(), ModBlocks.WATER_TURBINE.get(), ModBlocks.LASER_OBSERVER.get(),
+                ModBlocks.WIND_TURBINE.get(), ModBlocks.UPGRADED_WIND_TURBINE.get(),
+                ModBlocks.WATER_TURBINE.get(), ModBlocks.LASER_OBSERVER.get(),
                 ModBlocks.ANCIENT_BARREL.get(), ModBlocks.DART_TURRET.get(),
                 ModBlocks.PROCESSOR.get(), ModBlocks.ANCIENT_FURNACE.get(),
                 ModBlocks.ANCIENT_SPELL_STONE.get(), ModBlocks.LASER_TURRET.get(),
@@ -843,6 +852,68 @@ public final class PrimevalGameTests {
                             "Processing produced output without consuming its Core");
                 })
                 .thenSucceed();
+    }
+
+    private static void windTurbineUpgradePath(GameTestHelper helper) {
+        var upgrade = ProcessorRecipes.find(
+                new ItemStack(ModItems.WIND_TURBINE.get()),
+                new ItemStack(ModItems.PTERANODON_WING_FRAGMENT.get())
+        ).orElseThrow(() -> new AssertionError("The Wind Turbine upgrade recipe is missing"));
+        helper.assertTrue(upgrade.outputStack().is(ModItems.UPGRADED_WIND_TURBINE.get()),
+                "The Wind Turbine upgrade produced the wrong item");
+
+        for (int tier = 0; tier <= 2; tier++) {
+            int checkedTier = tier;
+            helper.assertTrue(ExpeditionRewards.tier(tier).rewards().stream()
+                            .noneMatch(reward -> reward.item().get() == ModItems.PTERANODON_WING_FRAGMENT.get()),
+                    "Wing Fragments leaked into expedition tier " + checkedTier);
+        }
+        for (int tier = 3; tier <= 4; tier++) {
+            int checkedTier = tier;
+            helper.assertTrue(ExpeditionRewards.tier(tier).rewards().stream()
+                            .anyMatch(reward -> reward.item().get() == ModItems.PTERANODON_WING_FRAGMENT.get()),
+                    "Hard expedition tier " + checkedTier + " cannot award a Wing Fragment");
+        }
+
+        BlockPos tableRelative = new BlockPos(1, 1, 1);
+        BlockPos processorRelative = new BlockPos(3, 1, 1);
+        forceTicking(helper, tableRelative, processorRelative);
+        helper.setBlock(new BlockPos(1, 0, 1), Blocks.STONE);
+        helper.setBlock(new BlockPos(3, 0, 1), Blocks.STONE);
+        helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
+        helper.setBlock(processorRelative, ModBlocks.PROCESSOR.get());
+        CommandTableBlockEntity table = helper.getBlockEntity(tableRelative, CommandTableBlockEntity.class);
+        ProcessorBlockEntity processor = helper.getBlockEntity(processorRelative, ProcessorBlockEntity.class);
+        processor.setItem(ProcessorBlockEntity.INPUT_SLOT, new ItemStack(ModItems.WIND_TURBINE.get()));
+        processor.setItem(ProcessorBlockEntity.FUEL_SLOT, new ItemStack(Items.COAL));
+        processor.setItem(ProcessorBlockEntity.CATALYST_SLOT,
+                new ItemStack(ModItems.PTERANODON_WING_FRAGMENT.get()));
+        table.receiveGeneratedEnergy(500.0F);
+        helper.assertTrue(table.toggleEnergyConsumer(helper.getLevel(), helper.absolutePos(processorRelative)),
+                "The Processor could not connect for the turbine upgrade");
+        ProcessorBlockEntity.serverTick(
+                helper.getLevel(), helper.absolutePos(processorRelative),
+                helper.getBlockState(processorRelative), processor
+        );
+        helper.assertTrue(processor.addWorkerProgress(upgrade.processTicks()),
+                "The powered Processor rejected the Wind Turbine upgrade");
+        helper.assertTrue(processor.getItem(ProcessorBlockEntity.OUTPUT_SLOT)
+                        .is(ModItems.UPGRADED_WIND_TURBINE.get()),
+                "The Processor did not finish the upgraded Wind Turbine");
+
+        BlockPos basicRelative = new BlockPos(5, 1, 1);
+        BlockPos upgradedRelative = new BlockPos(7, 1, 1);
+        helper.setBlock(basicRelative, ModBlocks.WIND_TURBINE.get());
+        helper.setBlock(upgradedRelative, ModBlocks.UPGRADED_WIND_TURBINE.get());
+        TurbineBlockEntity basic = helper.getBlockEntity(basicRelative, TurbineBlockEntity.class);
+        TurbineBlockEntity upgraded = helper.getBlockEntity(upgradedRelative, TurbineBlockEntity.class);
+        helper.assertTrue(Math.abs(basic.generationMultiplier() - 0.6F) < 0.0001F,
+                "The basic Wind Turbine is not limited to 60% output");
+        helper.assertTrue(Math.abs(upgraded.generationMultiplier() - 1.0F) < 0.0001F,
+                "The upgraded Wind Turbine is not using the former full output");
+        helper.assertTrue(BaseEnergyRules.isGenerator(helper.getBlockState(upgradedRelative)),
+                "The energy network does not recognize the upgraded Wind Turbine");
+        helper.succeed();
     }
 
     private static void processorFinishesWithoutWorker(GameTestHelper helper) {

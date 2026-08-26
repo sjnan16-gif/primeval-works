@@ -139,9 +139,9 @@ public final class TurbinePartBlock extends Block implements SimpleWaterloggedBl
 
     public static boolean isExpectedMaster(Level level, BlockPos masterPos, BlockState partState) {
         BlockState masterState = level.getBlockState(masterPos);
-        return masterState.is(partState.getValue(WIND)
-                ? ModBlocks.WIND_TURBINE.get()
-                : ModBlocks.WATER_TURBINE.get())
+        return (partState.getValue(WIND)
+                ? TurbineBlock.isWindTurbine(masterState)
+                : masterState.is(ModBlocks.WATER_TURBINE.get()))
                 && masterState.getValue(TurbineBlock.FACING) == partState.getValue(FACING);
     }
 

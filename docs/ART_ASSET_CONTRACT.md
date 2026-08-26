@@ -359,6 +359,11 @@ interaction_anchor
 
 Optional machine-specific bones use explicit names such as `rotor`, `wheel`, `lid`, `needle`, `turret_yaw`, and `turret_pitch`.
 
+Current authored machine exceptions are frozen to their delivered exports:
+
+- Wind Turbine source: `art/blocks/wind_turbine/wind_turbine.bbmodel`; runtime geometry `geometry.wind_turbine`; static bone `bb_main`; rotor bone `spinnything`; looping clip `spin`; 128x128 base and upgraded atlases with identical UVs.
+- Processor source: `art/blocks/processor/processor.bbmodel`; one static 16x16x16 cube using the authored 64x64 per-face UV atlas. It stays a vanilla block model because it has no moving part.
+
 Required animation IDs:
 
 ```text

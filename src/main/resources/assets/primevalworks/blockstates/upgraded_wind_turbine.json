@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "primevalworks:block/wind_turbine" },
+    "facing=east": { "model": "primevalworks:block/wind_turbine" },
+    "facing=south": { "model": "primevalworks:block/wind_turbine" },
+    "facing=west": { "model": "primevalworks:block/wind_turbine" }
+  }
+}

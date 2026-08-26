@@ -280,14 +280,14 @@ A Compressed Core Buffer stores a short reserve measured in power-ticks. It brid
 - **Foraging Post** — berries, seeds, mushrooms, and biome-sensitive finds.
 - **Timber Station** — produces Hardwood from nearby valid logs without deleting player builds; it consumes tagged input logs or uses an explicit managed grove.
 - **Excavation Pit** — processes fossil-bearing material and mining inputs.
-- **Processor** — combines a material, furnace fuel, and a recipe catalyst to refine or compress ancient materials; Fire workers improve throughput but are not required.
+- **Processor** — combines a material, furnace fuel, and a recipe catalyst to refine/compress ancient materials or upgrade a Wind Turbine with a Pteranodon Wing Fragment; Fire workers improve throughput but are not required.
 - **Ancient Furnace** — powered heat processing, alloying, and prepared ration recipes.
 - **Runic Anvil** — final Primordial equipment assembly.
 
 ### Power and utility
 
 - **Water Turbine** — 3x3 cog generator whose bottom row of three cells must remain waterlogged.
-- **Wind Turbine** — generator requiring sky access and rotor clearance.
+- **Wind Turbine** — two-phase generator requiring sky access and rotor clearance. The basic phase runs at 60%; the Processor-built upgraded phase restores full output.
 - **Kinetic Dynamo** — generator powered entirely by an Energy worker.
 - **Compressed Core Buffer** — stores short-term reserve power.
 - **Gust Fan** — Power 1 directional push for entities and loose items. This is separate from the Wind Turbine.

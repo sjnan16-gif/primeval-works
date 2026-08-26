@@ -58,6 +58,11 @@ public final class ModBlocks {
             properties -> new TurbineBlock(properties.mapColor(MapColor.METAL).strength(4.0F)
                     .noOcclusion().sound(SoundType.METAL))
     );
+    public static final DeferredBlock<Block> UPGRADED_WIND_TURBINE = BLOCKS.registerBlock(
+            "upgraded_wind_turbine",
+            properties -> new TurbineBlock(properties.mapColor(MapColor.METAL).strength(5.0F)
+                    .noOcclusion().sound(SoundType.METAL))
+    );
     public static final DeferredBlock<Block> WATER_TURBINE = BLOCKS.registerBlock(
             "water_turbine",
             properties -> new TurbineBlock(properties.mapColor(MapColor.COLOR_BROWN).strength(4.0F)

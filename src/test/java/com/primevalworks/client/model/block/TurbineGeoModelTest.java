@@ -33,7 +33,8 @@ final class TurbineGeoModelTest {
 
     @Test
     void turbineTexturesMatchTheirExportedUvCanvas() throws IOException {
-        assertTextureCanvas("wind_turbine", 64, 64);
+        assertTextureCanvas("wind_turbine", 128, 128);
+        assertTextureCanvas("wind_turbine_upgraded", 128, 128);
         assertTextureCanvas("water_turbine", 64, 64);
     }
 
@@ -44,6 +45,7 @@ final class TurbineGeoModelTest {
         String water = Files.readString(Path.of(
                 "src/main/resources/assets/primevalworks/geckolib/models/block/water_turbine.geo.json"));
         assertTrue(wind.contains("\"visible_bounds_offset\": [0, 1.75, 0]"));
+        assertTrue(wind.contains("\"name\": \"spinnything\""));
         assertTrue(water.contains("\"visible_bounds_width\": 3.2"));
         assertTrue(water.contains("\"visible_bounds_offset\": [0, 1.5, 0]"));
         for (int blade = 0; blade < 8; blade++) {
