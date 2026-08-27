@@ -47,16 +47,16 @@ public record AssignWhistleFieldWorkPayload(UUID dinosaurId, BlockPos first, Blo
             boolean availableFollower = DinosaurOwnership.loadedFollowers(player).stream()
                     .limit(DinosaurOwnership.followerLimit(player))
                     .anyMatch(follower -> follower.getUUID().equals(payload.dinosaurId));
-            if (settings == null || dinosaur == null || dinosaur.level() != player.level()
+            if (settings == null || !settings.mode().requiresMark()
+                    || dinosaur == null || dinosaur.level() != player.level()
                     || !dinosaur.isOwnedBy(player.getUUID())
                     || !availableFollower
                     || dinosaur.getCommandMode() != DinosaurCommandMode.FOLLOW
                     || dinosaur.isOnExpedition() || dinosaur.isIncapacitated()
                     || !RequestWhistleFollowersPayload.validSelection(player, selection, settings)) return;
             int rating = DinoFieldWorkRules.rating(dinosaur, settings.mode());
-            if (rating <= 0 || settings.mode() != DinoWhistleSettings.FieldMode.COLLECT
-                    && settings.pattern() != DinoWhistleSettings.Pattern.AREA
-                    && !DinoFieldWorkRules.validTarget(player.level(), payload.first, settings.mode(), rating)) {
+            if (rating <= 0
+                    || !DinoFieldWorkRules.validTarget(player.level(), payload.first, settings.mode(), rating)) {
                 player.sendOverlayMessage(net.minecraft.network.chat.Component.literal(
                         "That companion cannot work this target."));
                 return;

@@ -89,9 +89,9 @@ final class DinoFieldWorkRulesTest {
                 DinoWhistleSettings.Pattern.CONNECTED));
         assertEquals("Tree", DinoWhistleSettings.FieldMode.LUMBER.targetTitle(
                 DinoWhistleSettings.Pattern.CONNECTED));
-        assertEquals("Field", DinoWhistleSettings.FieldMode.HARVEST.targetTitle(
+        assertEquals("Nearby crops", DinoWhistleSettings.FieldMode.HARVEST.targetTitle(
                 DinoWhistleSettings.Pattern.AREA));
-        assertEquals("Spot", DinoWhistleSettings.FieldMode.COLLECT.targetTitle(
+        assertEquals("Nearby items", DinoWhistleSettings.FieldMode.COLLECT.targetTitle(
                 DinoWhistleSettings.Pattern.SINGLE));
         for (DinoWhistleSettings.FieldMode mode : DinoWhistleSettings.FieldMode.values()) {
             for (DinoWhistleSettings.Pattern pattern : DinoWhistleSettings.Pattern.values()) {
@@ -99,5 +99,23 @@ final class DinoFieldWorkRulesTest {
                 assertFalse(mode.markHint(pattern).isBlank());
             }
         }
+    }
+
+    @Test
+    void modesNormalizeToOnlyTheSupportedPlayerBehaviors() {
+        assertEquals(DinoWhistleSettings.Pattern.CONNECTED,
+                DinoWhistleSettings.FieldMode.QUARRY.normalizePattern(DinoWhistleSettings.Pattern.SINGLE));
+        assertEquals(DinoWhistleSettings.Pattern.AREA,
+                DinoWhistleSettings.FieldMode.QUARRY.normalizePattern(DinoWhistleSettings.Pattern.AREA));
+        assertEquals(DinoWhistleSettings.Pattern.CONNECTED,
+                DinoWhistleSettings.FieldMode.LUMBER.normalizePattern(DinoWhistleSettings.Pattern.AREA));
+        assertEquals(DinoWhistleSettings.Pattern.AREA,
+                DinoWhistleSettings.FieldMode.HARVEST.normalizePattern(DinoWhistleSettings.Pattern.CONNECTED));
+        assertEquals(DinoWhistleSettings.Pattern.AREA,
+                DinoWhistleSettings.FieldMode.COLLECT.normalizePattern(DinoWhistleSettings.Pattern.CONNECTED));
+        assertTrue(DinoWhistleSettings.FieldMode.QUARRY.requiresMark());
+        assertTrue(DinoWhistleSettings.FieldMode.LUMBER.requiresMark());
+        assertTrue(DinoWhistleSettings.FieldMode.HARVEST.isPassive());
+        assertTrue(DinoWhistleSettings.FieldMode.COLLECT.isPassive());
     }
 }

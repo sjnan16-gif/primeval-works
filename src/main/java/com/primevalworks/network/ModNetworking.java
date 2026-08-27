@@ -27,11 +27,13 @@ import com.primevalworks.network.payload.MountedDinosaurAttackPayload;
 import com.primevalworks.network.payload.SpinosaurusLandSprintPayload;
 import com.primevalworks.network.payload.DinosaurCommandPayload;
 import com.primevalworks.network.payload.DinosaurCommandStatePayload;
-import com.primevalworks.network.payload.OpenDinoWhistlePayload;
 import com.primevalworks.network.payload.ConfigureDinoWhistlePayload;
 import com.primevalworks.network.payload.RequestWhistleFollowersPayload;
 import com.primevalworks.network.payload.WhistleFollowerListPayload;
 import com.primevalworks.network.payload.AssignWhistleFieldWorkPayload;
+import com.primevalworks.network.payload.RequestPassiveWhistleFollowersPayload;
+import com.primevalworks.network.payload.PassiveWhistleFollowersPayload;
+import com.primevalworks.network.payload.AssignPassiveWhistleWorkPayload;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 
@@ -179,11 +181,6 @@ public final class ModNetworking {
                 DinosaurCommandStatePayload.STREAM_CODEC,
                 DinosaurCommandStatePayload::handle
         );
-        event.registrar("1").playToClient(
-                OpenDinoWhistlePayload.TYPE,
-                OpenDinoWhistlePayload.STREAM_CODEC,
-                OpenDinoWhistlePayload::handle
-        );
         event.registrar("1").playToServer(
                 ConfigureDinoWhistlePayload.TYPE,
                 ConfigureDinoWhistlePayload.STREAM_CODEC,
@@ -203,6 +200,21 @@ public final class ModNetworking {
                 AssignWhistleFieldWorkPayload.TYPE,
                 AssignWhistleFieldWorkPayload.STREAM_CODEC,
                 AssignWhistleFieldWorkPayload::handle
+        );
+        event.registrar("1").playToServer(
+                RequestPassiveWhistleFollowersPayload.TYPE,
+                RequestPassiveWhistleFollowersPayload.STREAM_CODEC,
+                RequestPassiveWhistleFollowersPayload::handle
+        );
+        event.registrar("1").playToClient(
+                PassiveWhistleFollowersPayload.TYPE,
+                PassiveWhistleFollowersPayload.STREAM_CODEC,
+                PassiveWhistleFollowersPayload::handle
+        );
+        event.registrar("1").playToServer(
+                AssignPassiveWhistleWorkPayload.TYPE,
+                AssignPassiveWhistleWorkPayload.STREAM_CODEC,
+                AssignPassiveWhistleWorkPayload::handle
         );
     }
 }

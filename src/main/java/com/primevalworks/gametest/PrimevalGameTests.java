@@ -54,6 +54,7 @@ import net.minecraft.world.entity.player.Input;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
 import net.minecraft.world.level.block.piston.PistonBaseBlock;
@@ -198,6 +199,12 @@ public final class PrimevalGameTests {
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> FOLLOWER_QUARRIES_MARKED_BLOCK =
             TEST_FUNCTIONS.register("follower_quarries_marked_block",
                     () -> PrimevalGameTests::followerQuarriesMarkedBlock);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> FOLLOWER_PASSIVELY_HARVESTS_CROPS =
+            TEST_FUNCTIONS.register("follower_passively_harvests_crops",
+                    () -> PrimevalGameTests::followerPassivelyHarvestsCrops);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> FOLLOWER_PASSIVELY_COLLECTS_ITEMS =
+            TEST_FUNCTIONS.register("follower_passively_collects_items",
+                    () -> PrimevalGameTests::followerPassivelyCollectsItems);
 
     private PrimevalGameTests() {
     }
@@ -438,6 +445,16 @@ public final class PrimevalGameTests {
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "follower_quarries_marked_block"),
                 new FunctionGameTestInstance(FOLLOWER_QUARRIES_MARKED_BLOCK.getKey(),
                         isolatedTestData(event, "follower_quarry"))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "follower_passively_harvests_crops"),
+                new FunctionGameTestInstance(FOLLOWER_PASSIVELY_HARVESTS_CROPS.getKey(),
+                        isolatedTestData(event, "follower_passive_harvest"))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "follower_passively_collects_items"),
+                new FunctionGameTestInstance(FOLLOWER_PASSIVELY_COLLECTS_ITEMS.getKey(),
+                        isolatedTestData(event, "follower_passive_collect"))
         );
     }
 
@@ -3149,18 +3166,16 @@ public final class PrimevalGameTests {
 
     private static void followerOrderSurvivesReload(GameTestHelper helper) {
         BlockPos dinosaurRelative = new BlockPos(2, 1, 2);
-        BlockPos first = helper.absolutePos(new BlockPos(4, 1, 4));
-        BlockPos second = helper.absolutePos(new BlockPos(7, 3, 7));
         helper.setBlock(new BlockPos(2, 0, 2), Blocks.STONE);
         FieldDodoEntity original = helper.spawn(ModEntities.VELOCIRAPTOR.get(), dinosaurRelative);
         original.setCommandMode(DinosaurCommandMode.FOLLOW);
-        original.assignFieldWork(new DinoWhistleSettings(
+        BlockPos passiveAnchor = original.blockPosition();
+        original.assignPassiveFieldWork(new DinoWhistleSettings(
                 DinoWhistleSettings.FieldMode.COLLECT,
                 DinoWhistleSettings.Pattern.AREA,
-                true,
                 77,
                 "minecraft:coal"
-        ), first, second);
+        ));
 
         TagValueOutput output = TagValueOutput.createWithContext(
                 ProblemReporter.DISCARDING, helper.getLevel().registryAccess());
@@ -3180,12 +3195,12 @@ public final class PrimevalGameTests {
                 "The follower lost its field-work mode after reload");
         helper.assertTrue(restored.getFieldWorkPattern() == DinoWhistleSettings.Pattern.AREA
                         && restored.isFieldWorkContinuous(),
-                "The follower lost its area or continuous settings after reload");
+                "The follower lost its passive collection behavior after reload");
         helper.assertTrue(restored.getFieldWorkRange() == 77
                         && restored.getFieldWorkItemFilter().equals("minecraft:coal")
-                        && restored.getFieldWorkFirst().filter(first::equals).isPresent()
-                        && restored.getFieldWorkSecond().filter(second::equals).isPresent(),
-                "The follower lost its leash or selected corners after reload");
+                        && restored.getFieldWorkFirst().filter(passiveAnchor::equals).isPresent()
+                        && restored.getFieldWorkSecond().isEmpty(),
+                "The follower lost its passive anchor, leash, or item filter after reload");
         helper.succeed();
     }
 
@@ -3198,7 +3213,7 @@ public final class PrimevalGameTests {
             for (int z = 0; z <= 6; z++) helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
         }
         helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
-        helper.setBlock(targetRelative, Blocks.STONE);
+        helper.setBlock(targetRelative, Blocks.IRON_ORE);
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
@@ -3213,7 +3228,6 @@ public final class PrimevalGameTests {
         nonspecialist.assignFieldWork(new DinoWhistleSettings(
                 DinoWhistleSettings.FieldMode.COLLECT,
                 DinoWhistleSettings.Pattern.SINGLE,
-                false,
                 48
         ), target, null);
         helper.assertTrue(!nonspecialist.hasFieldWork(),
@@ -3228,7 +3242,6 @@ public final class PrimevalGameTests {
         dinosaur.assignFieldWork(new DinoWhistleSettings(
                 DinoWhistleSettings.FieldMode.QUARRY,
                 DinoWhistleSettings.Pattern.SINGLE,
-                false,
                 48
         ), target, null);
 
@@ -3242,6 +3255,88 @@ public final class PrimevalGameTests {
                                 + ", entityTicks=" + dinosaur.tickCount))
                 .thenExecute(() -> helper.assertTrue(!dinosaur.hasFieldWork(),
                         "A one-time quarry order remained active after its target was finished"))
+                .thenSucceed();
+    }
+
+    private static void followerPassivelyHarvestsCrops(GameTestHelper helper) {
+        BlockPos tableRelative = new BlockPos(1, 1, 1);
+        BlockPos dinosaurRelative = new BlockPos(3, 1, 3);
+        BlockPos cropRelative = new BlockPos(5, 1, 3);
+        forceTicking(helper, tableRelative, dinosaurRelative, cropRelative);
+        for (int x = 0; x <= 7; x++) {
+            for (int z = 0; z <= 6; z++) helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+        }
+        helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
+        helper.setBlock(cropRelative.below(), Blocks.FARMLAND);
+        helper.getLevel().setBlock(helper.absolutePos(cropRelative),
+                Blocks.WHEAT.defaultBlockState().setValue(CropBlock.AGE, 7), Block.UPDATE_ALL);
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
+        player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
+        player.snapTo(helper.absolutePos(new BlockPos(2, 1, 3)).getCenter().x,
+                helper.absolutePos(new BlockPos(2, 1, 3)).getY(),
+                helper.absolutePos(new BlockPos(2, 1, 3)).getCenter().z, 0.0F, 0.0F);
+        BlockPos table = helper.absolutePos(tableRelative);
+        CommandTableBlock.claimExisting(player, table);
+        FieldDodoEntity dinosaur = helper.spawn(ModEntities.FIELD_DODO.get(), dinosaurRelative);
+        helper.assertTrue(DinosaurOwnership.addToActiveIfRoom(player, dinosaur, table),
+                "The harvest specialist could not join the active crew");
+        helper.assertTrue(DinosaurOwnership.setCommandMode(player, dinosaur, DinosaurCommandMode.FOLLOW).success(),
+                "The harvest specialist could not enter Follow mode");
+        dinosaur.setInvulnerable(true);
+        dinosaur.assignPassiveFieldWork(new DinoWhistleSettings(
+                DinoWhistleSettings.FieldMode.HARVEST,
+                DinoWhistleSettings.Pattern.AREA,
+                48));
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(
+                        helper.getBlockState(cropRelative).getValue(CropBlock.AGE) == 0,
+                        "The passive harvest order never harvested and replanted the mature crop"))
+                .thenExecute(() -> helper.assertTrue(dinosaur.hasFieldWork()
+                                && dinosaur.isFieldWorkContinuous(),
+                        "The passive harvest order stopped after one crop"))
+                .thenSucceed();
+    }
+
+    private static void followerPassivelyCollectsItems(GameTestHelper helper) {
+        BlockPos tableRelative = new BlockPos(1, 1, 1);
+        BlockPos dinosaurRelative = new BlockPos(3, 1, 3);
+        BlockPos itemRelative = new BlockPos(5, 1, 3);
+        forceTicking(helper, tableRelative, dinosaurRelative, itemRelative);
+        for (int x = 0; x <= 7; x++) {
+            for (int z = 0; z <= 6; z++) helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+        }
+        helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
+        player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
+        player.snapTo(helper.absolutePos(new BlockPos(2, 1, 3)).getCenter().x,
+                helper.absolutePos(new BlockPos(2, 1, 3)).getY(),
+                helper.absolutePos(new BlockPos(2, 1, 3)).getCenter().z, 0.0F, 0.0F);
+        BlockPos table = helper.absolutePos(tableRelative);
+        CommandTableBlock.claimExisting(player, table);
+        FieldDodoEntity dinosaur = helper.spawn(ModEntities.VELOCIRAPTOR.get(), dinosaurRelative);
+        helper.assertTrue(DinosaurOwnership.addToActiveIfRoom(player, dinosaur, table),
+                "The retrieval specialist could not join the active crew");
+        helper.assertTrue(DinosaurOwnership.setCommandMode(player, dinosaur, DinosaurCommandMode.FOLLOW).success(),
+                "The retrieval specialist could not enter Follow mode");
+        dinosaur.setInvulnerable(true);
+        Vec3 itemPosition = helper.absolutePos(itemRelative).getCenter();
+        helper.getLevel().addFreshEntity(new ItemEntity(helper.getLevel(), itemPosition.x,
+                itemPosition.y, itemPosition.z, new ItemStack(Items.COAL, 3)));
+        dinosaur.assignPassiveFieldWork(new DinoWhistleSettings(
+                DinoWhistleSettings.FieldMode.COLLECT,
+                DinoWhistleSettings.Pattern.AREA,
+                48,
+                "minecraft:coal"));
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(player.getInventory().countItem(Items.COAL) == 3,
+                        "The passive retrieval order never returned the filtered loose items"))
+                .thenExecute(() -> helper.assertTrue(dinosaur.hasFieldWork()
+                                && dinosaur.isFieldWorkContinuous(),
+                        "The passive retrieval order stopped after one pickup"))
                 .thenSucceed();
     }
 

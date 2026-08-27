@@ -5,19 +5,19 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 
-public record DinoWhistleSettings(FieldMode mode, Pattern pattern, boolean continuous, int range, String itemFilter) {
+public record DinoWhistleSettings(FieldMode mode, Pattern pattern, int range, String itemFilter) {
     public static final int MIN_RANGE = DinoWhistleRules.MIN_RANGE;
     public static final int MAX_RANGE = DinoWhistleRules.MAX_RANGE;
     public static final DinoWhistleSettings DEFAULT = new DinoWhistleSettings(
-            FieldMode.QUARRY, Pattern.SINGLE, false, 48, "");
+            FieldMode.QUARRY, Pattern.CONNECTED, 48, "");
 
-    public DinoWhistleSettings(FieldMode mode, Pattern pattern, boolean continuous, int range) {
-        this(mode, pattern, continuous, range, "");
+    public DinoWhistleSettings(FieldMode mode, Pattern pattern, int range) {
+        this(mode, pattern, range, "");
     }
 
     public DinoWhistleSettings {
         mode = mode == null ? FieldMode.QUARRY : mode;
-        pattern = pattern == null ? Pattern.SINGLE : pattern;
+        pattern = mode.normalizePattern(pattern);
         range = DinoWhistleRules.clampRange(range);
         itemFilter = itemFilter == null ? "" : itemFilter.trim();
     }
@@ -29,7 +29,6 @@ public record DinoWhistleSettings(FieldMode mode, Pattern pattern, boolean conti
         return new DinoWhistleSettings(
                 FieldMode.byId(tag.getIntOr("Mode", DEFAULT.mode.ordinal())),
                 Pattern.byId(tag.getIntOr("Pattern", DEFAULT.pattern.ordinal())),
-                tag.getBooleanOr("Continuous", DEFAULT.continuous),
                 tag.getIntOr("Range", DEFAULT.range),
                 tag.getStringOr("ItemFilter", "")
         );
@@ -40,7 +39,6 @@ public record DinoWhistleSettings(FieldMode mode, Pattern pattern, boolean conti
             CompoundTag tag = new CompoundTag();
             tag.putInt("Mode", mode.ordinal());
             tag.putInt("Pattern", pattern.ordinal());
-            tag.putBoolean("Continuous", continuous);
             tag.putInt("Range", range);
             if (!itemFilter.isBlank()) tag.putString("ItemFilter", itemFilter);
             root.put("PrimevalWhistle", tag);
@@ -59,7 +57,7 @@ public record DinoWhistleSettings(FieldMode mode, Pattern pattern, boolean conti
         QUARRY("Quarry", "Breaks stone and ore. Harder blocks need a stronger field rating."),
         LUMBER("Lumber", "Fells a chosen log or a bounded connected tree."),
         HARVEST("Harvest", "Harvests mature crops without touching storage or machines."),
-        COLLECT("Collect", "Collects loose items from the marked ground and brings them to you.");
+        COLLECT("Collect", "Collects loose items around the follower and brings them to you.");
 
         private final String title;
         private final String description;
@@ -72,66 +70,50 @@ public record DinoWhistleSettings(FieldMode mode, Pattern pattern, boolean conti
         public String title() { return title; }
         public String description() { return description; }
 
+        public boolean requiresMark() {
+            return this == QUARRY || this == LUMBER;
+        }
+
+        public boolean isPassive() {
+            return !requiresMark();
+        }
+
+        public Pattern normalizePattern(Pattern requested) {
+            if (this == QUARRY) return requested == Pattern.AREA ? Pattern.AREA : Pattern.CONNECTED;
+            return this == LUMBER ? Pattern.CONNECTED : Pattern.AREA;
+        }
+
         public String targetTitle(Pattern pattern) {
             return switch (this) {
                 case QUARRY -> switch (pattern) {
-                    case SINGLE -> "Block";
-                    case CONNECTED -> "Vein";
+                    case SINGLE, CONNECTED -> "Vein";
                     case AREA -> "Area";
                 };
-                case LUMBER -> switch (pattern) {
-                    case SINGLE -> "Log";
-                    case CONNECTED -> "Tree";
-                    case AREA -> "Grove";
-                };
-                case HARVEST -> switch (pattern) {
-                    case SINGLE -> "Crop";
-                    case CONNECTED -> "Patch";
-                    case AREA -> "Field";
-                };
-                case COLLECT -> switch (pattern) {
-                    case SINGLE -> "Spot";
-                    case CONNECTED -> "Nearby";
-                    case AREA -> "Zone";
-                };
+                case LUMBER -> "Tree";
+                case HARVEST -> "Nearby crops";
+                case COLLECT -> "Nearby items";
             };
         }
 
         public String targetDescription(Pattern pattern) {
             return switch (this) {
                 case QUARRY -> switch (pattern) {
-                    case SINGLE -> "Break the stone or ore you mark.";
-                    case CONNECTED -> "Follow matching stone or ore through one vein.";
-                    case AREA -> "Mine valid blocks between two marked corners.";
+                    case SINGLE, CONNECTED -> "Mine matching blocks connected to the one you mark.";
+                    case AREA -> "Mine only the marked block type between two corners.";
                 };
-                case LUMBER -> switch (pattern) {
-                    case SINGLE -> "Cut the log you mark.";
-                    case CONNECTED -> "Follow connected logs through one tree.";
-                    case AREA -> "Cut valid logs between two marked corners.";
-                };
-                case HARVEST -> switch (pattern) {
-                    case SINGLE -> "Harvest the mature crop you mark.";
-                    case CONNECTED -> "Harvest a connected patch of mature crops.";
-                    case AREA -> "Harvest mature crops between two marked corners.";
-                };
-                case COLLECT -> switch (pattern) {
-                    case SINGLE -> "Collect loose items around the marked spot.";
-                    case CONNECTED -> "Search a wider circle around the marked spot.";
-                    case AREA -> "Collect loose items between two marked corners.";
-                };
+                case LUMBER -> "Cut every connected log in the tree you mark.";
+                case HARVEST -> "Harvest and replant mature crops near the follower.";
+                case COLLECT -> "Retrieve matching loose items near the follower.";
             };
         }
 
         public String markHint(Pattern pattern) {
-            String target = switch (this) {
-                case QUARRY -> "stone or ore";
-                case LUMBER -> "a log";
-                case HARVEST -> "a mature crop";
-                case COLLECT -> "the ground";
-            };
+            if (this == HARVEST) return "Assign a follower; mature crops are handled automatically.";
+            if (this == COLLECT) return "Assign a follower; loose items are gathered automatically.";
+            if (this == LUMBER) return "Mark a log to choose the tree.";
             return pattern == Pattern.AREA
-                    ? "Mark two corners around " + target + "."
-                    : "Mark " + target + ".";
+                    ? "Mark the block type, then mark the opposite corner."
+                    : "Mark stone or ore to choose a connected vein.";
         }
 
         public static FieldMode byId(int id) {

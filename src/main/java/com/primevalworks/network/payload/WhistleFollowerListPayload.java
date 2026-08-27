@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.UUID;
 
 public record WhistleFollowerListPayload(BlockPos first, BlockPos second, boolean hasSecond,
-                                         int mode, int pattern, boolean continuous, int range,
+                                         int mode, int pattern, int range,
                                          List<Entry> entries) implements CustomPacketPayload {
     public static final Type<WhistleFollowerListPayload> TYPE = new Type<>(
             Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "whistle_follower_list"));
@@ -27,7 +27,6 @@ public record WhistleFollowerListPayload(BlockPos first, BlockPos second, boolea
         if (payload.hasSecond) buffer.writeLong(payload.second.asLong());
         buffer.writeVarInt(payload.mode);
         buffer.writeVarInt(payload.pattern);
-        buffer.writeBoolean(payload.continuous);
         buffer.writeVarInt(payload.range);
         buffer.writeVarInt(Math.min(3, payload.entries.size()));
         for (Entry entry : payload.entries.stream().limit(3).toList()) {
@@ -46,7 +45,6 @@ public record WhistleFollowerListPayload(BlockPos first, BlockPos second, boolea
         BlockPos second = hasSecond ? BlockPos.of(buffer.readLong()) : first;
         int mode = buffer.readVarInt();
         int pattern = buffer.readVarInt();
-        boolean continuous = buffer.readBoolean();
         int range = buffer.readVarInt();
         int count = Math.min(3, buffer.readVarInt());
         List<Entry> entries = new ArrayList<>(count);
@@ -55,7 +53,7 @@ public record WhistleFollowerListPayload(BlockPos first, BlockPos second, boolea
                     buffer.readUtf(48), buffer.readVarInt(), buffer.readBoolean()));
         }
         return new WhistleFollowerListPayload(first, second, hasSecond, mode, pattern,
-                continuous, range, List.copyOf(entries));
+                range, List.copyOf(entries));
     }
 
     public static void handle(WhistleFollowerListPayload payload, IPayloadContext context) {

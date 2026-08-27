@@ -52,26 +52,27 @@ public record RequestWhistleFollowersPayload(BlockPos first, BlockPos second, bo
             for (FieldDodoEntity dinosaur : DinosaurOwnership.loadedFollowers(player)) {
                 if (entries.size() >= DinosaurOwnership.followerLimit(player)) break;
                 int rating = DinoFieldWorkRules.rating(dinosaur, settings.mode());
-                boolean valid = rating > 0 && (settings.mode() == DinoWhistleSettings.FieldMode.COLLECT
-                        || DinoFieldWorkRules.validTarget(player.level(), payload.first, settings.mode(), rating)
-                        || settings.pattern() == DinoWhistleSettings.Pattern.AREA);
+                boolean valid = rating > 0
+                        && DinoFieldWorkRules.validTarget(player.level(), payload.first, settings.mode(), rating);
                 entries.add(new WhistleFollowerListPayload.Entry(dinosaur.getId(), dinosaur.getUUID(),
                         dinosaur.getDisplayName().getString(), dinosaur.getSpecies().registryName(), rating, valid));
             }
             PacketDistributor.sendToPlayer(player, new WhistleFollowerListPayload(payload.first,
                     payload.second, payload.hasSecond, settings.mode().ordinal(), settings.pattern().ordinal(),
-                    settings.continuous(), settings.range(), entries));
+                    settings.range(), entries));
         });
     }
 
     static boolean validSelection(ServerPlayer player, RequestWhistleFollowersPayload payload,
                                   DinoWhistleSettings settings) {
         double packetReach = 10.0D;
+        if (!settings.mode().requiresMark()) return false;
         if (player.position().distanceToSqr(payload.first.getCenter()) > packetReach * packetReach
                 || payload.hasSecond && player.position().distanceToSqr(payload.second.getCenter()) > packetReach * packetReach) {
             return false;
         }
-        if (settings.pattern() == DinoWhistleSettings.Pattern.AREA) {
+        if (settings.mode() == DinoWhistleSettings.FieldMode.QUARRY
+                && settings.pattern() == DinoWhistleSettings.Pattern.AREA) {
             return payload.hasSecond && DinoFieldWorkRules.areaWithinLimits(payload.first, payload.second);
         }
         return !payload.hasSecond;

@@ -84,6 +84,10 @@ public final class PrimevalWorksClient {
         NeoForge.EVENT_BUS.addListener(PrimevalWorksClient::openCompanionScreen);
         NeoForge.EVENT_BUS.addListener(PrimevalWorksClient::mountedDinosaurAttack);
         NeoForge.EVENT_BUS.addListener(DinoWhistleClient::handleAttack);
+        NeoForge.EVENT_BUS.addListener(net.neoforged.neoforge.client.event.RenderTooltipEvent.Pre.class,
+                DinoWhistleClient::cancelVanillaTooltip);
+        NeoForge.EVENT_BUS.addListener(net.neoforged.neoforge.client.event.ScreenEvent.Render.Post.class,
+                DinoWhistleClient::renderInventoryHover);
         NeoForge.EVENT_BUS.addListener(RenderHandEvent.class, PrimevalWorksClient::hidePlannerHand);
         NeoForge.EVENT_BUS.addListener(RenderBlockScreenEffectEvent.class, PrimevalWorksClient::hidePlannerBlockOverlay);
         NeoForge.EVENT_BUS.addListener(SubmitCustomGeometryEvent.class, WorksitePlannerScreen::submitWorldGeometry);
@@ -98,7 +102,6 @@ public final class PrimevalWorksClient {
         NeoForge.EVENT_BUS.addListener(ViewportEvent.ComputeFov.class, PteranodonFlightFeedback::applyFov);
         NeoForge.EVENT_BUS.addListener(RenderGuiEvent.Post.class, PteranodonFlightFeedback::renderFlightHud);
         NeoForge.EVENT_BUS.addListener(RenderGuiEvent.Post.class, DinosaurHatchReveal::render);
-        NeoForge.EVENT_BUS.addListener(RenderGuiEvent.Post.class, DinoWhistleClient::renderHud);
     }
 
     private static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {

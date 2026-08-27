@@ -1535,7 +1535,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         if (DinoFieldWorkRules.rating(this, settings.mode()) <= 0) return;
         fieldWorkMode = settings.mode();
         fieldWorkPattern = settings.pattern();
-        fieldWorkContinuous = settings.continuous();
+        fieldWorkContinuous = settings.mode().isPassive();
         fieldWorkRange = settings.range();
         fieldWorkItemFilter = settings.mode() == DinoWhistleSettings.FieldMode.COLLECT
                 ? settings.itemFilter() : "";
@@ -1549,6 +1549,11 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         cancelWorkAction();
         navigation.stop();
         DinosaurOwnership.syncRecord(this);
+    }
+
+    public void assignPassiveFieldWork(DinoWhistleSettings settings) {
+        if (!settings.mode().isPassive()) return;
+        assignFieldWork(settings, blockPosition(), null);
     }
 
     public void clearFieldWork() {
@@ -1830,7 +1835,6 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         output.putBoolean("PrimevalFieldWorkEnabled", fieldWorkEnabled);
         output.putInt("PrimevalFieldWorkMode", fieldWorkMode.ordinal());
         output.putInt("PrimevalFieldWorkPattern", fieldWorkPattern.ordinal());
-        output.putBoolean("PrimevalFieldWorkContinuous", fieldWorkContinuous);
         output.putInt("PrimevalFieldWorkRange", fieldWorkRange);
         if (!fieldWorkItemFilter.isBlank()) output.putString("PrimevalFieldWorkItem", fieldWorkItemFilter);
         if (fieldWorkFirst != null) output.putLong("PrimevalFieldWorkFirst", fieldWorkFirst.asLong());
@@ -1933,8 +1937,9 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         fieldWorkEnabled = input.getBooleanOr("PrimevalFieldWorkEnabled", false)
                 && commandMode == DinosaurCommandMode.FOLLOW;
         fieldWorkMode = DinoWhistleSettings.FieldMode.byId(input.getIntOr("PrimevalFieldWorkMode", 0));
-        fieldWorkPattern = DinoWhistleSettings.Pattern.byId(input.getIntOr("PrimevalFieldWorkPattern", 0));
-        fieldWorkContinuous = input.getBooleanOr("PrimevalFieldWorkContinuous", false);
+        fieldWorkPattern = fieldWorkMode.normalizePattern(
+                DinoWhistleSettings.Pattern.byId(input.getIntOr("PrimevalFieldWorkPattern", 0)));
+        fieldWorkContinuous = fieldWorkMode.isPassive();
         fieldWorkRange = Mth.clamp(input.getIntOr("PrimevalFieldWorkRange", 48),
                 DinoWhistleSettings.MIN_RANGE, DinoWhistleSettings.MAX_RANGE);
         fieldWorkItemFilter = input.getStringOr("PrimevalFieldWorkItem", "");
@@ -2698,8 +2703,16 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             navigation.stop();
             return;
         }
-        if (fieldWorkFirst == null || getHunger() <= 10) {
+        if (fieldWorkFirst == null && fieldWorkMode.isPassive()) {
+            fieldWorkFirst = blockPosition().immutable();
+        }
+        if (fieldWorkFirst == null) {
             clearFieldWork();
+            return;
+        }
+        if (getHunger() <= 10) {
+            cancelWorkAction();
+            navigation.stop();
             return;
         }
         int rating = DinoFieldWorkRules.rating(this, fieldWorkMode);
@@ -2708,7 +2721,8 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             return;
         }
         double allowed = fieldWorkRange;
-        Vec3 anchor = fieldWorkPattern == DinoWhistleSettings.Pattern.AREA && fieldWorkSecond != null
+        Vec3 anchor = fieldWorkMode.isPassive() ? position()
+                : fieldWorkPattern == DinoWhistleSettings.Pattern.AREA && fieldWorkSecond != null
                 ? Vec3.atCenterOf(fieldWorkFirst).lerp(Vec3.atCenterOf(fieldWorkSecond), 0.5D)
                 : fieldWorkFirst.getCenter();
         if (owner.position().distanceToSqr(anchor) > allowed * allowed) {
@@ -2717,8 +2731,12 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             return;
         }
         if (fieldWorkMode == DinoWhistleSettings.FieldMode.COLLECT) {
+            fieldWorkFirst = blockPosition().immutable();
             runFieldCollection(owner);
             return;
+        }
+        if (fieldWorkMode == DinoWhistleSettings.FieldMode.HARVEST) {
+            fieldWorkFirst = blockPosition().immutable();
         }
         if (fieldWorkTargets.isEmpty() || fieldWorkCursor >= fieldWorkTargets.size()) {
             if (fieldWorkContinuous && fieldWorkRescanCooldown-- > 0) {
@@ -2765,6 +2783,10 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         fieldWorkTargets.clear();
         fieldWorkCursor = 0;
         int rating = DinoFieldWorkRules.rating(this, fieldWorkMode);
+        if (fieldWorkMode == DinoWhistleSettings.FieldMode.HARVEST) {
+            rebuildNearbyHarvestTargets(rating);
+            return;
+        }
         if (fieldWorkPattern == DinoWhistleSettings.Pattern.SINGLE || fieldWorkSecond == null
                 && fieldWorkPattern == DinoWhistleSettings.Pattern.AREA) {
             if (DinoFieldWorkRules.validTarget(level(), fieldWorkFirst, fieldWorkMode, rating)) {
@@ -2774,6 +2796,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         }
         if (fieldWorkPattern == DinoWhistleSettings.Pattern.AREA) {
             if (!DinoFieldWorkRules.areaWithinLimits(fieldWorkFirst, fieldWorkSecond)) return;
+            BlockState originState = level().getBlockState(fieldWorkFirst);
             BlockPos min = new BlockPos(Math.min(fieldWorkFirst.getX(), fieldWorkSecond.getX()),
                     Math.min(fieldWorkFirst.getY(), fieldWorkSecond.getY()),
                     Math.min(fieldWorkFirst.getZ(), fieldWorkSecond.getZ()));
@@ -2782,7 +2805,10 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                     Math.max(fieldWorkFirst.getZ(), fieldWorkSecond.getZ()));
             for (BlockPos candidate : BlockPos.betweenClosed(min, max)) {
                 if (fieldWorkTargets.size() >= DinoFieldWorkRules.MAX_AREA_BLOCKS) break;
-                if (DinoFieldWorkRules.validTarget(level(), candidate, fieldWorkMode, rating)) {
+                BlockState candidateState = level().getBlockState(candidate);
+                boolean matchesMarkedType = fieldWorkMode != DinoWhistleSettings.FieldMode.QUARRY
+                        || candidateState.is(originState.getBlock());
+                if (matchesMarkedType && DinoFieldWorkRules.validTarget(level(), candidate, fieldWorkMode, rating)) {
                     fieldWorkTargets.add(candidate.immutable());
                 }
             }
@@ -2815,6 +2841,20 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                 }
             } else {
                 for (Direction direction : Direction.values()) queue.addLast(candidate.relative(direction));
+            }
+        }
+        fieldWorkTargets.sort(Comparator.comparingDouble(pos -> distanceToSqr(pos.getCenter())));
+    }
+
+    private void rebuildNearbyHarvestTargets(int rating) {
+        BlockPos center = blockPosition();
+        int radius = 7;
+        BlockPos min = center.offset(-radius, -2, -radius);
+        BlockPos max = center.offset(radius, 2, radius);
+        for (BlockPos candidate : BlockPos.betweenClosed(min, max)) {
+            if (fieldWorkTargets.size() >= 128) break;
+            if (DinoFieldWorkRules.validTarget(level(), candidate, DinoWhistleSettings.FieldMode.HARVEST, rating)) {
+                fieldWorkTargets.add(candidate.immutable());
             }
         }
         fieldWorkTargets.sort(Comparator.comparingDouble(pos -> distanceToSqr(pos.getCenter())));
@@ -2903,6 +2943,10 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     }
 
     private AABB fieldCollectionArea() {
+        if (fieldWorkMode == DinoWhistleSettings.FieldMode.COLLECT) {
+            double radius = Math.min(32.0D, fieldWorkRange);
+            return getBoundingBox().inflate(radius, Math.min(8.0D, radius * 0.35D), radius);
+        }
         if (fieldWorkPattern != DinoWhistleSettings.Pattern.AREA || fieldWorkSecond == null) {
             return new AABB(fieldWorkFirst).inflate(fieldWorkPattern == DinoWhistleSettings.Pattern.CONNECTED ? 6.0D : 1.5D);
         }

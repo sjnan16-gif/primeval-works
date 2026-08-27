@@ -39,17 +39,35 @@ final class WhistleUiContractTest {
     }
 
     @Test
-    void whistleUsesSimpleCyclingRowsInsteadOfACustomDashboard() throws Exception {
+    void whistleUsesPassiveFirstRowsWithoutRunOnceOrLoopControls() throws Exception {
         String config = Files.readString(CLIENT.resolve("screen/DinoWhistleScreen.java"));
         assertTrue(config.contains("orderRect"));
-        assertTrue(config.contains("targetRect"));
-        assertTrue(config.contains("runRect"));
+        assertTrue(config.contains("behaviorRect"));
         assertTrue(config.contains("rangeRect"));
         assertTrue(config.contains("% values.length"));
         assertTrue(config.contains("settings.mode().targetTitle(settings.pattern())"));
         assertTrue(config.contains("filterSlot"));
+        assertTrue(config.contains("filteredInventory"));
+        assertTrue(config.contains("draggedItem"));
+        assertFalse(config.contains("runRect"));
+        assertFalse(config.contains("ONCE"));
+        assertFalse(config.contains("LOOP"));
         assertFalse(config.contains("modeRect"));
         assertFalse(config.contains("patternRect"));
+    }
+
+    @Test
+    void inventoryHoverHoldReplacesRightClickAndTheWorldHud() throws Exception {
+        String client = Files.readString(CLIENT.resolve("effect/DinoWhistleClient.java"));
+        String item = Files.readString(Path.of(
+                "src/main/java/com/primevalworks/world/item/DinoWhistleItem.java"));
+        assertTrue(client.contains("renderInventoryHover"));
+        assertTrue(client.contains("CONFIGURE_HOLD_NANOS"));
+        assertTrue(client.contains("classic_work"));
+        assertTrue(client.contains("HOLD SHIFT TO CONFIGURE"));
+        assertFalse(client.contains("renderHud"));
+        assertFalse(item.contains("InteractionResult use("));
+        assertFalse(item.contains("finishUsingItem"));
     }
 
     @Test

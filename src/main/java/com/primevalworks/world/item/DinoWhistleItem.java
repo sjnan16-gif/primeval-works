@@ -1,27 +1,16 @@
 package com.primevalworks.world.item;
 
-import com.primevalworks.network.payload.OpenDinoWhistlePayload;
-import com.primevalworks.world.work.DinoWhistleSettings;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.TooltipDisplay;
-import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.function.Consumer;
 
 public final class DinoWhistleItem extends Item {
-    public static final int OPEN_TICKS = 18;
-
     public DinoWhistleItem(Properties properties) {
         super(properties.stacksTo(1));
     }
@@ -36,43 +25,15 @@ public final class DinoWhistleItem extends Item {
         return ItemStack.EMPTY;
     }
 
-    @Override
-    public InteractionResult use(Level level, Player player, InteractionHand hand) {
-        player.startUsingItem(hand);
-        return InteractionResult.CONSUME;
-    }
-
-    @Override
-    public int getUseDuration(ItemStack stack, LivingEntity user) {
-        return OPEN_TICKS;
-    }
-
-    @Override
-    public ItemUseAnimation getUseAnimation(ItemStack stack) {
-        return ItemUseAnimation.NONE;
-    }
-
-    @Override
-    public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity entity) {
-        if (!level.isClientSide() && entity instanceof ServerPlayer player && player.connection.hasChannel(OpenDinoWhistlePayload.TYPE)) {
-            PacketDistributor.sendToPlayer(player, new OpenDinoWhistlePayload());
-        }
-        return stack;
+    public static ItemStack findInventoryWhistle(Player player, int inventorySlot) {
+        if (inventorySlot < 0 || inventorySlot >= player.getInventory().getContainerSize()) return ItemStack.EMPTY;
+        ItemStack stack = player.getInventory().getItem(inventorySlot);
+        return stack.is(com.primevalworks.registry.ModItems.DINO_WHISTLE.get()) ? stack : ItemStack.EMPTY;
     }
 
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
                                 Consumer<Component> tooltip, TooltipFlag flag) {
-        DinoWhistleSettings settings = DinoWhistleSettings.read(stack);
-        tooltip.accept(Component.literal(settings.mode().title()).withStyle(ChatFormatting.GOLD));
-        tooltip.accept(Component.literal(settings.mode().description()).withStyle(ChatFormatting.GRAY));
-        tooltip.accept(Component.literal(settings.mode().targetTitle(settings.pattern()) + " / "
-                + (settings.continuous() ? "Continuous" : "One time") + " / " + settings.range() + " blocks")
-                .withStyle(ChatFormatting.DARK_AQUA));
-        if (settings.filtersItems()) {
-            tooltip.accept(Component.literal("Collect filter: " + settings.itemFilter()).withStyle(ChatFormatting.GRAY));
-        }
-        tooltip.accept(Component.literal("Hold use to configure. " + settings.mode().markHint(settings.pattern()))
-                .withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.accept(Component.literal("Directs a following field specialist.").withStyle(ChatFormatting.GRAY));
     }
 }
