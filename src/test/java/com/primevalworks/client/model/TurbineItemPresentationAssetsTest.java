@@ -33,8 +33,9 @@ final class TurbineItemPresentationAssetsTest {
 
         String item = Files.readString(Path.of(
                 "src/main/java/com/primevalworks/world/item/TurbineBlockItem.java"));
-        assertTrue(item.contains("-23.0F / 16.0F") && item.contains("-24.0F / 16.0F"),
-                "The wind and water turbine GUI centers no longer match their authored geometry");
+        assertTrue(item.contains("-0.66F, -0.99F")
+                        && item.contains("-0.33F, -1.10F"),
+                "A turbine lost its individually verified 16x16 GUI center");
     }
 
     @Test
