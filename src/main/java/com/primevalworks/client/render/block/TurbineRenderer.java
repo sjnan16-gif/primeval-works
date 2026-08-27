@@ -47,9 +47,9 @@ public final class TurbineRenderer<R extends BlockEntityRenderState & GeoRenderS
                             pos.getX() + 1.0D, pos.getY() + 4.0D, pos.getZ() + 2.0D);
         }
         return widthRunsEastWest
-                ? new AABB(pos.getX() - 1.0D, pos.getY(), pos.getZ(),
-                        pos.getX() + 2.0D, pos.getY() + 3.0D, pos.getZ() + 1.0D)
-                : new AABB(pos.getX(), pos.getY(), pos.getZ() - 1.0D,
-                        pos.getX() + 1.0D, pos.getY() + 3.0D, pos.getZ() + 2.0D);
+                ? new AABB(pos.getX() - 2.0D, pos.getY(), pos.getZ(),
+                        pos.getX() + 3.0D, pos.getY() + 3.0D, pos.getZ() + 1.0D)
+                : new AABB(pos.getX(), pos.getY(), pos.getZ() - 2.0D,
+                        pos.getX() + 1.0D, pos.getY() + 3.0D, pos.getZ() + 3.0D);
     }
 }

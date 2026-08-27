@@ -16,22 +16,24 @@ import java.util.function.Consumer;
 
 public final class TurbineBlockItem extends BlockItem implements GeoItem {
     public enum Variant {
-        WIND("wind_turbine", "wind_turbine", "Wind Turbine", 1.08F, -0.45F, 0.5F / 16.0F),
-        UPGRADED_WIND("wind_turbine", "wind_turbine_upgraded", "Upgraded Wind Turbine", 1.08F, -0.45F, 0.5F / 16.0F),
-        WATER("water_turbine", "water_turbine", "Water Turbine", 1.17F, -0.72F, 0.0F);
+        WIND("wind_turbine", "wind_turbine", "Wind Turbine", 1.0F, 1.08F, -0.45F, 0.5F / 16.0F),
+        UPGRADED_WIND("wind_turbine", "wind_turbine_upgraded", "Upgraded Wind Turbine", 1.0F, 1.08F, -0.45F, 0.5F / 16.0F),
+        WATER("water_turbine", "water_turbine", "Water Turbine", 0.64F, 1.17F, -0.72F, 0.0F);
 
         private final String model;
         private final String texture;
         private final String displayName;
+        private final float presentationScale;
         private final float guiOffsetX;
         private final float guiOffsetY;
         private final float guiOffsetZ;
 
-        Variant(String model, String texture, String displayName,
+        Variant(String model, String texture, String displayName, float presentationScale,
                 float guiOffsetX, float guiOffsetY, float guiOffsetZ) {
             this.model = model;
             this.texture = texture;
             this.displayName = displayName;
+            this.presentationScale = presentationScale;
             this.guiOffsetX = guiOffsetX;
             this.guiOffsetY = guiOffsetY;
             this.guiOffsetZ = guiOffsetZ;
@@ -47,6 +49,10 @@ public final class TurbineBlockItem extends BlockItem implements GeoItem {
 
         public String displayName() {
             return displayName;
+        }
+
+        public float presentationScale() {
+            return presentationScale;
         }
 
         public float guiOffsetX() {

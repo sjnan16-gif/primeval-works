@@ -82,4 +82,22 @@ final class DinoFieldWorkRulesTest {
             assertEquals(best, profile.stars(source));
         }
     }
+
+    @Test
+    void everyWhistleModeExplainsItsOwnTargets() {
+        assertEquals("Vein", DinoWhistleSettings.FieldMode.QUARRY.targetTitle(
+                DinoWhistleSettings.Pattern.CONNECTED));
+        assertEquals("Tree", DinoWhistleSettings.FieldMode.LUMBER.targetTitle(
+                DinoWhistleSettings.Pattern.CONNECTED));
+        assertEquals("Field", DinoWhistleSettings.FieldMode.HARVEST.targetTitle(
+                DinoWhistleSettings.Pattern.AREA));
+        assertEquals("Spot", DinoWhistleSettings.FieldMode.COLLECT.targetTitle(
+                DinoWhistleSettings.Pattern.SINGLE));
+        for (DinoWhistleSettings.FieldMode mode : DinoWhistleSettings.FieldMode.values()) {
+            for (DinoWhistleSettings.Pattern pattern : DinoWhistleSettings.Pattern.values()) {
+                assertFalse(mode.targetDescription(pattern).isBlank());
+                assertFalse(mode.markHint(pattern).isBlank());
+            }
+        }
+    }
 }

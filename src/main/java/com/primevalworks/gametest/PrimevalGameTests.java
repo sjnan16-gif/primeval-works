@@ -3152,13 +3152,14 @@ public final class PrimevalGameTests {
         BlockPos first = helper.absolutePos(new BlockPos(4, 1, 4));
         BlockPos second = helper.absolutePos(new BlockPos(7, 3, 7));
         helper.setBlock(new BlockPos(2, 0, 2), Blocks.STONE);
-        FieldDodoEntity original = helper.spawn(ModEntities.FIELD_DODO.get(), dinosaurRelative);
+        FieldDodoEntity original = helper.spawn(ModEntities.VELOCIRAPTOR.get(), dinosaurRelative);
         original.setCommandMode(DinosaurCommandMode.FOLLOW);
         original.assignFieldWork(new DinoWhistleSettings(
-                DinoWhistleSettings.FieldMode.HARVEST,
+                DinoWhistleSettings.FieldMode.COLLECT,
                 DinoWhistleSettings.Pattern.AREA,
                 true,
-                77
+                77,
+                "minecraft:coal"
         ), first, second);
 
         TagValueOutput output = TagValueOutput.createWithContext(
@@ -3167,7 +3168,7 @@ public final class PrimevalGameTests {
         CompoundTag snapshot = output.buildResult();
         original.discard();
 
-        FieldDodoEntity restored = ModEntities.FIELD_DODO.get().create(
+        FieldDodoEntity restored = ModEntities.VELOCIRAPTOR.get().create(
                 helper.getLevel(), EntitySpawnReason.LOAD);
         helper.assertTrue(restored != null, "The follower could not be recreated from its saved state");
         restored.load(TagValueInput.create(
@@ -3175,12 +3176,13 @@ public final class PrimevalGameTests {
         helper.assertTrue(restored.getCommandMode() == DinosaurCommandMode.FOLLOW,
                 "The saved follower reverted to Home after reload");
         helper.assertTrue(restored.hasFieldWork()
-                        && restored.getFieldWorkMode() == DinoWhistleSettings.FieldMode.HARVEST,
+                        && restored.getFieldWorkMode() == DinoWhistleSettings.FieldMode.COLLECT,
                 "The follower lost its field-work mode after reload");
         helper.assertTrue(restored.getFieldWorkPattern() == DinoWhistleSettings.Pattern.AREA
                         && restored.isFieldWorkContinuous(),
                 "The follower lost its area or continuous settings after reload");
         helper.assertTrue(restored.getFieldWorkRange() == 77
+                        && restored.getFieldWorkItemFilter().equals("minecraft:coal")
                         && restored.getFieldWorkFirst().filter(first::equals).isPresent()
                         && restored.getFieldWorkSecond().filter(second::equals).isPresent(),
                 "The follower lost its leash or selected corners after reload");

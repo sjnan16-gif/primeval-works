@@ -2,10 +2,12 @@ package com.primevalworks.client.screen;
 
 import com.mojang.blaze3d.platform.cursor.CursorTypes;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.primevalworks.PrimevalWorks;
+import com.primevalworks.client.model.entity.DinosaurPreviewBounds;
+import com.primevalworks.client.model.entity.DinosaurVisualProfile;
 import com.primevalworks.network.payload.AssignWhistleFieldWorkPayload;
 import com.primevalworks.network.payload.WhistleFollowerListPayload;
-import com.primevalworks.registry.ModItems;
-import com.primevalworks.world.entity.DinosaurSpecies;
+import com.primevalworks.world.entity.FieldDodoEntity;
 import com.primevalworks.world.work.DinoFieldWorkRules;
 import com.primevalworks.world.work.DinoWhistleSettings;
 import net.minecraft.client.Minecraft;
@@ -13,35 +15,40 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 public final class WhistleFollowerPickerScreen extends Screen {
-    private static final int PANEL_WIDTH = 276;
+    private static final int SLOT_SIZE = 38;
+    private static final int SLOT_GAP = 7;
     private static final int INK = 0xFF494341;
     private static final int MUTED_INK = 0xFF6E6764;
-    private static final int LABEL = 0xFFC74F43;
+    private static final Identifier HOTBAR = texture("hotbar.png");
     private static WhistleFollowerPickerScreen active;
+
     private final WhistleFollowerListPayload payload;
     private final long[] hoverStarted;
     private long openedAt;
     private long renderNow;
-    private long previousFrame;
     private long pressedAt;
     private int pressedIndex = -1;
-    private float parallaxX;
-    private float parallaxY;
 
     private WhistleFollowerPickerScreen(WhistleFollowerListPayload payload) {
         super(Component.literal("Choose a Companion"));
@@ -52,6 +59,12 @@ public final class WhistleFollowerPickerScreen extends Screen {
     public static void open(WhistleFollowerListPayload payload) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player == null || minecraft.screen != null) return;
+        if (payload.entries().isEmpty()) {
+            DinoWhistleSettings.FieldMode mode = DinoWhistleSettings.FieldMode.byId(payload.mode());
+            minecraft.player.sendOverlayMessage(Component.literal(
+                    "No following companion can handle " + DinoFieldWorkRules.specialtyName(mode).toLowerCase() + "."));
+            return;
+        }
         active = new WhistleFollowerPickerScreen(payload);
         minecraft.setScreen(active);
     }
@@ -59,106 +72,103 @@ public final class WhistleFollowerPickerScreen extends Screen {
     @Override
     protected void init() {
         openedAt = Util.getNanos();
-        previousFrame = openedAt;
         PrimevalUiSounds.open(this);
     }
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         renderNow = Util.getNanos();
-        int panelWidth = PANEL_WIDTH;
-        int panelHeight = 36 + Math.max(1, payload.entries().size()) * 44;
-        int x = (width - panelWidth) / 2;
-        int y = (height - panelHeight) / 2;
-        updateParallax(mouseX, mouseY);
-        Motion motion = motion(x, y, panelWidth, panelHeight);
-        float uiMouseX = motion.inverseX(mouseX);
-        float uiMouseY = motion.inverseY(mouseY);
-        graphics.fill(0, 0, width, height, 0x72000000);
-        graphics.pose().pushMatrix();
-        graphics.pose().translate(motion.pivotX + motion.offsetX, motion.pivotY + motion.offsetY);
-        graphics.pose().scale(motion.scale, motion.scale);
-        graphics.pose().translate(-motion.pivotX, -motion.pivotY);
-        drawBubble(graphics, new Rect(x, y, panelWidth, 32));
-        bold(graphics, "CHOOSE A FOLLOWER", x + 10, y + 6, LABEL, 0.94F);
-        DinoWhistleSettings.FieldMode mode = DinoWhistleSettings.FieldMode.byId(payload.mode());
-        text(graphics, DinoFieldWorkRules.specialtyName(mode).toUpperCase() + "  /  " + payload.range() + " BLOCK RANGE",
-                x + 10, y + 19, MUTED_INK, 0.76F);
-        if (payload.entries().isEmpty()) {
-            Rect empty = entryRect(x, y, panelWidth, 0);
-            drawBubble(graphics, empty);
-            graphics.fill(empty.x + 3, empty.y + 3, empty.x + 6, empty.bottom() - 3, 0xFFC76459);
-            bold(graphics, "NO FOLLOWERS AVAILABLE", empty.x + 10, empty.y + 7, 0xFFC76459, 0.86F);
-            text(graphics, "Set a companion to Follow first.", empty.x + 10, empty.y + 23, MUTED_INK, 0.76F);
-        } else {
-            for (int index = 0; index < payload.entries().size(); index++) {
-                drawEntry(graphics, payload.entries().get(index), entryRect(x, y, panelWidth, index),
-                        uiMouseX, uiMouseY, index);
-            }
+        int count = payload.entries().size();
+        int rowWidth = count * SLOT_SIZE + Math.max(0, count - 1) * SLOT_GAP;
+        int startX = (width - rowWidth) / 2;
+        int slotY = height / 2 - 58;
+        int hoveredIndex = -1;
+
+        for (int index = 0; index < count; index++) {
+            Rect slot = new Rect(startX + index * (SLOT_SIZE + SLOT_GAP), slotY, SLOT_SIZE, SLOT_SIZE);
+            boolean hovered = slot.contains(mouseX, mouseY);
+            if (hovered) hoveredIndex = index;
+            drawFollowerSlot(graphics, payload.entries().get(index), slot, hovered, index);
         }
-        graphics.pose().popMatrix();
+        if (hoveredIndex >= 0) drawHoverLabel(graphics, payload.entries().get(hoveredIndex), slotY + SLOT_SIZE + 5);
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
-    private void drawEntry(GuiGraphicsExtractor graphics, WhistleFollowerListPayload.Entry entry,
-                           Rect rect, float mouseX, float mouseY, int index) {
-        boolean hovered = rect.contains(mouseX, mouseY);
-        int accent = entry.compatible() ? 0xFF62A269 : 0xFF8B5E58;
-        drawBubble(graphics, rect);
-        graphics.fill(rect.x + 3, rect.y + 3, rect.x + 6, rect.bottom() - 3, accent);
-        if (hovered) {
-            graphics.fill(rect.x + 2, rect.y + 2, rect.right() - 2, rect.bottom() - 2, 0x20FFFFFF);
-        }
-        graphics.item(spawnEgg(entry.species()), rect.x + 11, rect.y + 10);
+    private void drawFollowerSlot(GuiGraphicsExtractor graphics, WhistleFollowerListPayload.Entry entry,
+                                  Rect slot, boolean hovered, int index) {
         updateHover(index, hovered);
-        float motion = interactionMotion(index, hovered);
-        graphics.pose().pushMatrix();
+        float reveal = slotReveal(index);
+        float hover = interactionMotion(index, hovered);
         float time = (renderNow - openedAt) / 1_000_000_000.0F;
-        graphics.pose().translate(rect.centerX() + Mth.sin(time * 7.2F + index) * 0.5F * motion,
-                rect.centerY() + Mth.sin(time * 8.5F + index) * 0.25F * motion);
-        graphics.pose().scale(1.0F + Mth.sin(time * 6.2F + index) * 0.012F * motion,
-                1.0F + Mth.sin(time * 6.2F + index) * 0.012F * motion);
-        graphics.pose().translate(-rect.centerX(), -rect.centerY());
-        bold(graphics, entry.name().toUpperCase(), rect.x + 36, rect.y + 6,
-                hovered ? accent : INK, 0.88F);
-        DinosaurSpecies species = DinosaurSpecies.byRegistryName(entry.species());
-        DinoWhistleSettings.FieldMode specialty = DinoFieldWorkRules.specialty(species);
-        String detail = specialty == null ? "NO FIELD SPECIALTY"
-                : specialty.title().toUpperCase() + "  /  " + entry.rating() + " STAR";
-        if (!entry.compatible() && specialty != null) detail += "  /  WRONG ORDER";
-        text(graphics, detail, rect.x + 36, rect.y + 23,
-                hovered ? accent : MUTED_INK, 0.76F);
-        graphics.pose().popMatrix();
-        if (hovered) {
-            if (entry.compatible()) graphics.requestCursor(CursorTypes.POINTING_HAND);
+        float wobbleX = Mth.sin(time * 6.8F + index * 1.4F) * 0.55F * hover;
+        float wobbleY = Mth.sin(time * 7.9F + index * 0.9F) * 0.34F * hover;
+        float scale = Math.max(0.05F, (0.68F + reveal * 0.32F)
+                * (1.0F + Mth.sin(time * 6.1F + index) * 0.018F * hover));
+        if (pressedIndex == index) {
+            float press = Mth.clamp(1.0F - (renderNow - pressedAt) / 260_000_000.0F, 0.0F, 1.0F);
+            scale *= 1.0F - Mth.sin(press * Mth.PI) * 0.08F;
         }
+        float rise = (1.0F - reveal) * 18.0F;
+        float visualCenterX = slot.centerX() + wobbleX;
+        float visualCenterY = slot.centerY() + rise + wobbleY;
+        graphics.pose().pushMatrix();
+        graphics.pose().translate(visualCenterX, visualCenterY);
+        graphics.pose().scale(scale, scale);
+        graphics.pose().translate(-slot.centerX(), -slot.centerY());
+        blit(graphics, HOTBAR, slot);
+        graphics.pose().popMatrix();
+
+        FloatRect visualSlot = new FloatRect(
+                visualCenterX + (slot.x - slot.centerX()) * scale,
+                visualCenterY + (slot.y - slot.centerY()) * scale,
+                slot.w * scale,
+                slot.h * scale);
+        if (hovered) fill(graphics, inset(visualSlot, 3.0F * scale), 0x22FFF0CB);
+        FieldDodoEntity dinosaur = entity(entry.entityId());
+        if (dinosaur != null) {
+            FloatRect preview = inset(visualSlot, 3.0F * scale);
+            float previewScale = previewScale(preview, DinosaurVisualProfile.forType(dinosaur.getType()), 42.0F, -25.0F);
+            extractPreview(graphics, preview, previewScale, dinosaur, 42.0F, -25.0F);
+        }
+        if (!entry.compatible()) fill(graphics, inset(visualSlot, 3.0F * scale), 0x8A211C20);
+        if (hovered && entry.compatible()) graphics.requestCursor(CursorTypes.POINTING_HAND);
+    }
+
+    private void drawHoverLabel(GuiGraphicsExtractor graphics, WhistleFollowerListPayload.Entry entry, int y) {
+        String name = entry.name().toUpperCase();
+        String detail = entry.compatible()
+                ? entry.rating() + " STAR  /  CLICK TO ASSIGN"
+                : "THIS COMPANION CANNOT DO THIS ORDER";
+        int width = Mth.clamp(Math.max(font.width(name), font.width(detail)) + 18, 76, 164);
+        int x = (this.width - width) / 2;
+        PrimevalBubbleUi.draw(graphics, x, y, width, 25);
+        fitText(graphics, name, x + 7, y + 5, width - 14,
+                entry.compatible() ? INK : 0xFF9C5149, 0.68F, true);
+        fitText(graphics, detail, x + 7, y + 15, width - 14, MUTED_INK, 0.55F, true);
     }
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         if (event.button() != 0) return super.mouseClicked(event, doubleClick);
-        int panelWidth = PANEL_WIDTH;
-        int panelHeight = 36 + Math.max(1, payload.entries().size()) * 44;
-        int x = (width - panelWidth) / 2;
-        int y = (height - panelHeight) / 2;
-        Motion motion = motion(x, y, panelWidth, panelHeight);
-        double uiMouseX = motion.inverseX(event.x());
-        double uiMouseY = motion.inverseY(event.y());
-        for (int index = 0; index < payload.entries().size(); index++) {
+        int count = payload.entries().size();
+        int rowWidth = count * SLOT_SIZE + Math.max(0, count - 1) * SLOT_GAP;
+        int startX = (width - rowWidth) / 2;
+        int slotY = height / 2 - 58;
+        for (int index = 0; index < count; index++) {
+            Rect slot = new Rect(startX + index * (SLOT_SIZE + SLOT_GAP), slotY, SLOT_SIZE, SLOT_SIZE);
+            if (!slot.contains(event.x(), event.y())) continue;
             WhistleFollowerListPayload.Entry entry = payload.entries().get(index);
-            if (entryRect(x, y, panelWidth, index).contains(uiMouseX, uiMouseY)) {
-                if (!entry.compatible()) {
-                    PrimevalUiSounds.click(0.72F);
-                    return true;
-                }
-                pressedIndex = index;
-                pressedAt = Util.getNanos();
-                ClientPacketDistributor.sendToServer(new AssignWhistleFieldWorkPayload(entry.uuid(),
-                        payload.first(), payload.second(), payload.hasSecond()));
-                PrimevalUiSounds.click(1.08F);
-                onClose();
+            if (!entry.compatible()) {
+                PrimevalUiSounds.click(0.72F);
                 return true;
             }
+            pressedIndex = index;
+            pressedAt = Util.getNanos();
+            ClientPacketDistributor.sendToServer(new AssignWhistleFieldWorkPayload(entry.uuid(),
+                    payload.first(), payload.second(), payload.hasSecond()));
+            PrimevalUiSounds.click(1.08F);
+            onClose();
+            return true;
         }
         return super.mouseClicked(event, doubleClick);
     }
@@ -203,99 +213,111 @@ public final class WhistleFollowerPickerScreen extends Screen {
                 }));
     }
 
-    private Rect entryRect(int x, int y, int panelWidth, int index) {
-        return new Rect(x, y + 36 + index * 44, panelWidth, 40);
+    private FieldDodoEntity entity(int entityId) {
+        if (minecraft == null || minecraft.level == null) return null;
+        Entity entity = minecraft.level.getEntity(entityId);
+        return entity instanceof FieldDodoEntity dinosaur ? dinosaur : null;
     }
 
-    private void drawBubble(GuiGraphicsExtractor graphics, Rect rect) {
-        graphics.fill(rect.x + 4, rect.y + 5, rect.right() + 4, rect.bottom() + 5, 0x43000000);
-        PrimevalBubbleUi.draw(graphics, rect.x, rect.y, rect.w, rect.h);
+    private void extractPreview(GuiGraphicsExtractor graphics, FloatRect target, float scale,
+                                FieldDodoEntity dinosaur, float viewYaw, float viewPitch) {
+        int x0 = Mth.ceil(target.x);
+        int y0 = Mth.ceil(target.y);
+        int x1 = Mth.floor(target.right());
+        int y1 = Mth.floor(target.bottom());
+        if (x1 <= x0 || y1 <= y0) return;
+        float renderCenterX = (x0 + x1) * 0.5F;
+        float renderCenterY = (y0 + y1) * 0.5F;
+        Quaternionf rotation = new Quaternionf().rotateZ((float)Math.PI);
+        Quaternionf topDownRotation = new Quaternionf().rotateX(viewPitch * Mth.DEG_TO_RAD);
+        rotation.mul(topDownRotation);
+        EntityRenderDispatcher dispatcher = minecraft.getEntityRenderDispatcher();
+        EntityRenderer<? super FieldDodoEntity, ?> renderer = dispatcher.getRenderer(dinosaur);
+        EntityRenderState renderState = renderer.createRenderState(dinosaur, 1.0F);
+        renderState.shadowPieces.clear();
+        renderState.outlineColor = 0;
+        if (renderState instanceof LivingEntityRenderState livingState) {
+            livingState.bodyRot = 180.0F - viewYaw;
+            livingState.yRot = 0.0F;
+            livingState.xRot = 0.0F;
+            livingState.boundingBoxWidth /= livingState.scale;
+            livingState.boundingBoxHeight /= livingState.scale;
+            livingState.scale = 1.0F;
+        }
+        float inverseScale = 1.0F / Math.max(0.001F, scale);
+        Vector3f translation = new Vector3f(
+                (target.centerX() - renderCenterX) * inverseScale,
+                renderState.boundingBoxHeight * 0.5F
+                        + DinosaurVisualProfile.forType(dinosaur.getType()).modelGroundOffset()
+                        + (target.centerY() - renderCenterY) * inverseScale,
+                0.0F);
+        graphics.entity(renderState, scale, translation, rotation, topDownRotation, x0, y0, x1, y1);
     }
 
-    private static ItemStack spawnEgg(String species) {
-        return switch (DinosaurSpecies.byRegistryName(species)) {
-            case TYRANNOSAURUS -> new ItemStack(ModItems.TYRANNOSAURUS_SPAWN_EGG.get());
-            case TRICERATOPS -> new ItemStack(ModItems.TRICERATOPS_SPAWN_EGG.get());
-            case VELOCIRAPTOR -> new ItemStack(ModItems.VELOCIRAPTOR_SPAWN_EGG.get());
-            case STEGOSAURUS -> new ItemStack(ModItems.STEGOSAURUS_SPAWN_EGG.get());
-            case PARASAUROLOPHUS -> new ItemStack(ModItems.PARASAUROLOPHUS_SPAWN_EGG.get());
-            case PTERANODON -> new ItemStack(ModItems.PTERANODON_SPAWN_EGG.get());
-            case SPINOSAURUS -> new ItemStack(ModItems.SPINOSAURUS_SPAWN_EGG.get());
-            default -> new ItemStack(ModItems.FIELD_DODO_SPAWN_EGG.get());
-        };
+    private float previewScale(FloatRect target, DinosaurVisualProfile visual, float viewYaw, float viewPitch) {
+        DinosaurPreviewBounds bounds = DinosaurPreviewBounds.forVisual(visual);
+        float yaw = viewYaw * Mth.DEG_TO_RAD;
+        float pitch = viewPitch * Mth.DEG_TO_RAD;
+        float footprint = Math.abs(bounds.width() * Mth.cos(yaw)) + Math.abs(bounds.depth() * Mth.sin(yaw));
+        float cameraDepth = Math.abs(bounds.width() * Mth.sin(yaw)) + Math.abs(bounds.depth() * Mth.cos(yaw));
+        float projectedHeight = bounds.height() * Math.abs(Mth.cos(pitch))
+                + cameraDepth * Math.abs(Mth.sin(pitch));
+        return Mth.clamp(Math.min(target.width / Math.max(0.35F, footprint),
+                target.height / Math.max(0.35F, projectedHeight)) * 1.08F, 1.5F, 44.0F);
     }
 
-    private void bold(GuiGraphicsExtractor graphics, String value, float x, float y, int color, float scale) {
-        drawText(graphics, Component.literal(value).withStyle(Style.EMPTY.withBold(true)), x, y, color, scale);
-    }
-    private void text(GuiGraphicsExtractor graphics, String value, float x, float y, int color, float scale) {
-        drawText(graphics, Component.literal(value), x, y, color, scale);
-    }
-    private void drawText(GuiGraphicsExtractor graphics, Component value, float x, float y, int color, float scale) {
-        graphics.pose().pushMatrix();
-        graphics.pose().translate(x, y);
-        graphics.pose().scale(scale, scale);
-        graphics.text(font, value, 0, 0, color, true);
-        graphics.pose().popMatrix();
+    private float slotReveal(int index) {
+        float elapsed = (renderNow - openedAt) / 1_000_000_000.0F - index * 0.055F;
+        float progress = Mth.clamp(elapsed / 0.42F, 0.0F, 1.0F);
+        return PrimevalBubbleUi.spring(progress, 6.4F, 11.6F);
     }
 
     private void updateHover(int index, boolean hovered) {
         if (hovered) {
             if (hoverStarted[index] == 0L) hoverStarted[index] = renderNow;
-        } else {
-            hoverStarted[index] = 0L;
-        }
+        } else hoverStarted[index] = 0L;
     }
 
     private float interactionMotion(int index, boolean hovered) {
-        float amount = 0.0F;
-        if (hovered && hoverStarted[index] != 0L) {
-            float seconds = (renderNow - hoverStarted[index]) / 1_000_000_000.0F;
-            amount = (1.0F - (float)Math.exp(-seconds * 18.0F)) * (float)Math.exp(-seconds * 2.8F);
-            if (seconds >= 1.35F) amount = 0.0F;
-        }
-        if (pressedIndex == index) {
-            amount = Math.max(amount, Mth.clamp(1.0F - (renderNow - pressedAt) / 280_000_000.0F, 0.0F, 1.0F));
-        }
-        return amount;
+        if (!hovered || hoverStarted[index] == 0L) return 0.0F;
+        float seconds = (renderNow - hoverStarted[index]) / 1_000_000_000.0F;
+        float amount = (1.0F - (float)Math.exp(-seconds * 18.0F)) * (float)Math.exp(-seconds * 2.8F);
+        return seconds >= 1.35F ? 0.0F : amount;
     }
 
-    private void updateParallax(int mouseX, int mouseY) {
-        float delta = Mth.clamp((renderNow - previousFrame) / 1_000_000_000.0F, 0.0F, 0.05F);
-        previousFrame = renderNow;
-        float targetX = Mth.clamp((mouseX - width * 0.5F) / Math.max(1.0F, width * 0.5F), -1.0F, 1.0F) * -3.0F;
-        float targetY = Mth.clamp((mouseY - height * 0.5F) / Math.max(1.0F, height * 0.5F), -1.0F, 1.0F) * -1.8F;
-        float blend = 1.0F - (float)Math.exp(-delta * 9.0F);
-        parallaxX = Mth.lerp(blend, parallaxX, targetX);
-        parallaxY = Mth.lerp(blend, parallaxY, targetY);
+    private void fitText(GuiGraphicsExtractor graphics, String value, float x, float y,
+                         float maxWidth, int color, float requestedScale, boolean bold) {
+        Component component = bold ? Component.literal(value).withStyle(Style.EMPTY.withBold(true)) : Component.literal(value);
+        float scale = Math.min(requestedScale, maxWidth / Math.max(1, font.width(component)));
+        graphics.pose().pushMatrix();
+        graphics.pose().translate(x, y);
+        graphics.pose().scale(scale, scale);
+        graphics.text(font, component, 0, 0, color, true);
+        graphics.pose().popMatrix();
     }
 
-    private Motion motion(int x, int y, int panelWidth, int panelHeight) {
-        long now = renderNow == 0L ? Util.getNanos() : renderNow;
-        float elapsedTicks = (now - openedAt) / 50_000_000.0F;
-        float progress = Mth.clamp(elapsedTicks / 24.0F, 0.0F, 1.0F);
-        float settled = PrimevalBubbleUi.spring(progress, 6.2F, 11.4F);
-        float fade = smoothStep(Mth.clamp(elapsedTicks / 18.0F, 0.0F, 1.0F));
-        float fit = Math.min(1.0F, Math.min((width - 12.0F) / panelWidth, (height - 12.0F) / panelHeight));
-        float scale = Math.max(0.1F, fit * (0.74F + settled * 0.26F));
-        float offsetX = parallaxX * fade;
-        float offsetY = 18.0F * (1.0F - settled) + parallaxY * fade;
-        return new Motion(x + panelWidth * 0.5F, y + panelHeight * 0.5F, offsetX, offsetY, scale);
+    private static void blit(GuiGraphicsExtractor graphics, Identifier texture, Rect rect) {
+        graphics.blit(texture, rect.x, rect.y, rect.right(), rect.bottom(), 0.0F, 1.0F, 0.0F, 1.0F);
     }
 
-    private static float smoothStep(float value) {
-        float clamped = Mth.clamp(value, 0.0F, 1.0F);
-        return clamped * clamped * (3.0F - 2.0F * clamped);
+    private static FloatRect inset(FloatRect rect, float amount) {
+        return new FloatRect(rect.x + amount, rect.y + amount,
+                Math.max(1.0F, rect.width - amount * 2.0F), Math.max(1.0F, rect.height - amount * 2.0F));
     }
 
-    private record Motion(float pivotX, float pivotY, float offsetX, float offsetY, float scale) {
-        float inverseX(double mouseX) {
-            return pivotX + ((float)mouseX - pivotX - offsetX) / scale;
-        }
+    private static void fill(GuiGraphicsExtractor graphics, FloatRect rect, int color) {
+        graphics.fill(Mth.ceil(rect.x), Mth.ceil(rect.y), Mth.floor(rect.right()), Mth.floor(rect.bottom()), color);
+    }
 
-        float inverseY(double mouseY) {
-            return pivotY + ((float)mouseY - pivotY - offsetY) / scale;
-        }
+    private static Identifier texture(String name) {
+        return Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "textures/gui/" + name);
+    }
+
+    private record FloatRect(float x, float y, float width, float height) {
+        float right() { return x + width; }
+        float bottom() { return y + height; }
+        float centerX() { return x + width * 0.5F; }
+        float centerY() { return y + height * 0.5F; }
     }
 
     private record Rect(int x, int y, int w, int h) {

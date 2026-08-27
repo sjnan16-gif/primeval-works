@@ -66,10 +66,13 @@ public final class DinoWhistleItem extends Item {
         DinoWhistleSettings settings = DinoWhistleSettings.read(stack);
         tooltip.accept(Component.literal(settings.mode().title()).withStyle(ChatFormatting.GOLD));
         tooltip.accept(Component.literal(settings.mode().description()).withStyle(ChatFormatting.GRAY));
-        tooltip.accept(Component.literal(settings.pattern().title() + " / "
+        tooltip.accept(Component.literal(settings.mode().targetTitle(settings.pattern()) + " / "
                 + (settings.continuous() ? "Continuous" : "One time") + " / " + settings.range() + " blocks")
                 .withStyle(ChatFormatting.DARK_AQUA));
-        tooltip.accept(Component.literal("Hold use to configure. Mark a block with attack.")
+        if (settings.filtersItems()) {
+            tooltip.accept(Component.literal("Collect filter: " + settings.itemFilter()).withStyle(ChatFormatting.GRAY));
+        }
+        tooltip.accept(Component.literal("Hold use to configure. " + settings.mode().markHint(settings.pattern()))
                 .withStyle(ChatFormatting.DARK_GRAY));
     }
 }

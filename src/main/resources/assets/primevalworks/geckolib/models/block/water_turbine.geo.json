@@ -1,113 +1,73 @@
 {
-  "format_version": "1.12.0",
-  "minecraft:geometry": [
-    {
-      "description": {
-        "identifier": "geometry.water_turbine",
-        "texture_width": 64,
-        "texture_height": 64,
-        "visible_bounds_width": 3.2,
-        "visible_bounds_height": 3.2,
-        "visible_bounds_offset": [0, 1.5, 0]
-      },
-      "bones": [
-        {
-          "name": "root",
-          "pivot": [0, 24, 0],
-          "cubes": [
-            {"origin": [-5, 19, -11], "size": [10, 10, 22], "uv": [32, 32]},
-            {"origin": [-9, 15, -13], "size": [18, 18, 4], "uv": [0, 0]},
-            {"origin": [-9, 15, 9], "size": [18, 18, 4], "uv": [0, 0]}
-          ]
-        },
-        {
-          "name": "rotor",
-          "parent": "root",
-          "pivot": [0, 24, 0],
-          "cubes": [
-            {"origin": [-8, 16, -7], "size": [16, 16, 14], "uv": [32, 32]}
-          ]
-        },
-        {
-          "name": "blade_0",
-          "parent": "rotor",
-          "pivot": [0, 24, 0],
-          "cubes": [
-            {"origin": [-3, 26, -3], "size": [6, 13, 6], "uv": [0, 0]},
-            {"origin": [-8, 36, -5], "size": [16, 9, 10], "uv": [0, 16]}
-          ]
-        },
-        {
-          "name": "blade_1",
-          "parent": "rotor",
-          "pivot": [0, 24, 0],
-          "rotation": [0, 0, 45],
-          "cubes": [
-            {"origin": [-3, 26, -3], "size": [6, 13, 6], "uv": [0, 0]},
-            {"origin": [-8, 36, -5], "size": [16, 9, 10], "uv": [0, 16]}
-          ]
-        },
-        {
-          "name": "blade_2",
-          "parent": "rotor",
-          "pivot": [0, 24, 0],
-          "rotation": [0, 0, 90],
-          "cubes": [
-            {"origin": [-3, 26, -3], "size": [6, 13, 6], "uv": [0, 0]},
-            {"origin": [-8, 36, -5], "size": [16, 9, 10], "uv": [0, 16]}
-          ]
-        },
-        {
-          "name": "blade_3",
-          "parent": "rotor",
-          "pivot": [0, 24, 0],
-          "rotation": [0, 0, 135],
-          "cubes": [
-            {"origin": [-3, 26, -3], "size": [6, 13, 6], "uv": [0, 0]},
-            {"origin": [-8, 36, -5], "size": [16, 9, 10], "uv": [0, 16]}
-          ]
-        },
-        {
-          "name": "blade_4",
-          "parent": "rotor",
-          "pivot": [0, 24, 0],
-          "rotation": [0, 0, 180],
-          "cubes": [
-            {"origin": [-3, 26, -3], "size": [6, 13, 6], "uv": [0, 0]},
-            {"origin": [-8, 36, -5], "size": [16, 9, 10], "uv": [0, 16]}
-          ]
-        },
-        {
-          "name": "blade_5",
-          "parent": "rotor",
-          "pivot": [0, 24, 0],
-          "rotation": [0, 0, 225],
-          "cubes": [
-            {"origin": [-3, 26, -3], "size": [6, 13, 6], "uv": [0, 0]},
-            {"origin": [-8, 36, -5], "size": [16, 9, 10], "uv": [0, 16]}
-          ]
-        },
-        {
-          "name": "blade_6",
-          "parent": "rotor",
-          "pivot": [0, 24, 0],
-          "rotation": [0, 0, 270],
-          "cubes": [
-            {"origin": [-3, 26, -3], "size": [6, 13, 6], "uv": [0, 0]},
-            {"origin": [-8, 36, -5], "size": [16, 9, 10], "uv": [0, 16]}
-          ]
-        },
-        {
-          "name": "blade_7",
-          "parent": "rotor",
-          "pivot": [0, 24, 0],
-          "rotation": [0, 0, 315],
-          "cubes": [
-            {"origin": [-3, 26, -3], "size": [6, 13, 6], "uv": [0, 0]},
-            {"origin": [-8, 36, -5], "size": [16, 9, 10], "uv": [0, 16]}
-          ]
-        }
-      ]
-    }
-  ]
+	"format_version": "1.12.0",
+	"minecraft:geometry": [
+		{
+			"description": {
+				"identifier": "geometry.water_turbine",
+				"texture_width": 256,
+				"texture_height": 256,
+				"visible_bounds_width": 5,
+				"visible_bounds_height": 4.5,
+				"visible_bounds_offset": [0, 1.75, 0]
+			},
+			"bones": [
+				{
+					"name": "bb_main",
+					"pivot": [0, 0, 0],
+					"cubes": [
+						{"origin": [-5, 19, -5], "size": [10, 10, 10], "uv": [48, 114]}
+					]
+				},
+				{
+					"name": "all",
+					"pivot": [0, 24, 0],
+					"cubes": [
+						{"origin": [-5, 0, -7], "size": [10, 2, 14], "pivot": [0, 1, 0], "rotation": [0, 0, 90], "uv": [84, 40]},
+						{"origin": [-5, 45, -7], "size": [10, 2, 14], "pivot": [0, 46, 0], "rotation": [0, 0, -90], "uv": [78, 82]},
+						{"origin": [16, 2, -7], "size": [10, 2, 14], "pivot": [21, 3, 0], "rotation": [0, 0, -135], "uv": [0, 86]},
+						{"origin": [16, 43, -7], "size": [10, 2, 14], "pivot": [21, 44, 0], "rotation": [0, 0, 135], "uv": [96, 16]},
+						{"origin": [5, 15, -8], "size": [33, 4, 6], "pivot": [17, 19, -7], "rotation": [0, 0, -90], "uv": [0, 76]},
+						{"origin": [5, 15, 2], "size": [33, 4, 6], "pivot": [17, 19, 3], "rotation": [0, 0, -90], "uv": [78, 56]},
+						{"origin": [18, 24, -7], "size": [10, 2, 14], "uv": [96, 98]},
+						{"origin": [-26, 2, -7], "size": [10, 2, 14], "pivot": [-21, 3, 0], "rotation": [0, 0, 135], "uv": [48, 98]},
+						{"origin": [-26, 2, -7], "size": [10, 2, 14], "pivot": [-21, 3, 0], "rotation": [0, 0, -45], "uv": [78, 66]},
+						{"origin": [-26, 43, -7], "size": [10, 2, 14], "pivot": [-21, 44, 0], "rotation": [0, 0, -135], "uv": [96, 0]},
+						{"origin": [-21, 3, -8], "size": [42, 4, 6], "uv": [0, 20]},
+						{"origin": [-21, 3, 2], "size": [42, 4, 6], "uv": [0, 30]},
+						{"origin": [-21, 40, -8], "size": [42, 4, 6], "uv": [0, 0]},
+						{"origin": [-21, 40, 2], "size": [42, 4, 6], "uv": [0, 10]},
+						{"origin": [-28, 24, -7], "size": [10, 2, 14], "uv": [0, 102]},
+						{"origin": [-38, 15, 2], "size": [33, 4, 6], "pivot": [-17, 19, 3], "rotation": [0, 0, 90], "uv": [0, 56]},
+						{"origin": [-38, 15, -8], "size": [33, 4, 6], "pivot": [-17, 19, -7], "rotation": [0, 0, 90], "uv": [0, 66]}
+					]
+				},
+				{
+					"name": "big ass bone",
+					"parent": "all",
+					"pivot": [0, 24, 1],
+					"rotation": [-90, 0, 45],
+					"cubes": [
+						{"origin": [-19, 22, -1], "size": [38, 4, 4], "uv": [0, 40]},
+						{"origin": [-23, 24, -1], "size": [4, 4, 4], "uv": [48, 86]},
+						{"origin": [-23, 20, -2], "size": [4, 4, 4], "uv": [96, 32]},
+						{"origin": [19, 20, 0], "size": [4, 4, 4], "uv": [112, 32]},
+						{"origin": [19, 24, -1], "size": [4, 4, 4], "uv": [88, 114]}
+					]
+				},
+				{
+					"name": "big ass bone 2",
+					"parent": "all",
+					"pivot": [0, 24, -1],
+					"rotation": [90, 0, -45],
+					"cubes": [
+						{"origin": [-19, 22, -3], "size": [38, 4, 4], "uv": [0, 48]},
+						{"origin": [19, 24, -3], "size": [4, 4, 4], "uv": [104, 114]},
+						{"origin": [19, 20, -2], "size": [4, 4, 4], "uv": [0, 118]},
+						{"origin": [-23, 20, -4], "size": [4, 4, 4], "uv": [16, 118]},
+						{"origin": [-23, 24, -3], "size": [4, 4, 4], "uv": [32, 118]}
+					]
+				}
+			]
+		}
+	]
 }

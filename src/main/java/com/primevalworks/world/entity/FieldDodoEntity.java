@@ -388,6 +388,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     private DinoWhistleSettings.Pattern fieldWorkPattern = DinoWhistleSettings.Pattern.SINGLE;
     private boolean fieldWorkContinuous;
     private int fieldWorkRange = 48;
+    private String fieldWorkItemFilter = "";
     private @Nullable BlockPos fieldWorkFirst;
     private @Nullable BlockPos fieldWorkSecond;
     private final List<BlockPos> fieldWorkTargets = new ArrayList<>();
@@ -1483,6 +1484,10 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         return fieldWorkRange;
     }
 
+    public String getFieldWorkItemFilter() {
+        return fieldWorkItemFilter;
+    }
+
     public Optional<BlockPos> getFieldWorkFirst() {
         return Optional.ofNullable(fieldWorkFirst);
     }
@@ -1532,6 +1537,8 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         fieldWorkPattern = settings.pattern();
         fieldWorkContinuous = settings.continuous();
         fieldWorkRange = settings.range();
+        fieldWorkItemFilter = settings.mode() == DinoWhistleSettings.FieldMode.COLLECT
+                ? settings.itemFilter() : "";
         fieldWorkFirst = first.immutable();
         fieldWorkSecond = second == null ? null : second.immutable();
         fieldWorkEnabled = true;
@@ -1551,6 +1558,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         fieldWorkRescanCooldown = 0;
         fieldWorkFirst = null;
         fieldWorkSecond = null;
+        fieldWorkItemFilter = "";
         entityData.set(FIELD_WORK_MODE, -1);
         cancelWorkAction();
         if (!level().isClientSide()) DinosaurOwnership.syncRecord(this);
@@ -1824,6 +1832,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         output.putInt("PrimevalFieldWorkPattern", fieldWorkPattern.ordinal());
         output.putBoolean("PrimevalFieldWorkContinuous", fieldWorkContinuous);
         output.putInt("PrimevalFieldWorkRange", fieldWorkRange);
+        if (!fieldWorkItemFilter.isBlank()) output.putString("PrimevalFieldWorkItem", fieldWorkItemFilter);
         if (fieldWorkFirst != null) output.putLong("PrimevalFieldWorkFirst", fieldWorkFirst.asLong());
         if (fieldWorkSecond != null) output.putLong("PrimevalFieldWorkSecond", fieldWorkSecond.asLong());
         if (commandTablePos != null) {
@@ -1928,6 +1937,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         fieldWorkContinuous = input.getBooleanOr("PrimevalFieldWorkContinuous", false);
         fieldWorkRange = Mth.clamp(input.getIntOr("PrimevalFieldWorkRange", 48),
                 DinoWhistleSettings.MIN_RANGE, DinoWhistleSettings.MAX_RANGE);
+        fieldWorkItemFilter = input.getStringOr("PrimevalFieldWorkItem", "");
         fieldWorkFirst = input.getLong("PrimevalFieldWorkFirst").map(BlockPos::of).orElse(null);
         fieldWorkSecond = input.getLong("PrimevalFieldWorkSecond").map(BlockPos::of).orElse(null);
         entityData.set(FIELD_WORK_MODE, fieldWorkEnabled ? fieldWorkMode.ordinal() : -1);
@@ -2853,7 +2863,9 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         }
         AABB searchArea = fieldCollectionArea();
         ItemEntity item = level().getEntitiesOfClass(ItemEntity.class, searchArea,
-                        entity -> entity.isAlive() && !entity.getItem().isEmpty())
+                        entity -> entity.isAlive() && !entity.getItem().isEmpty()
+                                && (fieldWorkItemFilter.isBlank()
+                                || matchesIdentifiers(List.of(fieldWorkItemFilter), entity.getItem())))
                 .stream().min(Comparator.comparingDouble(this::distanceToSqr)).orElse(null);
         if (item == null) {
             if (fieldWorkContinuous) fieldWorkRescanCooldown = 40;

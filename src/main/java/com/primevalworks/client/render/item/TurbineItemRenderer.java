@@ -39,6 +39,7 @@ public final class TurbineItemRenderer extends GeoItemRenderer<TurbineBlockItem>
             case THIRD_PERSON_LEFT_HAND, THIRD_PERSON_RIGHT_HAND -> 0.45F;
             default -> 0.42F;
         };
+        scale *= variant.presentationScale();
         super.scaleModelForRender(renderPassInfo, widthScale * scale, heightScale * scale);
     }
 

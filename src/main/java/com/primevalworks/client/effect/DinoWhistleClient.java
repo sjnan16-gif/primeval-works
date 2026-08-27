@@ -3,6 +3,7 @@ package com.primevalworks.client.effect;
 import com.primevalworks.client.screen.PrimevalBubbleUi;
 import com.primevalworks.network.payload.RequestWhistleFollowersPayload;
 import com.primevalworks.world.item.DinoWhistleItem;
+import com.primevalworks.world.work.DinoFieldWorkRules;
 import com.primevalworks.world.work.DinoWhistleSettings;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -18,6 +19,7 @@ import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
 public final class DinoWhistleClient {
     private static BlockPos areaFirst;
+    private static DinoWhistleSettings.FieldMode areaMode;
     private static float visibility;
     private static long lastFrame;
 
@@ -28,22 +30,37 @@ public final class DinoWhistleClient {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player == null || minecraft.screen != null) return;
         ItemStack whistle = DinoWhistleItem.findHeld(minecraft.player);
-        if (whistle.isEmpty() || !(minecraft.hitResult instanceof BlockHitResult hit)) return;
-        DinoWhistleSettings settings = DinoWhistleSettings.read(whistle);
+        if (whistle.isEmpty()) return;
         event.setCanceled(true);
         event.setSwingHand(false);
+        DinoWhistleSettings settings = DinoWhistleSettings.read(whistle);
+        if (!(minecraft.hitResult instanceof BlockHitResult hit)) {
+            areaFirst = null;
+            areaMode = null;
+            minecraft.player.sendOverlayMessage(Component.literal(settings.mode().markHint(settings.pattern())));
+            return;
+        }
         BlockPos selected = hit.getBlockPos().immutable();
+        boolean choosingFirst = settings.pattern() != DinoWhistleSettings.Pattern.AREA || areaFirst == null;
+        if (choosingFirst && settings.mode() != DinoWhistleSettings.FieldMode.COLLECT
+                && !DinoFieldWorkRules.validTarget(minecraft.level, selected, settings.mode(), 4)) {
+            minecraft.player.sendOverlayMessage(Component.literal(settings.mode().markHint(settings.pattern())));
+            return;
+        }
         if (settings.pattern() == DinoWhistleSettings.Pattern.AREA) {
-            if (areaFirst == null) {
+            if (areaFirst == null || areaMode != settings.mode()) {
                 areaFirst = selected;
-                minecraft.player.sendOverlayMessage(Component.literal("First corner marked. Attack the opposite corner."));
+                areaMode = settings.mode();
+                minecraft.player.sendOverlayMessage(Component.literal("First corner set. Mark the opposite corner."));
                 return;
             }
             BlockPos first = areaFirst;
             areaFirst = null;
+            areaMode = null;
             ClientPacketDistributor.sendToServer(new RequestWhistleFollowersPayload(first, selected, true));
         } else {
             areaFirst = null;
+            areaMode = null;
             ClientPacketDistributor.sendToServer(new RequestWhistleFollowersPayload(selected, selected, false));
         }
     }
@@ -52,7 +69,10 @@ public final class DinoWhistleClient {
         Minecraft minecraft = Minecraft.getInstance();
         ItemStack whistle = minecraft.player == null ? ItemStack.EMPTY : DinoWhistleItem.findHeld(minecraft.player);
         boolean visible = !whistle.isEmpty() && minecraft.screen == null && !minecraft.options.hideGui;
-        if (whistle.isEmpty()) areaFirst = null;
+        if (whistle.isEmpty()) {
+            areaFirst = null;
+            areaMode = null;
+        }
         long now = System.nanoTime();
         float delta = lastFrame == 0L ? 1.0F / 60.0F
                 : Mth.clamp((now - lastFrame) / 1_000_000_000.0F, 0.001F, 0.05F);
@@ -64,10 +84,10 @@ public final class DinoWhistleClient {
         DinoWhistleSettings settings = whistle.isEmpty() ? DinoWhistleSettings.DEFAULT : DinoWhistleSettings.read(whistle);
         if (settings.pattern() != DinoWhistleSettings.Pattern.AREA) areaFirst = null;
         GuiGraphicsExtractor graphics = event.getGuiGraphics();
-        int width = 170;
-        int height = areaFirst == null ? 30 : 42;
-        int x = graphics.guiWidth() - width - 9;
-        int y = Math.max(8, graphics.guiHeight() / 2 - height / 2);
+        int width = 116;
+        int height = areaFirst == null ? 24 : 32;
+        int x = graphics.guiWidth() - width - 7;
+        int y = Math.max(7, graphics.guiHeight() / 2 - height / 2);
         int alpha = Mth.clamp(Math.round(visibility * 235.0F), 0, 255);
         float eased = visibility * visibility * (3.0F - 2.0F * visibility);
         float offsetX = (1.0F - eased) * (width + 18.0F);
@@ -76,17 +96,15 @@ public final class DinoWhistleClient {
         graphics.pose().translate(x + width * 0.5F + offsetX, y + height * 0.5F);
         graphics.pose().scale(scale, scale);
         graphics.pose().translate(-(x + width * 0.5F), -(y + height * 0.5F));
-        graphics.fill(x + 5, y + 5, x + width + 5, y + height + 5, 0x54000000);
+        graphics.fill(x + 3, y + 4, x + width + 3, y + height + 4, 0x49000000);
         PrimevalBubbleUi.draw(graphics, x, y, width, height);
-        graphics.fill(x + 3, y + 3, x + 6, y + height - 3, alpha << 24 | 0xD87949);
-        drawFitText(graphics, Component.literal(settings.shortLabel()).withStyle(Style.EMPTY.withBold(true)),
-                x + 10, y + 6, width - 18, alpha << 24 | 0x494341, 0.76F);
-        drawFitText(graphics, Component.literal("ATTACK: MARK  /  HOLD USE: EDIT"),
-                x + 10, y + 18, width - 18, alpha << 24 | 0x6E6764, 0.62F);
+        drawFitText(graphics, Component.literal(settings.shortLabel().toUpperCase()).withStyle(Style.EMPTY.withBold(true)),
+                x + 7, y + 5, width - 14, alpha << 24 | 0x494341, 0.66F);
+        drawFitText(graphics, Component.literal(settings.mode().markHint(settings.pattern()).toUpperCase()),
+                x + 7, y + 14, width - 14, alpha << 24 | 0x6E6764, 0.50F);
         if (areaFirst != null) {
-            drawText(graphics, Component.literal("CORNER A  " + areaFirst.getX() + "  "
-                            + areaFirst.getY() + "  " + areaFirst.getZ()).withStyle(Style.EMPTY.withBold(true)),
-                    x + 10, y + 30, alpha << 24 | 0x477895, 0.62F);
+            drawFitText(graphics, Component.literal("FIRST CORNER READY").withStyle(Style.EMPTY.withBold(true)),
+                    x + 7, y + 23, width - 14, alpha << 24 | 0x477895, 0.52F);
         }
 
         if (visible && minecraft.player.isUsingItem()

@@ -505,10 +505,10 @@ public final class CompanionScreen extends Screen {
         DinosaurCommandMode next = nextCommandMode(mode);
         int accent = commandColor(mode);
         boolean locked = next == DinosaurCommandMode.FOLLOW && state.followers >= state.followerLimit;
-        drawAction(graphics, rect, mode.title().toUpperCase(), locked ? 0xFF766F68 : accent,
+        drawAction(graphics, rect, mode.title().toUpperCase(), 0xFF766F68,
                 Action.COMMAND, mouseX, mouseY, time);
-        outline(graphics, inset(rect, 2), withAlpha(accent, 210));
-        graphics.fill(rect.right() - 5, rect.y() + 4, rect.right() - 3, rect.bottom() - 4, accent);
+        graphics.fill(rect.x() + 3, rect.y() + 3, rect.right() - 3, rect.bottom() - 3,
+                withAlpha(accent, rect.contains(mouseX, mouseY) ? 26 : 11));
         if (locked) {
             graphics.fill(rect.x() + 2, rect.y() + 2, rect.right() - 2, rect.bottom() - 2, 0x60706A67);
         }
