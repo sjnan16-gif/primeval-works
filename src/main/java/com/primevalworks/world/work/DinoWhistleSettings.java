@@ -9,7 +9,7 @@ public record DinoWhistleSettings(FieldMode mode, Pattern pattern, int range, St
     public static final int MIN_RANGE = DinoWhistleRules.MIN_RANGE;
     public static final int MAX_RANGE = DinoWhistleRules.MAX_RANGE;
     public static final DinoWhistleSettings DEFAULT = new DinoWhistleSettings(
-            FieldMode.QUARRY, Pattern.CONNECTED, 48, "");
+            FieldMode.QUARRY, Pattern.AREA, 48, "");
 
     public DinoWhistleSettings(FieldMode mode, Pattern pattern, int range) {
         this(mode, pattern, range, "");
@@ -54,7 +54,7 @@ public record DinoWhistleSettings(FieldMode mode, Pattern pattern, int range, St
     }
 
     public enum FieldMode {
-        QUARRY("Quarry", "Breaks stone and ore. Harder blocks need a stronger field rating."),
+        QUARRY("Quarry", "Automatically mines nearby stone and ore. Harder blocks need a stronger field rating."),
         LUMBER("Lumber", "Fells a chosen log or a bounded connected tree."),
         HARVEST("Harvest", "Harvests mature crops without touching storage or machines."),
         COLLECT("Collect", "Collects loose items around the follower and brings them to you.");
@@ -71,7 +71,7 @@ public record DinoWhistleSettings(FieldMode mode, Pattern pattern, int range, St
         public String description() { return description; }
 
         public boolean requiresMark() {
-            return this == QUARRY || this == LUMBER;
+            return this == LUMBER;
         }
 
         public boolean isPassive() {
@@ -79,16 +79,13 @@ public record DinoWhistleSettings(FieldMode mode, Pattern pattern, int range, St
         }
 
         public Pattern normalizePattern(Pattern requested) {
-            if (this == QUARRY) return requested == Pattern.AREA ? Pattern.AREA : Pattern.CONNECTED;
+            if (this == QUARRY) return Pattern.AREA;
             return this == LUMBER ? Pattern.CONNECTED : Pattern.AREA;
         }
 
         public String targetTitle(Pattern pattern) {
             return switch (this) {
-                case QUARRY -> switch (pattern) {
-                    case SINGLE, CONNECTED -> "Vein";
-                    case AREA -> "Area";
-                };
+                case QUARRY -> "Nearby blocks";
                 case LUMBER -> "Tree";
                 case HARVEST -> "Nearby crops";
                 case COLLECT -> "Nearby items";
@@ -97,10 +94,7 @@ public record DinoWhistleSettings(FieldMode mode, Pattern pattern, int range, St
 
         public String targetDescription(Pattern pattern) {
             return switch (this) {
-                case QUARRY -> switch (pattern) {
-                    case SINGLE, CONNECTED -> "Mine matching blocks connected to the one you mark.";
-                    case AREA -> "Mine only the marked block type between two corners.";
-                };
+                case QUARRY -> "Automatically mines safe nearby stone and ore within the leash.";
                 case LUMBER -> "Cut every connected log in the tree you mark.";
                 case HARVEST -> "Harvest and replant mature crops near the follower.";
                 case COLLECT -> "Retrieve matching loose items near the follower.";
@@ -108,12 +102,11 @@ public record DinoWhistleSettings(FieldMode mode, Pattern pattern, int range, St
         }
 
         public String markHint(Pattern pattern) {
+            if (this == QUARRY) return "Assign a follower; nearby stone and ore are mined automatically.";
             if (this == HARVEST) return "Assign a follower; mature crops are handled automatically.";
             if (this == COLLECT) return "Assign a follower; loose items are gathered automatically.";
             if (this == LUMBER) return "Mark a log to choose the tree.";
-            return pattern == Pattern.AREA
-                    ? "Mark the block type, then mark the opposite corner."
-                    : "Mark stone or ore to choose a connected vein.";
+            return "Assign a follower to begin.";
         }
 
         public static FieldMode byId(int id) {

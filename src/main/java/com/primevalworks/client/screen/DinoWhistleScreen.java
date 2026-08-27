@@ -25,7 +25,6 @@ import net.minecraft.util.Util;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
 import java.util.ArrayList;
@@ -33,11 +32,11 @@ import java.util.List;
 import java.util.Locale;
 
 public final class DinoWhistleScreen extends Screen {
-    private static final int PANEL_WIDTH = 164;
-    private static final int PANEL_HEIGHT = 110;
-    private static final int PICKER_WIDTH = 178;
-    private static final int PICKER_HEIGHT = 112;
-    private static final float MAX_PANEL_SCALE = 1.0F;
+    private static final int PANEL_WIDTH = 196;
+    private static final int PANEL_HEIGHT = 142;
+    private static final int SEARCH_PANEL_WIDTH = 198;
+    private static final int SEARCH_PANEL_HEIGHT = 128;
+    private static final float MAX_PANEL_SCALE = 1.08F;
     private static final int INK = 0xFF494341;
     private static final int MUTED = 0xFF6E6764;
     private static final int LABEL = 0xFFC74F43;
@@ -119,24 +118,20 @@ public final class DinoWhistleScreen extends Screen {
         Motion motion = motion();
         float logicalMouseX = (float)motion.inverseX(mouseX);
         float logicalMouseY = (float)motion.inverseY(mouseY);
-        float mainSlide = -190.0F * searchReveal;
-        float pickerSlide = 190.0F * (1.0F - searchReveal);
-        updateSearchBox(motion, pickerSlide);
+        updateSearchBox(motion);
 
         graphics.fill(0, 0, width, height, 0x9608050D);
         graphics.pose().pushMatrix();
         applyMotion(graphics, motion);
-        if (searchReveal < 0.995F) {
-            graphics.pose().pushMatrix();
-            graphics.pose().translate(mainSlide, 0.0F);
-            drawPanel(graphics, mainPanel(), logicalMouseX - mainSlide, logicalMouseY);
-            graphics.pose().popMatrix();
-        }
+        drawPanel(graphics, mainPanel(), logicalMouseX, logicalMouseY);
         if (searchReveal > 0.005F) {
-            graphics.pose().pushMatrix();
-            graphics.pose().translate(pickerSlide, 0.0F);
-            drawSearchPicker(graphics, pickerPanel(), logicalMouseX - pickerSlide, logicalMouseY);
-            graphics.pose().popMatrix();
+            hoverTooltip = null;
+            int shade = Math.round(118.0F * searchReveal);
+            Rect main = mainPanel();
+            graphics.fill(main.x, main.y, main.right(), main.bottom(), shade << 24 | 0x08050D);
+            if (searchOpen || searchReveal > 0.28F) {
+                drawSearchPicker(graphics, searchPanel(), logicalMouseX, logicalMouseY);
+            }
         }
         graphics.pose().popMatrix();
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
@@ -154,9 +149,11 @@ public final class DinoWhistleScreen extends Screen {
     private void drawPanel(GuiGraphicsExtractor graphics, Rect panel, float mouseX, float mouseY) {
         Rect header = headerRect(panel);
         drawBubble(graphics, header);
-        bold(graphics, "DINO WHISTLE", header.x + 7, header.y + 4, LABEL, 0.74F);
-        rightText(graphics, settings.mode().isPassive() ? "AUTO DUTY" : "MARKED DUTY",
-                header.right() - 7, header.y + 4, 67, MUTED, 0.58F);
+        bold(graphics, "DINO WHISTLE", header.x + 7, header.y + 5, LABEL, 0.86F);
+        Rect duty = new Rect(header.right() - 75, header.y + 3, 72, header.h - 6);
+        drawInsetBubble(graphics, duty);
+        centeredText(graphics, settings.mode().isPassive() ? "AUTOMATIC DUTY" : "MARKED DUTY",
+                duty, MUTED, 0.66F);
 
         Rect order = orderRect(panel);
         drawCycleRow(graphics, order, 0, order.contains(mouseX, mouseY), modeColor(),
@@ -167,24 +164,26 @@ public final class DinoWhistleScreen extends Screen {
         }
 
         Rect behavior = behaviorRect(panel);
-        boolean cycles = settings.mode() == DinoWhistleSettings.FieldMode.QUARRY;
         boolean behaviorHovered = behavior.contains(mouseX, mouseY);
         drawBubble(graphics, behavior);
         if (behaviorHovered) {
             graphics.fill(behavior.x + 2, behavior.y + 2, behavior.right() - 2, behavior.bottom() - 2,
                     0x18FFFFFF);
-            if (cycles) graphics.requestCursor(CursorTypes.POINTING_HAND);
             hoverTooltip = tooltip(settings.mode().targetTitle(settings.pattern()), modeColor(),
                     settings.mode().targetDescription(settings.pattern()),
-                    cycles ? "Click to switch between a vein and a marked area." : settings.mode().markHint(settings.pattern()));
+                    settings.mode().markHint(settings.pattern()));
         }
-        drawSeparator(graphics, behavior, 54);
+        Rect behaviorValue = new Rect(behavior.x + 61, behavior.y + 3, behavior.w - 64, behavior.h - 6);
+        drawInsetBubble(graphics, behaviorValue);
         drawMovingText(graphics, behavior, 1, behaviorHovered, () -> {
             bold(graphics, settings.mode().isPassive() ? "BEHAVIOR" : "TARGET",
-                    behavior.x + 7, behavior.y + 5, behaviorHovered ? modeColor() : MUTED, 0.63F);
-            rightText(graphics, settings.mode().targetTitle(settings.pattern()).toUpperCase(Locale.ROOT)
-                            + (cycles ? "  >" : ""), behavior.right() - 7, behavior.y + 5,
-                    behavior.w - 65, behaviorHovered ? modeColor() : INK, 0.65F);
+                    behavior.x + 7, behavior.y + 11, behaviorHovered ? modeColor() : MUTED, 0.72F);
+            bold(graphics, settings.mode().targetTitle(settings.pattern()).toUpperCase(Locale.ROOT),
+                    behaviorValue.x + 5, behaviorValue.y + 4,
+                    behaviorHovered ? modeColor() : INK, 0.74F);
+            drawWrappedText(graphics, settings.mode().targetDescription(settings.pattern()),
+                    behaviorValue.x + 5, behaviorValue.y + 13, behaviorValue.w - 10,
+                    behaviorHovered ? modeColor() : MUTED, 0.62F, 2);
         });
 
         drawRange(graphics, rangeRect(panel), mouseX, mouseY);
@@ -194,10 +193,11 @@ public final class DinoWhistleScreen extends Screen {
     private void drawFollowerRow(GuiGraphicsExtractor graphics, Rect row, float mouseX, float mouseY) {
         drawBubble(graphics, row);
         if (!settings.mode().isPassive()) {
-            bold(graphics, "ASSIGN", row.x + 7, row.y + 8, MUTED, 0.62F);
-            drawSeparator(graphics, row, 49);
-            fitText(graphics, settings.mode().markHint(settings.pattern()).toUpperCase(Locale.ROOT),
-                    row.x + 56, row.y + 8, row.w - 63, modeColor(), 0.55F, true);
+            bold(graphics, "ASSIGN", row.x + 7, row.y + 12, MUTED, 0.70F);
+            Rect instruction = new Rect(row.x + 52, row.y + 4, row.w - 56, row.h - 8);
+            drawInsetBubble(graphics, instruction);
+            drawWrappedText(graphics, settings.mode().markHint(settings.pattern()).toUpperCase(Locale.ROOT),
+                    instruction.x + 5, instruction.y + 5, instruction.w - 10, modeColor(), 0.66F, 2);
             if (row.contains(mouseX, mouseY)) {
                 hoverTooltip = tooltip("Assign in the world", modeColor(),
                         settings.mode().targetDescription(settings.pattern()), settings.mode().markHint(settings.pattern()));
@@ -205,8 +205,7 @@ public final class DinoWhistleScreen extends Screen {
             return;
         }
 
-        bold(graphics, "FOLLOWER", row.x + 7, row.y + 8, MUTED, 0.58F);
-        drawSeparator(graphics, row, 47);
+        bold(graphics, "FOLLOWER", row.x + 6, row.y + 13, MUTED, 0.64F);
         int maximum = 3;
         for (int index = 0; index < Math.min(maximum, followers.size()); index++) {
             Rect slot = followerSlot(row, index);
@@ -220,16 +219,18 @@ public final class DinoWhistleScreen extends Screen {
             }
         }
         if (followers.isEmpty()) {
-            fitText(graphics, "NO COMPATIBLE FOLLOWER", row.x + 54, row.y + 8,
-                    settings.mode() == DinoWhistleSettings.FieldMode.COLLECT ? 61 : 100, MUTED, 0.53F, true);
+            Rect empty = new Rect(row.x + 52, row.y + 5,
+                    settings.mode() == DinoWhistleSettings.FieldMode.COLLECT ? 89 : row.w - 57, row.h - 10);
+            drawInsetBubble(graphics, empty);
+            centeredText(graphics, "NO COMPATIBLE FOLLOWER", empty, MUTED, 0.61F);
         }
         if (settings.mode() == DinoWhistleSettings.FieldMode.COLLECT) {
             Rect filter = filterSlot(row);
             boolean hovered = filter.contains(mouseX, mouseY);
             drawHotbar(graphics, filter, hovered);
             ItemStack selected = filterStack();
-            graphics.item(selected.isEmpty() ? Items.HOPPER.getDefaultInstance() : selected,
-                    filter.x + 1, filter.y + 1);
+            if (selected.isEmpty()) centeredText(graphics, "+", filter, modeColor(), 1.0F);
+            else graphics.item(selected, filter.x + 1, filter.y + 1);
             if (hovered) {
                 graphics.requestCursor(CursorTypes.POINTING_HAND);
                 hoverTooltip = tooltip(selected.isEmpty() ? "Any loose item" : selected.getHoverName().getString(),
@@ -275,12 +276,14 @@ public final class DinoWhistleScreen extends Screen {
                     "Drag the marker to set the range.");
         }
         bold(graphics, settings.mode() == DinoWhistleSettings.FieldMode.COLLECT ? "SEARCH" : "LEASH",
-                range.x + 7, range.y + 4, hovered || draggingRange ? modeColor() : MUTED, 0.58F);
-        rightText(graphics, settings.range() + "M", range.right() - 7, range.y + 4,
-                28, hovered || draggingRange ? modeColor() : INK, 0.58F);
-        int trackLeft = range.x + 7;
-        int trackRight = range.right() - 7;
-        int trackY = range.y + 14;
+                range.x + 7, range.y + 8, hovered || draggingRange ? modeColor() : MUTED, 0.66F);
+        Rect control = new Rect(range.x + 53, range.y + 3, range.w - 56, range.h - 6);
+        drawInsetBubble(graphics, control);
+        rightText(graphics, settings.range() + "M", control.right() - 6, control.y + 4,
+                30, hovered || draggingRange ? modeColor() : INK, 0.66F);
+        int trackLeft = control.x + 6;
+        int trackRight = control.right() - 35;
+        int trackY = control.y + control.h / 2;
         graphics.fill(trackLeft, trackY, trackRight, trackY + 2, LINE);
         float ratio = (settings.range() - DinoWhistleSettings.MIN_RANGE)
                 / (float)(DinoWhistleSettings.MAX_RANGE - DinoWhistleSettings.MIN_RANGE);
@@ -295,53 +298,58 @@ public final class DinoWhistleScreen extends Screen {
             graphics.fill(row.x + 2, row.y + 2, row.right() - 2, row.bottom() - 2, 0x18FFFFFF);
             graphics.requestCursor(CursorTypes.POINTING_HAND);
         }
-        drawSeparator(graphics, row, 45);
+        Rect valueBubble = new Rect(row.x + 54, row.y + 3, row.w - 57, row.h - 6);
+        drawInsetBubble(graphics, valueBubble);
         drawMovingText(graphics, row, key, hovered, () -> {
-            bold(graphics, label, row.x + 7, row.y + 5, hovered ? accent : MUTED, 0.63F);
-            rightText(graphics, value + "  >", row.right() - 7, row.y + 5,
-                    row.w - 59, hovered ? accent : INK, 0.66F);
+            bold(graphics, label, row.x + 7, row.y + 7, hovered ? accent : MUTED, 0.70F);
+            centeredText(graphics, value + "  >", valueBubble, hovered ? accent : INK, 0.74F);
         });
     }
 
     private void drawSearchPicker(GuiGraphicsExtractor graphics, Rect panel, float mouseX, float mouseY) {
-        Rect header = new Rect(panel.x, panel.y, panel.w, 16);
-        Rect body = new Rect(panel.x, panel.y + 19, panel.w, panel.h - 19);
-        drawBubble(graphics, header);
-        drawBubble(graphics, body);
-        bold(graphics, "COLLECT FILTER", header.x + 7, header.y + 4, modeColor(), 0.68F);
-        Rect back = new Rect(header.right() - 39, header.y, 39, header.h);
-        boolean backHovered = back.contains(mouseX, mouseY);
-        rightText(graphics, "BACK", header.right() - 7, header.y + 4, 30,
-                backHovered ? modeColor() : MUTED, 0.60F);
-        if (backHovered) {
-            graphics.requestCursor(CursorTypes.POINTING_HAND);
-            hoverTooltip = tooltip("Back", modeColor(), "Return to whistle settings.", "Your filter is saved automatically.");
-        }
+        float settled = PrimevalBubbleUi.spring(Mth.clamp(searchReveal, 0.0F, 1.0F), 6.4F, 10.8F);
+        float scale = 0.88F + 0.12F * settled;
+        float offsetY = 12.0F * (1.0F - settled);
+        int alpha = Math.round(255.0F * Mth.clamp(searchReveal * 1.25F, 0.0F, 1.0F));
+        if (!searchOpen) alpha = Math.max(190, alpha);
+        graphics.pose().pushMatrix();
+        graphics.pose().translate(panel.centerX(), panel.bottom() + offsetY);
+        graphics.pose().scale(scale, scale);
+        graphics.pose().translate(-panel.centerX(), -panel.bottom());
 
-        Rect target = searchTarget(body);
+        Rect target = searchTarget(panel);
+        Rect search = searchRect(panel);
         boolean targetHovered = target.contains(mouseX, mouseY);
-        drawHotbar(graphics, target, targetHovered);
+        drawSearchInventorySlot(graphics, target, targetHovered, 0, alpha);
         ItemStack selected = filterStack();
-        graphics.item(selected.isEmpty() ? Items.HOPPER.getDefaultInstance() : selected,
-                target.x + 1, target.y + 1);
+        if (selected.isEmpty()) centeredText(graphics, "+", target, modeColor(), 1.0F);
+        else graphics.item(selected, target.x + 2, target.y + 2);
         if (targetHovered) {
             graphics.requestCursor(CursorTypes.POINTING_HAND);
             hoverTooltip = tooltip(selected.isEmpty() ? "Any item" : selected.getHoverName().getString(),
                     modeColor(), selected.isEmpty() ? "No filter is active." : "The current collection filter.",
-                    selected.isEmpty() ? "Drag an inventory item here." : "Click to clear it.");
+                    selected.isEmpty() ? "Drag an inventory item into this slot." : "Click to clear it.");
         }
-        PrimevalBubbleUi.draw(graphics, searchRect(body).x, searchRect(body).y,
-                searchRect(body).w, searchRect(body).h);
+        int revealedWidth = Math.max(4, Math.round(search.w * searchReveal));
+        drawBubble(graphics, new Rect(search.x, search.y, revealedWidth, search.h));
+        if (searchBox != null && searchBox.getValue().isBlank() && searchReveal > 0.82F) {
+            bold(graphics, "SEARCH INVENTORY", search.x + 6, search.y + 5, MUTED, 0.66F);
+        }
+
+        Rect results = searchResults(panel);
+        drawSearchPaperPanel(graphics, results, alpha);
+        bold(graphics, "YOUR INVENTORY  /  DRAG A FILTER", results.x + 8, results.y + 6,
+                modeColor(), 0.70F);
 
         List<ItemStack> items = filteredInventory();
         for (int index = 0; index < 36; index++) {
-            Rect slot = searchItemSlot(body, index);
+            Rect slot = searchItemSlot(results, index);
             ItemStack stack = index < items.size() ? items.get(index) : ItemStack.EMPTY;
             boolean hovered = slot.contains(mouseX, mouseY);
-            drawHotbar(graphics, slot, hovered && !stack.isEmpty());
+            drawSearchInventorySlot(graphics, slot, hovered && !stack.isEmpty(), index, alpha);
             if (!stack.isEmpty()) {
-                graphics.item(stack, slot.x + 1, slot.y + 1);
-                graphics.itemDecorations(font, stack, slot.x + 1, slot.y + 1);
+                graphics.item(stack, slot.x + 2, slot.y + 2);
+                graphics.itemDecorations(font, stack, slot.x + 2, slot.y + 2);
             }
             if (hovered && !stack.isEmpty()) {
                 graphics.requestCursor(CursorTypes.POINTING_HAND);
@@ -351,6 +359,7 @@ public final class DinoWhistleScreen extends Screen {
                 );
             }
         }
+        graphics.pose().popMatrix();
     }
 
     @Override
@@ -360,17 +369,16 @@ public final class DinoWhistleScreen extends Screen {
         double mouseX = motion.inverseX(event.x());
         double mouseY = motion.inverseY(event.y());
         if (searchReveal > 0.5F) {
-            double localX = mouseX - 190.0F * (1.0F - searchReveal);
-            Rect panel = pickerPanel();
-            Rect header = new Rect(panel.x, panel.y, panel.w, 16);
-            Rect body = new Rect(panel.x, panel.y + 19, panel.w, panel.h - 19);
-            if (new Rect(header.right() - 39, header.y, 39, header.h).contains(localX, mouseY)) {
-                closeSearch();
+            Rect panel = searchPanel();
+            Rect results = searchResults(panel);
+            if (searchRect(panel).contains(mouseX, mouseY)) {
+                setFocused(searchBox);
+                searchBox.setFocused(true);
                 return true;
             }
             List<ItemStack> items = filteredInventory();
             for (int index = 0; index < 36; index++) {
-                if (!searchItemSlot(body, index).contains(localX, mouseY) || index >= items.size()) continue;
+                if (!searchItemSlot(results, index).contains(mouseX, mouseY) || index >= items.size()) continue;
                 ItemStack stack = items.get(index);
                 if (!stack.isEmpty()) {
                     draggedItem = stack.copyWithCount(1);
@@ -378,15 +386,16 @@ public final class DinoWhistleScreen extends Screen {
                     return true;
                 }
             }
-            if (searchTarget(body).contains(localX, mouseY) && !settings.itemFilter().isBlank()) {
+            if (searchTarget(panel).contains(mouseX, mouseY) && !settings.itemFilter().isBlank()) {
                 settings = copy(settings.mode(), settings.pattern(), settings.range(), "");
                 changed(0.88F, 6);
                 return true;
             }
+            if (!panel.contains(mouseX, mouseY)) closeSearch();
             return true;
         }
 
-        double localX = mouseX + 190.0F * searchReveal;
+        double localX = mouseX;
         Rect panel = mainPanel();
         if (orderRect(panel).contains(localX, mouseY)) {
             DinoWhistleSettings.FieldMode[] values = DinoWhistleSettings.FieldMode.values();
@@ -394,14 +403,6 @@ public final class DinoWhistleScreen extends Screen {
             settings = copy(mode, mode.normalizePattern(settings.pattern()), settings.range(), settings.itemFilter());
             changed(0.96F, 0);
             requestFollowers();
-            return true;
-        }
-        if (settings.mode() == DinoWhistleSettings.FieldMode.QUARRY
-                && behaviorRect(panel).contains(localX, mouseY)) {
-            DinoWhistleSettings.Pattern pattern = settings.pattern() == DinoWhistleSettings.Pattern.AREA
-                    ? DinoWhistleSettings.Pattern.CONNECTED : DinoWhistleSettings.Pattern.AREA;
-            settings = copy(settings.mode(), pattern, settings.range(), settings.itemFilter());
-            changed(1.02F, 1);
             return true;
         }
         if (rangeRect(panel).contains(localX, mouseY)) {
@@ -435,7 +436,7 @@ public final class DinoWhistleScreen extends Screen {
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
         if (draggingRange && event.button() == 0) {
-            updateRange(motion().inverseX(event.x()) + 190.0F * searchReveal);
+            updateRange(motion().inverseX(event.x()));
             return true;
         }
         return !draggedItem.isEmpty() || super.mouseDragged(event, dragX, dragY);
@@ -449,11 +450,20 @@ public final class DinoWhistleScreen extends Screen {
         }
         if (event.button() == 0 && !draggedItem.isEmpty()) {
             Motion motion = motion();
-            double mouseX = motion.inverseX(event.x()) - 190.0F * (1.0F - searchReveal);
+            double mouseX = motion.inverseX(event.x());
             double mouseY = motion.inverseY(event.y());
-            Rect panel = pickerPanel();
-            Rect body = new Rect(panel.x, panel.y + 19, panel.w, panel.h - 19);
-            if (searchTarget(body).contains(mouseX, mouseY)) {
+            Rect panel = searchPanel();
+            boolean choseItem = searchTarget(panel).contains(mouseX, mouseY);
+            if (!choseItem) {
+                Rect results = searchResults(panel);
+                for (int index = 0; index < 36; index++) {
+                    if (searchItemSlot(results, index).contains(mouseX, mouseY)) {
+                        choseItem = true;
+                        break;
+                    }
+                }
+            }
+            if (choseItem) {
                 settings = copy(settings.mode(), settings.pattern(), settings.range(),
                         BuiltInRegistries.ITEM.getKey(draggedItem.getItem()).toString());
                 changed(1.12F, 6);
@@ -476,20 +486,27 @@ public final class DinoWhistleScreen extends Screen {
 
     private void openSearch() {
         searchOpen = true;
-        if (searchBox != null) searchBox.setFocused(true);
+        if (searchBox != null) {
+            setFocused(searchBox);
+            searchBox.setFocused(true);
+        }
         PrimevalUiSounds.click(1.02F);
     }
 
     private void closeSearch() {
         searchOpen = false;
         draggedItem = ItemStack.EMPTY;
-        if (searchBox != null) searchBox.setFocused(false);
+        if (searchBox != null) {
+            searchBox.setFocused(false);
+            if (getFocused() == searchBox) setFocused(null);
+        }
     }
 
     private void updateRange(double mouseX) {
         Rect range = rangeRect(mainPanel());
-        int left = range.x + 7;
-        int right = range.right() - 7;
+        Rect control = new Rect(range.x + 53, range.y + 3, range.w - 56, range.h - 6);
+        int left = control.x + 6;
+        int right = control.right() - 35;
         float ratio = Mth.clamp((float)((mouseX - left) / (right - left)), 0.0F, 1.0F);
         int value = Math.round(Mth.lerp(ratio, DinoWhistleSettings.MIN_RANGE, DinoWhistleSettings.MAX_RANGE));
         if (value != settings.range()) {
@@ -498,14 +515,12 @@ public final class DinoWhistleScreen extends Screen {
         }
     }
 
-    private void updateSearchBox(Motion motion, float pickerSlide) {
+    private void updateSearchBox(Motion motion) {
         if (searchBox == null) return;
-        Rect panel = pickerPanel();
-        Rect body = new Rect(panel.x, panel.y + 19, panel.w, panel.h - 19);
-        Rect logical = searchRect(body);
-        float left = motion.screenX(logical.x + 4 + pickerSlide);
+        Rect logical = searchRect(searchPanel());
+        float left = motion.screenX(logical.x + 5);
         float top = motion.screenY(logical.y + 2);
-        float right = motion.screenX(logical.right() - 4 + pickerSlide);
+        float right = motion.screenX(logical.right() - 5);
         float bottom = motion.screenY(logical.bottom() - 2);
         searchBox.setX(Math.round(left));
         searchBox.setY(Math.round(top));
@@ -584,18 +599,19 @@ public final class DinoWhistleScreen extends Screen {
     @Override public boolean isInGameUi() { return true; }
 
     private Rect mainPanel() { return new Rect((width - PANEL_WIDTH) / 2, (height - PANEL_HEIGHT) / 2, PANEL_WIDTH, PANEL_HEIGHT); }
-    private Rect pickerPanel() { return new Rect((width - PICKER_WIDTH) / 2, (height - PICKER_HEIGHT) / 2, PICKER_WIDTH, PICKER_HEIGHT); }
-    private Rect headerRect(Rect panel) { return new Rect(panel.x, panel.y, panel.w, 16); }
-    private Rect orderRect(Rect panel) { return new Rect(panel.x, panel.y + 19, panel.w, 18); }
-    private Rect behaviorRect(Rect panel) { return new Rect(panel.x, panel.y + 40, panel.w, 18); }
-    private Rect rangeRect(Rect panel) { return new Rect(panel.x, panel.y + 61, panel.w, 20); }
-    private Rect followerRect(Rect panel) { return new Rect(panel.x, panel.y + 84, panel.w, 26); }
-    private Rect followerSlot(Rect row, int index) { return new Rect(row.x + 53 + index * 22, row.y + 4, 18, 18); }
-    private Rect filterSlot(Rect row) { return new Rect(row.right() - 23, row.y + 4, 18, 18); }
-    private Rect searchTarget(Rect body) { return new Rect(body.x + 7, body.y + 5, 18, 18); }
-    private Rect searchRect(Rect body) { return new Rect(body.x + 29, body.y + 5, body.w - 36, 18); }
-    private Rect searchItemSlot(Rect body, int index) {
-        return new Rect(body.x + 8 + index % 9 * 18, body.y + 26 + index / 9 * 18, 18, 18);
+    private Rect searchPanel() { return new Rect((width - SEARCH_PANEL_WIDTH) / 2, (height - SEARCH_PANEL_HEIGHT) / 2, SEARCH_PANEL_WIDTH, SEARCH_PANEL_HEIGHT); }
+    private Rect headerRect(Rect panel) { return new Rect(panel.x, panel.y, panel.w, 19); }
+    private Rect orderRect(Rect panel) { return new Rect(panel.x, panel.y + 22, panel.w, 23); }
+    private Rect behaviorRect(Rect panel) { return new Rect(panel.x, panel.y + 48, panel.w, 32); }
+    private Rect rangeRect(Rect panel) { return new Rect(panel.x, panel.y + 83, panel.w, 25); }
+    private Rect followerRect(Rect panel) { return new Rect(panel.x, panel.y + 111, panel.w, 31); }
+    private Rect followerSlot(Rect row, int index) { return new Rect(row.x + 53 + index * 24, row.y + 6, 18, 18); }
+    private Rect filterSlot(Rect row) { return new Rect(row.right() - 24, row.y + 6, 18, 18); }
+    private Rect searchTarget(Rect panel) { return new Rect(panel.x, panel.y, 20, 20); }
+    private Rect searchRect(Rect panel) { return new Rect(panel.x + 23, panel.y + 1, panel.w - 23, 18); }
+    private Rect searchResults(Rect panel) { return new Rect(panel.x, panel.y + 24, panel.w, panel.h - 24); }
+    private Rect searchItemSlot(Rect results, int index) {
+        return new Rect(results.x + 9 + index % 9 * 20, results.y + 22 + index / 9 * 20, 20, 20);
     }
 
     private int modeColor() { return MODE_COLORS[settings.mode().ordinal()]; }
@@ -605,24 +621,82 @@ public final class DinoWhistleScreen extends Screen {
         PrimevalBubbleUi.draw(graphics, rect.x, rect.y, rect.w, rect.h);
     }
 
+    private void drawInsetBubble(GuiGraphicsExtractor graphics, Rect rect) {
+        PrimevalBubbleUi.draw(graphics, rect.x, rect.y, rect.w, rect.h);
+        graphics.fill(rect.x + 2, rect.y + 2, rect.right() - 2, rect.bottom() - 2, 0x0D5D4436);
+    }
+
+    private void drawSearchPaperPanel(GuiGraphicsExtractor graphics, Rect panel, int alpha) {
+        graphics.fill(panel.x + 4, panel.y + 5, panel.right() + 4, panel.bottom() + 5,
+                withAlpha(0xFF000000, Math.round(alpha * 0.28F)));
+        graphics.fill(panel.x, panel.y, panel.right(), panel.bottom(), withAlpha(0xFF4A332C, alpha));
+        graphics.fill(panel.x + 2, panel.y + 2, panel.right() - 2, panel.bottom() - 2,
+                withAlpha(0xFF88664F, alpha));
+        graphics.fill(panel.x + 4, panel.y + 4, panel.right() - 4, panel.bottom() - 4,
+                withAlpha(0xFFD0AD89, alpha));
+        for (int y = panel.y + 7; y < panel.bottom() - 5; y += 7) {
+            graphics.fill(panel.x + 5, y, panel.right() - 5, y + 1,
+                    withAlpha(0xFFFFFFFF, Math.round(alpha * 0.07F)));
+        }
+    }
+
+    private void drawSearchInventorySlot(GuiGraphicsExtractor graphics, Rect rect,
+                                         boolean hovered, int index, int alpha) {
+        graphics.fill(rect.x, rect.y, rect.right(), rect.bottom(), withAlpha(0xFF4A332C, alpha));
+        graphics.fill(rect.x + 1, rect.y + 1, rect.right() - 1, rect.bottom() - 1,
+                withAlpha(0xFF9A765A, alpha));
+        graphics.fill(rect.x + 2, rect.y + 2, rect.right() - 2, rect.bottom() - 2,
+                withAlpha(0xFFD7B392, alpha));
+        if (hovered) {
+            int pulse = 92 + Math.round((Mth.sin(renderNow / 50_000_000.0F * 0.24F + index) + 1.0F) * 46.0F);
+            outline(graphics, new Rect(rect.x - 1, rect.y - 1, rect.w + 2, rect.h + 2),
+                    withAlpha(0xFFFFFFFF, pulse));
+            graphics.fill(rect.x + 2, rect.y + 2, rect.right() - 2, rect.bottom() - 2,
+                    withAlpha(modeColor(), 34));
+        }
+    }
+
     private void drawHotbar(GuiGraphicsExtractor graphics, Rect rect, boolean hovered) {
         blit(graphics, HOTBAR, rect);
         if (hovered) graphics.fill(rect.x + 2, rect.y + 2, rect.right() - 2, rect.bottom() - 2, 0x24FFFFFF);
     }
 
-    private void drawSeparator(GuiGraphicsExtractor graphics, Rect rect, int offset) {
-        int x = rect.x + offset;
-        graphics.fill(x, rect.y + 4, x + 1, rect.bottom() - 4, 0x8F6D503D);
-        graphics.fill(x + 1, rect.y + 4, x + 2, rect.bottom() - 4, 0x45E6C4A3);
+    private void outline(GuiGraphicsExtractor graphics, Rect rect, int color) {
+        graphics.fill(rect.x, rect.y, rect.right(), rect.y + 1, color);
+        graphics.fill(rect.x, rect.bottom() - 1, rect.right(), rect.bottom(), color);
+        graphics.fill(rect.x, rect.y + 1, rect.x + 1, rect.bottom() - 1, color);
+        graphics.fill(rect.right() - 1, rect.y + 1, rect.right(), rect.bottom() - 1, color);
+    }
+
+    private static int withAlpha(int color, int alpha) {
+        return Mth.clamp(alpha, 0, 255) << 24 | color & 0x00FFFFFF;
     }
 
     private List<Component> tooltip(String title, int color, String detail, String action) {
-        return List.of(
-                Component.literal(title).withStyle(style -> style.withBold(true).withColor(color & 0xFFFFFF)),
-                Component.literal("────────────").withStyle(style -> style.withColor(0x5F5652)),
-                Component.literal(detail).withStyle(style -> style.withColor(0xB6AFAB)),
-                Component.literal(action).withStyle(style -> style.withColor(0xE6C36F))
-        );
+        List<Component> result = new ArrayList<>();
+        result.add(Component.literal(title).withStyle(style -> style.withBold(true).withColor(color & 0xFFFFFF)));
+        result.add(Component.literal("----------------").withStyle(style -> style.withColor(0x5F5652)));
+        wrapTooltip(detail, 130).forEach(line -> result.add(Component.literal(line)
+                .withStyle(style -> style.withColor(0xB6AFAB))));
+        wrapTooltip(action, 130).forEach(line -> result.add(Component.literal(line)
+                .withStyle(style -> style.withBold(true).withColor(0xE6C36F))));
+        return List.copyOf(result);
+    }
+
+    private List<String> wrapTooltip(String value, int maximumWidth) {
+        List<String> result = new ArrayList<>();
+        String current = "";
+        for (String word : value.split(" ")) {
+            String candidate = current.isEmpty() ? word : current + " " + word;
+            if (!current.isEmpty() && font.width(candidate) > maximumWidth) {
+                result.add(current);
+                current = word;
+            } else {
+                current = candidate;
+            }
+        }
+        if (!current.isEmpty()) result.add(current);
+        return result;
     }
 
     private void updateParallax(int mouseX, int mouseY) {
@@ -637,14 +711,14 @@ public final class DinoWhistleScreen extends Screen {
 
     private Motion motion() {
         long now = renderNow == 0L ? Util.getNanos() : renderNow;
-        float elapsedTicks = (now - openedAt) / 50_000_000.0F;
-        float progress = Mth.clamp(elapsedTicks / 20.0F, 0.0F, 1.0F);
-        float settled = PrimevalBubbleUi.spring(progress, 6.2F, 11.4F);
+        float progress = Mth.clamp((now - openedAt) / 380_000_000.0F, 0.0F, 1.0F);
+        float settled = PrimevalBubbleUi.spring(progress, 6.4F, 11.6F);
         float fitted = Math.min(MAX_PANEL_SCALE,
-                Math.min((width - 12.0F) / PICKER_WIDTH, (height - 12.0F) / PICKER_HEIGHT));
-        float scale = Math.max(0.62F, fitted) * Math.max(0.1F, 0.76F + 0.24F * settled);
+                Math.min((width - 12.0F) / Math.max(PANEL_WIDTH, SEARCH_PANEL_WIDTH),
+                        (height - 12.0F) / Math.max(PANEL_HEIGHT, SEARCH_PANEL_HEIGHT)));
+        float scale = Math.max(0.62F, fitted) * Math.max(0.1F, 0.72F + 0.28F * settled);
         return new Motion(width * 0.5F, height * 0.5F, parallaxX,
-                12.0F * (1.0F - settled) + parallaxY, scale);
+                18.0F * (1.0F - settled) + parallaxY, scale);
     }
 
     private void applyMotion(GuiGraphicsExtractor graphics, Motion motion) {
@@ -698,6 +772,36 @@ public final class DinoWhistleScreen extends Screen {
                 ? Component.literal(value).withStyle(Style.EMPTY.withBold(true)) : Component.literal(value);
         int textWidth = Math.max(1, font.width(component));
         drawText(graphics, component, x, y, color, Math.min(requestedScale, maxWidth / textWidth));
+    }
+
+    private void centeredText(GuiGraphicsExtractor graphics, String value, Rect rect,
+                              int color, float requestedScale) {
+        Component component = Component.literal(value).withStyle(Style.EMPTY.withBold(true));
+        int textWidth = Math.max(1, font.width(component));
+        float scale = Math.min(requestedScale, Math.max(0.52F, (rect.w - 6.0F) / textWidth));
+        float x = rect.centerX() - textWidth * scale * 0.5F;
+        float y = rect.centerY() - font.lineHeight * scale * 0.5F;
+        drawText(graphics, component, x, y, color, scale);
+    }
+
+    private void drawWrappedText(GuiGraphicsExtractor graphics, String value, float x, float y,
+                                 float maxWidth, int color, float scale, int maximumLines) {
+        List<String> lines = new ArrayList<>();
+        String current = "";
+        for (String word : value.split(" ")) {
+            String candidate = current.isEmpty() ? word : current + " " + word;
+            if (!current.isEmpty() && font.width(candidate) * scale > maxWidth) {
+                lines.add(current);
+                current = word;
+                if (lines.size() >= maximumLines) break;
+            } else {
+                current = candidate;
+            }
+        }
+        if (lines.size() < maximumLines && !current.isEmpty()) lines.add(current);
+        for (int index = 0; index < Math.min(maximumLines, lines.size()); index++) {
+            fitText(graphics, lines.get(index), x, y + index * 7.0F, maxWidth, color, scale, true);
+        }
     }
 
     private void drawText(GuiGraphicsExtractor graphics, Component value,

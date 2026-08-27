@@ -19,9 +19,6 @@ import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
 public final class DinoWhistleClient {
-    private static BlockPos areaFirst;
-    private static DinoWhistleSettings.FieldMode areaMode;
-
     private DinoWhistleClient() {}
 
     public static void handleAttack(InputEvent.InteractionKeyMappingTriggered event) {
@@ -34,8 +31,6 @@ public final class DinoWhistleClient {
         event.setSwingHand(false);
         DinoWhistleSettings settings = DinoWhistleSettings.read(whistle);
         if (!settings.mode().requiresMark()) {
-            areaFirst = null;
-            areaMode = null;
             return;
         }
         if (!(minecraft.hitResult instanceof BlockHitResult hit)) {
@@ -43,29 +38,10 @@ public final class DinoWhistleClient {
             return;
         }
         BlockPos selected = hit.getBlockPos().immutable();
-        boolean areaOrder = settings.mode() == DinoWhistleSettings.FieldMode.QUARRY
-                && settings.pattern() == DinoWhistleSettings.Pattern.AREA;
-        boolean choosingFirst = !areaOrder || areaFirst == null;
-        if (choosingFirst && !DinoFieldWorkRules.validTarget(minecraft.level, selected, settings.mode(), 4)) {
+        if (!DinoFieldWorkRules.validTarget(minecraft.level, selected, settings.mode(), 4)) {
             minecraft.player.sendOverlayMessage(Component.literal(settings.mode().markHint(settings.pattern())));
             return;
         }
-        if (areaOrder) {
-            if (areaFirst == null || areaMode != settings.mode()) {
-                areaFirst = selected;
-                areaMode = settings.mode();
-                minecraft.player.sendOverlayMessage(Component.literal(
-                        "Block type saved. Mark the opposite corner."));
-                return;
-            }
-            BlockPos first = areaFirst;
-            areaFirst = null;
-            areaMode = null;
-            ClientPacketDistributor.sendToServer(new RequestWhistleFollowersPayload(first, selected, true));
-            return;
-        }
-        areaFirst = null;
-        areaMode = null;
         ClientPacketDistributor.sendToServer(new RequestWhistleFollowersPayload(selected, selected, false));
     }
 

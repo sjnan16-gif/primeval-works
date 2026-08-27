@@ -286,7 +286,11 @@ public final class CompanionScreen extends Screen {
         drawBars(graphics, layout, time);
         drawJobSummary(graphics, layout, uiMouseX, uiMouseY, time);
         drawAction(graphics, global(layout, FEED), "FEED", 0xFFD86B32, Action.FEED, uiMouseX, uiMouseY, time);
-        drawAction(graphics, global(layout, JOBS), "JOBS", 0xFF477895, Action.JOBS, uiMouseX, uiMouseY, time);
+        Rect jobs = global(layout, JOBS);
+        drawAction(graphics, jobs, "JOBS", 0xFF477895, Action.JOBS, uiMouseX, uiMouseY, time);
+        if (state.commandMode == DinosaurCommandMode.FOLLOW) {
+            graphics.fill(jobs.x() + 2, jobs.y() + 2, jobs.right() - 2, jobs.bottom() - 2, 0x52605B58);
+        }
         drawCommandAction(graphics, global(layout, COMMAND), uiMouseX, uiMouseY, time);
 
         HoverInfo hover = mainHoverInfo(layout, uiMouseX, uiMouseY);
@@ -519,7 +523,12 @@ public final class CompanionScreen extends Screen {
             return new HoverInfo("FEED", "Choose suitable food from your inventory and feed this companion now.", 0xFFD86B32);
         }
         if (global(layout, JOBS).contains(mouseX, mouseY)) {
-            return new HoverInfo("BASE JOBS", "Review specialties and assign permanent work inside the Command Table's base.", 0xFF477895);
+            return state.commandMode == DinosaurCommandMode.FOLLOW
+                    ? new HoverInfo("BASE JOBS PAUSED",
+                    "Base assignments are locked while this dinosaur follows you. Open the page to review its field specialty.",
+                    0xFF766F68)
+                    : new HoverInfo("BASE JOBS",
+                    "Review specialties and assign permanent work inside the Command Table's base.", 0xFF477895);
         }
         if (global(layout, COMMAND).contains(mouseX, mouseY)) {
             DinosaurCommandMode current = state.commandMode;
@@ -639,6 +648,7 @@ public final class CompanionScreen extends Screen {
 
     private void drawJobMenu(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float time) {
         JobMenuLayout layout = jobMenuLayout();
+        boolean following = state.commandMode == DinosaurCommandMode.FOLLOW;
         UiMotion motion = popupMotion(layout.panel(), time);
         int uiMouseX = Math.round(motion.inverseX(mouseX));
         int uiMouseY = Math.round(motion.inverseY(mouseY));
@@ -650,7 +660,9 @@ public final class CompanionScreen extends Screen {
         rightText(graphics, record, layout.panel().right() - 13, layout.panel().y() + 8, layout.panel().width() / 2, LABEL, 0.76F, true);
         textLine(
                 graphics,
-                "Choose one base priority. Field work is reserved for species specialists.",
+                following
+                        ? "Base work is paused while following. Field duty is assigned with the Dino Whistle."
+                        : "Choose one base priority. Field work is reserved for species specialists.",
                 layout.panel().x() + 13,
                 layout.panel().y() + 20,
                 layout.panel().width() - 26,
@@ -660,7 +672,7 @@ public final class CompanionScreen extends Screen {
         );
 
         for (int index = 0; index < SPECIALTIES.length; index++) {
-            drawJobRow(graphics, layout.row(index), index, uiMouseX, uiMouseY, time);
+            drawJobRow(graphics, layout.row(index), index, uiMouseX, uiMouseY, time, following);
         }
         drawFieldJobRow(graphics, layout.row(SPECIALTIES.length), uiMouseX, uiMouseY, time);
 
@@ -670,6 +682,12 @@ public final class CompanionScreen extends Screen {
         drawWorksiteButton(graphics, layout.worksite(), selectedColor, uiMouseX, uiMouseY, time);
         drawDialogButton(graphics, layout.cancel(), "CANCEL", MUTED_INK, uiMouseX, uiMouseY, time);
         drawDialogButton(graphics, layout.confirm(), "ASSIGN", selectedColor, uiMouseX, uiMouseY, time);
+        if (following) {
+            graphics.fill(layout.worksite().x() + 2, layout.worksite().y() + 2,
+                    layout.worksite().right() - 2, layout.worksite().bottom() - 2, 0x6A5C5754);
+            graphics.fill(layout.confirm().x() + 2, layout.confirm().y() + 2,
+                    layout.confirm().right() - 2, layout.confirm().bottom() - 2, 0x6A5C5754);
+        }
         graphics.pose().popMatrix();
     }
 
@@ -679,11 +697,12 @@ public final class CompanionScreen extends Screen {
             int index,
             int mouseX,
             int mouseY,
-            float time
+            float time,
+            boolean locked
     ) {
         boolean selected = pendingJobIndex == index;
         boolean active = state.assignmentIndex == index;
-        boolean hovered = row.contains(mouseX, mouseY);
+        boolean hovered = !locked && row.contains(mouseX, mouseY);
         int color = SPECIALTY_COLORS[index];
 
         graphics.fill(row.x(), row.y(), row.right(), row.bottom(), EDGE_DARK);
@@ -696,7 +715,6 @@ public final class CompanionScreen extends Screen {
             glow(graphics, row, time);
             graphics.requestCursor(CursorTypes.POINTING_HAND);
         }
-
         int iconHeight = 16;
         int iconWidth = Math.max(12, Math.round(SPECIALTY_ICON_WIDTHS[index] * (iconHeight / 8.0F)));
         blit(graphics, SPECIALTY_ICONS[index], new Rect(row.x() + 11, row.y() + (row.height() - iconHeight) / 2, iconWidth, iconHeight));
@@ -721,9 +739,18 @@ public final class CompanionScreen extends Screen {
                 blitTinted(graphics, STAR_TEXTURE, starRect, 0x676A625D);
             }
         }
+        if (locked) {
+            graphics.fill(row.x() + 2, row.y() + 2, row.right() - 2, row.bottom() - 2, 0x765C5754);
+            if (row.contains(mouseX, mouseY)) {
+                graphics.setComponentTooltipForNextFrame(font(), java.util.List.of(
+                        Component.literal("BASE WORK PAUSED").withStyle(style -> style.withBold(true)),
+                        Component.literal("Set this dinosaur to Home before assigning a base job.")), mouseX, mouseY);
+            }
+        }
     }
 
     private void drawFieldJobRow(GuiGraphicsExtractor graphics, Rect row, int mouseX, int mouseY, float time) {
+        boolean following = state.commandMode == DinosaurCommandMode.FOLLOW;
         boolean hovered = row.contains(mouseX, mouseY);
         DinoWhistleSettings.FieldMode specialty = DinoFieldWorkRules.specialty(dodo.getSpecies());
         int source = DinoFieldWorkRules.sourceJobIndex(dodo.getSpecies());
@@ -748,7 +775,7 @@ public final class CompanionScreen extends Screen {
         String title = specialty == null ? "FIELD WORK" : DinoFieldWorkRules.specialtyName(specialty).toUpperCase();
         String description = specialty == null
                 ? "No field specialty."
-                : "Assign with the Dino Whistle.";
+                : following ? "Assign with the Dino Whistle." : "Follow required.";
         String speed = specialty == null ? "NOT AVAILABLE" : specialtySpeedLabel(source);
         withTextMotion(graphics, new Rect(textX, row.y() + 2, row.width() - 92, row.height() - 4),
                 time, hovered, false, () -> {
@@ -768,9 +795,18 @@ public final class CompanionScreen extends Screen {
                 else blitTinted(graphics, STAR_TEXTURE, starRect, 0x453E3B40);
             }
         }
+        if (!following || specialty == null) {
+            graphics.fill(row.x() + 2, row.y() + 2, row.right() - 2, row.bottom() - 2, 0x765C5754);
+        }
         if (hovered) {
-            glow(graphics, row, time);
-            graphics.requestCursor(CursorTypes.POINTING_HAND);
+            if (following && specialty != null) glow(graphics, row, time);
+            graphics.setComponentTooltipForNextFrame(font(), java.util.List.of(
+                    Component.literal(title).withStyle(style -> style.withBold(true)),
+                    Component.literal(specialty == null
+                            ? "This species has no follower specialty."
+                            : following
+                            ? "Assign this job with the Dino Whistle."
+                            : "This specialty can only be assigned to a following dinosaur.")), mouseX, mouseY);
         }
     }
 
@@ -807,8 +843,14 @@ public final class CompanionScreen extends Screen {
 
     private boolean handleJobMenuClick(double mouseX, double mouseY) {
         JobMenuLayout layout = jobMenuLayout();
+        boolean following = state.commandMode == DinosaurCommandMode.FOLLOW;
         for (int index = 0; index < SPECIALTIES.length; index++) {
             if (layout.row(index).contains(mouseX, mouseY)) {
+                if (following) {
+                    state.notice = "Set this companion to Home before assigning base work.";
+                    playUiClick(0.72F);
+                    return true;
+                }
                 pendingJobIndex = index;
                 playUiClick(0.96F + index * 0.035F);
                 return true;
@@ -817,7 +859,9 @@ public final class CompanionScreen extends Screen {
         if (layout.row(SPECIALTIES.length).contains(mouseX, mouseY)) {
             state.notice = DinoFieldWorkRules.specialty(dodo.getSpecies()) == null
                     ? "This species has no follower specialty."
-                    : "Set this companion to Follow, then mark field work with a Dino Whistle.";
+                    : following
+                    ? "Assign this field job with the Dino Whistle."
+                    : "This specialty can only be assigned to a following dinosaur.";
             playUiClick(0.84F);
             return true;
         }
@@ -828,11 +872,21 @@ public final class CompanionScreen extends Screen {
             return true;
         }
         if (layout.worksite().contains(mouseX, mouseY)) {
+            if (following) {
+                state.notice = "Base worksites are locked while this dinosaur follows you.";
+                playUiClick(0.72F);
+                return true;
+            }
             playUiClick(1.22F);
             minecraft.setScreen(new WorksitePlannerScreen(dodo, commandTablePos, pendingJobIndex, this));
             return true;
         }
         if (layout.confirm().contains(mouseX, mouseY)) {
+            if (following) {
+                state.notice = "Set this companion to Home before assigning base work.";
+                playUiClick(0.72F);
+                return true;
+            }
             selectSpecialty(pendingJobIndex);
             jobMenuOpen = false;
             restartTransition();

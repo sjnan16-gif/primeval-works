@@ -28,12 +28,18 @@ final class WhistleUiContractTest {
     @Test
     void whistleConfigIsCompactAndKeepsTheEstablishedMotionLanguage() throws Exception {
         String config = Files.readString(CLIENT.resolve("screen/DinoWhistleScreen.java"));
-        assertTrue(config.contains("PANEL_WIDTH = 164"));
-        assertTrue(config.contains("PANEL_HEIGHT = 110"));
-        assertTrue(config.contains("MAX_PANEL_SCALE = 1.0F"));
+        assertTrue(config.contains("PANEL_WIDTH = 196"));
+        assertTrue(config.contains("PANEL_HEIGHT = 142"));
+        assertTrue(config.contains("MAX_PANEL_SCALE = 1.08F"));
         assertTrue(config.contains("PrimevalBubbleUi.spring"));
         assertTrue(config.contains("whistle_range_button.png"));
-        assertTrue(config.contains("drawSeparator"));
+        assertTrue(config.contains("drawInsetBubble"));
+        assertTrue(config.contains("drawSearchPaperPanel"));
+        assertTrue(config.contains("drawSearchInventorySlot"));
+        assertTrue(config.contains("SEARCH_PANEL_WIDTH = 198"));
+        assertTrue(config.contains("SEARCH_PANEL_HEIGHT = 128"));
+        assertTrue(config.contains("hoverTooltip = null"));
+        assertTrue(config.contains("SEARCH INVENTORY"));
         assertTrue(config.contains("hoverTooltip"));
         assertFalse(config.contains("PANEL_INNER"));
         assertFalse(config.contains("CARD_HOVER"));
@@ -48,6 +54,7 @@ final class WhistleUiContractTest {
         assertTrue(config.contains("% values.length"));
         assertTrue(config.contains("settings.mode().targetTitle(settings.pattern())"));
         assertTrue(config.contains("filterSlot"));
+        assertTrue(config.contains("centeredText(graphics, \"+\""));
         assertTrue(config.contains("filteredInventory"));
         assertTrue(config.contains("draggedItem"));
         assertFalse(config.contains("runRect"));

@@ -9,6 +9,7 @@ import com.primevalworks.world.block.TurbineBlock;
 import com.primevalworks.world.ownership.DinosaurOwnership;
 import com.primevalworks.world.work.WorkSpecialtyRules;
 import com.primevalworks.world.work.WorkTargetRules;
+import com.primevalworks.world.work.DinosaurCommandMode;
 import com.primevalworks.config.PrimevalTuning;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -224,6 +225,9 @@ public record AssignDodoWorkPayload(
         }
         if (!dodo.isAlive()) return "That dinosaur is recovering and cannot take a work order yet.";
         if (dodo.isOnExpedition()) return "That dinosaur is already away on an expedition.";
+        if (dodo.getCommandMode() == DinosaurCommandMode.FOLLOW) {
+            return "Following dinosaurs cannot take base work. Set this companion to Home first.";
+        }
         var table = CommandTableBlock.tableEntity(player.level(), payload.commandTablePos);
         if (table == null) return "The Command Table could not be found. Move closer and reopen it.";
         if (!table.isOwnedBy(player.getUUID())) return "This Command Table does not belong to you.";

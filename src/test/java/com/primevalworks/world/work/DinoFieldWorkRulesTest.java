@@ -85,7 +85,7 @@ final class DinoFieldWorkRulesTest {
 
     @Test
     void everyWhistleModeExplainsItsOwnTargets() {
-        assertEquals("Vein", DinoWhistleSettings.FieldMode.QUARRY.targetTitle(
+        assertEquals("Nearby blocks", DinoWhistleSettings.FieldMode.QUARRY.targetTitle(
                 DinoWhistleSettings.Pattern.CONNECTED));
         assertEquals("Tree", DinoWhistleSettings.FieldMode.LUMBER.targetTitle(
                 DinoWhistleSettings.Pattern.CONNECTED));
@@ -103,7 +103,7 @@ final class DinoFieldWorkRulesTest {
 
     @Test
     void modesNormalizeToOnlyTheSupportedPlayerBehaviors() {
-        assertEquals(DinoWhistleSettings.Pattern.CONNECTED,
+        assertEquals(DinoWhistleSettings.Pattern.AREA,
                 DinoWhistleSettings.FieldMode.QUARRY.normalizePattern(DinoWhistleSettings.Pattern.SINGLE));
         assertEquals(DinoWhistleSettings.Pattern.AREA,
                 DinoWhistleSettings.FieldMode.QUARRY.normalizePattern(DinoWhistleSettings.Pattern.AREA));
@@ -113,7 +113,7 @@ final class DinoFieldWorkRulesTest {
                 DinoWhistleSettings.FieldMode.HARVEST.normalizePattern(DinoWhistleSettings.Pattern.CONNECTED));
         assertEquals(DinoWhistleSettings.Pattern.AREA,
                 DinoWhistleSettings.FieldMode.COLLECT.normalizePattern(DinoWhistleSettings.Pattern.CONNECTED));
-        assertTrue(DinoWhistleSettings.FieldMode.QUARRY.requiresMark());
+        assertTrue(DinoWhistleSettings.FieldMode.QUARRY.isPassive());
         assertTrue(DinoWhistleSettings.FieldMode.LUMBER.requiresMark());
         assertTrue(DinoWhistleSettings.FieldMode.HARVEST.isPassive());
         assertTrue(DinoWhistleSettings.FieldMode.COLLECT.isPassive());
