@@ -1,7 +1,7 @@
 {
   "type": "minecraft:crafting_shaped",
   "category": "combat",
-  "key": {"N": "minecraft:netherite_sword", "C": "primevalworks:compressed_ancient_metal_ingot", "T": "primevalworks:tyrannosaurus_tooth", "S": "primevalworks:ancient_spell_ingot"},
+  "key": {"N": "minecraft:netherite_sword", "C": "primevalworks:compressed_ancient_metal_ingot", "T": "primevalworks:tyrannosaurus_tooth", "S": "primevalworks:magic_shard"},
   "pattern": [" T ", "SCS", " N "],
   "result": {"id": "primevalworks:primordial_sword"}
 }

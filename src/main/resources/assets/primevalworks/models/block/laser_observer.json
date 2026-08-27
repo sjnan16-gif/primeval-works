@@ -1,9 +1,21 @@
 {
   "parent": "minecraft:block/block",
-  "textures": {"body":"minecraft:block/observer_side","dark":"minecraft:block/polished_blackstone","lens":"minecraft:block/diamond_block","particle":"minecraft:block/observer_side"},
+  "textures": {
+    "all": "primevalworks:block/laser_observer",
+    "particle": "primevalworks:block/laser_observer"
+  },
   "elements": [
-    {"from":[1,1,1],"to":[15,15,15],"faces":{"down":{"texture":"#dark"},"up":{"texture":"#body"},"north":{"texture":"#body"},"south":{"texture":"#body"},"west":{"texture":"#body"},"east":{"texture":"#body"}}},
-    {"from":[5,5,0],"to":[11,11,2],"faces":{"down":{"texture":"#dark"},"up":{"texture":"#dark"},"north":{"texture":"#lens"},"south":{"texture":"#body"},"west":{"texture":"#dark"},"east":{"texture":"#dark"}}},
-    {"from":[7,7,15],"to":[9,9,16],"faces":{"down":{"texture":"#dark"},"up":{"texture":"#dark"},"north":{"texture":"#body"},"south":{"texture":"#lens"},"west":{"texture":"#dark"},"east":{"texture":"#dark"}}}
+    {
+      "from": [0, 0, 0],
+      "to": [16, 16, 16],
+      "faces": {
+        "north": {"uv": [4, 4, 8, 8], "texture": "#all"},
+        "east": {"uv": [0, 4, 4, 8], "texture": "#all"},
+        "south": {"uv": [12, 4, 16, 8], "texture": "#all"},
+        "west": {"uv": [8, 4, 12, 8], "texture": "#all"},
+        "up": {"uv": [8, 4, 4, 0], "texture": "#all"},
+        "down": {"uv": [12, 0, 8, 4], "texture": "#all"}
+      }
+    }
   ]
 }

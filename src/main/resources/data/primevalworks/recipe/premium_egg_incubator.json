@@ -1,7 +1,7 @@
 {
   "type": "minecraft:crafting_shaped",
   "category": "misc",
-  "key": {"M": "primevalworks:compressed_ancient_metal_ingot", "G": "minecraft:tinted_glass", "C": "primevalworks:compressed_core", "S": "primevalworks:ancient_spell_ingot"},
+  "key": {"M": "primevalworks:compressed_ancient_metal_ingot", "G": "minecraft:tinted_glass", "C": "primevalworks:compressed_core", "S": "primevalworks:magic_shard"},
   "pattern": ["MGM", "SCS", "MMM"],
   "result": {"id": "primevalworks:premium_egg_incubator"}
 }

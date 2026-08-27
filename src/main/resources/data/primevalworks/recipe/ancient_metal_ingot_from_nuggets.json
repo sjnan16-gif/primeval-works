@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {"N": "primevalworks:ancient_metal_nugget"},
+  "pattern": ["NNN", "NNN", "NNN"],
+  "result": {"id": "primevalworks:ancient_metal_ingot"}
+}

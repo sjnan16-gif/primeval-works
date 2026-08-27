@@ -1,7 +1,7 @@
 {
   "type": "minecraft:crafting_shaped",
   "category": "redstone",
-  "key": {"O": "minecraft:observer", "A": "minecraft:amethyst_shard", "E": "minecraft:redstone_block"},
-  "pattern": [" A ", "EOE", " A "],
+  "key": {"O": "minecraft:observer", "F": "primevalworks:magic_shard_fragment", "E": "minecraft:redstone_block"},
+  "pattern": [" F ", "EOE", " F "],
   "result": {"id": "primevalworks:laser_observer"}
 }

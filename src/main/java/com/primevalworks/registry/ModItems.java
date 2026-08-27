@@ -117,12 +117,13 @@ public final class ModItems {
             "primordial_sword",
             properties -> new Item(ToolMaterial.NETHERITE.applySwordProperties(properties, 6.0F, -2.2F))
     );
-    public static final DeferredItem<Item> RAW_ANCIENT_SPELL_INGOT = ITEMS.registerSimpleItem("raw_ancient_spell_ingot");
-    public static final DeferredItem<Item> ANCIENT_SPELL_INGOT = ITEMS.registerSimpleItem("ancient_spell_ingot");
+    public static final DeferredItem<Item> MAGIC_SHARD_FRAGMENT = ITEMS.registerSimpleItem("magic_shard_fragment");
+    public static final DeferredItem<Item> MAGIC_SHARD = ITEMS.registerSimpleItem("magic_shard");
     public static final DeferredItem<Item> HARDWOOD = ITEMS.registerSimpleItem("hardwood");
     public static final DeferredItem<Item> SILK = ITEMS.registerSimpleItem("silk");
     public static final DeferredItem<Item> RAW_ANCIENT_METAL_INGOT = ITEMS.registerSimpleItem("raw_ancient_metal_ingot");
     public static final DeferredItem<Item> ANCIENT_METAL_INGOT = ITEMS.registerSimpleItem("ancient_metal_ingot");
+    public static final DeferredItem<Item> ANCIENT_METAL_NUGGET = ITEMS.registerSimpleItem("ancient_metal_nugget");
     public static final DeferredItem<Item> COMPRESSED_ANCIENT_METAL_INGOT = ITEMS.registerSimpleItem("compressed_ancient_metal_ingot");
     public static final DeferredItem<Item> SULFUR = ITEMS.registerSimpleItem("sulfur");
     public static final DeferredItem<Item> BIG_DINO_BONE = ITEMS.registerSimpleItem("big_dino_bone");
@@ -188,6 +189,14 @@ public final class ModItems {
     }
 
     public static void register(IEventBus modBus) {
+        ITEMS.addAlias(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "raw_ancient_spell_ingot"),
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "magic_shard_fragment")
+        );
+        ITEMS.addAlias(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "ancient_spell_ingot"),
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "magic_shard")
+        );
         ITEMS.addAlias(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "magic_turret"),
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "laser_turret")

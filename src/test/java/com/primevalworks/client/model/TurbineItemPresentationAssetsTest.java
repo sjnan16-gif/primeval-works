@@ -34,7 +34,7 @@ final class TurbineItemPresentationAssetsTest {
         String item = Files.readString(Path.of(
                 "src/main/java/com/primevalworks/world/item/TurbineBlockItem.java"));
         assertTrue(item.contains("1.28F, -0.18F")
-                        && item.contains("1.17F, -0.72F"),
+                        && item.contains("1.35F, -0.90F"),
                 "A turbine lost its individually verified 16x16 GUI center");
         assertTrue(item.contains("WATER(\"water_turbine\", \"water_turbine\", \"Water Turbine\", 0.64F"),
                 "The larger authored water rotor no longer fits the item slot and held views");

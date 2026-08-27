@@ -138,8 +138,9 @@ public final class DinoWhistleScreen extends Screen {
     private void drawPanel(GuiGraphicsExtractor graphics, Rect panel, float mouseX, float mouseY) {
         Rect header = headerRect(panel);
         drawBubble(graphics, header);
-        bold(graphics, "DINO WHISTLE", header.x + 7, header.y + 5, LABEL, 0.86F);
-        Rect duty = new Rect(header.right() - 75, header.y + 3, 72, header.h - 6);
+        fitText(graphics, "DINO WHISTLE", header.x + 7, header.y + 5,
+                dutyRect(header).x - header.x - 12, LABEL, 0.86F, true);
+        Rect duty = dutyRect(header);
         drawInsetBubble(graphics, duty);
         PrimevalUiCrop.paperHorizontalRule(graphics, header.x + 80, header.y + 9,
                 Math.max(4, duty.x - header.x - 84), 2, 180);
@@ -175,13 +176,13 @@ public final class DinoWhistleScreen extends Screen {
             drawInsetBubble(graphics, behaviorValue);
             PrimevalUiCrop.paperVerticalRule(graphics, behavior.x + 55, behavior.y + 5,
                     2, behavior.h - 10, 178);
-            bold(graphics, settings.mode().isPassive() ? "BEHAVIOR" : "TARGET",
-                    behavior.x + 7, behavior.y + 11, behaviorHovered ? modeColor() : MUTED, 0.72F);
+            fitText(graphics, settings.mode().isPassive() ? "BEHAVIOR" : "TARGET",
+                    behavior.x + 7, behavior.y + 11, 42,
+                    behaviorHovered ? modeColor() : MUTED, 0.72F, true);
             String target = settings.mode().targetTitle(settings.pattern()).toUpperCase(Locale.ROOT)
                     + (cycles ? "  >" : "");
-            bold(graphics, target,
-                    behaviorValue.x + 5, behaviorValue.y + 4,
-                    behaviorHovered ? modeColor() : INK, 0.74F);
+            fitText(graphics, target, behaviorValue.x + 5, behaviorValue.y + 4,
+                    behaviorValue.w - 10, behaviorHovered ? modeColor() : INK, 0.74F, true);
             PrimevalUiCrop.paperHorizontalRule(graphics, behaviorValue.x + 5, behaviorValue.y + 11,
                     behaviorValue.w - 10, 1, 150);
             drawWrappedText(graphics, settings.mode().targetDescription(settings.pattern()),
@@ -202,7 +203,7 @@ public final class DinoWhistleScreen extends Screen {
     private void drawFollowerRow(GuiGraphicsExtractor graphics, Rect row, float mouseX, float mouseY) {
         drawBubble(graphics, row);
         if (!settings.mode().isPassive()) {
-            bold(graphics, "ASSIGN", row.x + 7, row.y + 12, MUTED, 0.70F);
+            fitText(graphics, "ASSIGN", row.x + 7, row.y + 12, 38, MUTED, 0.70F, true);
             Rect instruction = new Rect(row.x + 52, row.y + 4, row.w - 56, row.h - 8);
             drawInsetBubble(graphics, instruction);
             drawWrappedText(graphics, settings.mode().markHint(settings.pattern()).toUpperCase(Locale.ROOT),
@@ -214,7 +215,7 @@ public final class DinoWhistleScreen extends Screen {
             return;
         }
 
-        bold(graphics, "FOLLOWER", row.x + 6, row.y + 13, MUTED, 0.64F);
+        fitText(graphics, "FOLLOWER", row.x + 6, row.y + 13, 38, MUTED, 0.64F, true);
         PrimevalUiCrop.paperVerticalRule(graphics, row.x + 47, row.y + 5,
                 2, row.h - 10, 170);
         int maximum = 3;
@@ -286,8 +287,9 @@ public final class DinoWhistleScreen extends Screen {
                     modeColor(), "The dinosaur stops field work outside this distance.",
                     "Drag the marker to set the range.");
         }
-        bold(graphics, settings.mode() == DinoWhistleSettings.FieldMode.COLLECT ? "SEARCH" : "LEASH",
-                range.x + 7, range.y + 8, hovered || draggingRange ? modeColor() : MUTED, 0.66F);
+        fitText(graphics, settings.mode() == DinoWhistleSettings.FieldMode.COLLECT ? "SEARCH" : "LEASH",
+                range.x + 7, range.y + 8, 39,
+                hovered || draggingRange ? modeColor() : MUTED, 0.66F, true);
         Rect control = new Rect(range.x + 53, range.y + 3, range.w - 56, range.h - 6);
         drawInsetBubble(graphics, control);
         rightText(graphics, settings.range() + "M", control.right() - 6, control.y + 4,
@@ -314,7 +316,8 @@ public final class DinoWhistleScreen extends Screen {
         drawInsetBubble(graphics, valueBubble);
         PrimevalUiCrop.paperVerticalRule(graphics, row.x + 49, row.y + 5,
                 2, row.h - 10, 170);
-        bold(graphics, label, row.x + 7, row.y + 7, hovered ? accent : MUTED, 0.70F);
+        fitText(graphics, label, row.x + 7, row.y + 7, 38,
+                hovered ? accent : MUTED, 0.70F, true);
         centeredText(graphics, value + "  >", valueBubble, hovered ? accent : INK, 0.74F);
     }
 
@@ -344,7 +347,8 @@ public final class DinoWhistleScreen extends Screen {
         int revealedWidth = Math.max(4, Math.round(search.w * searchReveal));
         drawBubble(graphics, new Rect(search.x, search.y, revealedWidth, search.h));
         if (searchBox != null && searchBox.getValue().isBlank() && searchReveal > 0.82F) {
-            bold(graphics, "SEARCH ITEM TYPES", search.x + 6, search.y + 5, MUTED, 0.66F);
+            fitText(graphics, "SEARCH ITEM TYPES", search.x + 6, search.y + 5,
+                    search.w - 12, MUTED, 0.66F, true);
         }
 
         Rect results = searchResults(panel);
@@ -353,8 +357,8 @@ public final class DinoWhistleScreen extends Screen {
         int maximumRow = Math.max(0, (items.size() - 1) / 9 - 3);
         searchScrollRow = Mth.clamp(searchScrollRow, 0, maximumRow);
         String header = items.isEmpty() ? "NO MATCHES" : items.size() + " ITEM TYPES  /  DRAG A FILTER";
-        bold(graphics, header, results.x + 8, results.y + 6,
-                modeColor(), 0.70F);
+        fitText(graphics, header, results.x + 8, results.y + 6,
+                results.w - 16, modeColor(), 0.70F, true);
         PrimevalUiCrop.paperHorizontalRule(graphics, results.x + 7, results.y + 17,
                 results.w - 14, 2, alpha);
 
@@ -679,6 +683,7 @@ public final class DinoWhistleScreen extends Screen {
                 (height - SEARCH_PANEL_HEIGHT) / 2, SEARCH_PANEL_WIDTH, SEARCH_PANEL_HEIGHT);
     }
     private Rect headerRect(Rect panel) { return new Rect(panel.x, panel.y, panel.w, 19); }
+    private Rect dutyRect(Rect header) { return new Rect(header.right() - 75, header.y + 3, 72, header.h - 6); }
     private Rect orderRect(Rect panel) { return new Rect(panel.x, panel.y + 22, panel.w, 23); }
     private Rect behaviorRect(Rect panel) { return new Rect(panel.x, panel.y + 48, panel.w, 32); }
     private Rect rangeRect(Rect panel) { return new Rect(panel.x, panel.y + 83, panel.w, 25); }
@@ -850,10 +855,6 @@ public final class DinoWhistleScreen extends Screen {
     private static float smoothStep(float value) {
         float clamped = Mth.clamp(value, 0.0F, 1.0F);
         return clamped * clamped * (3.0F - 2.0F * clamped);
-    }
-
-    private void bold(GuiGraphicsExtractor graphics, String value, float x, float y, int color, float scale) {
-        drawText(graphics, Component.literal(value).withStyle(Style.EMPTY.withBold(true)), x, y, color, scale);
     }
 
     private void rightText(GuiGraphicsExtractor graphics, String value, float right, float y,

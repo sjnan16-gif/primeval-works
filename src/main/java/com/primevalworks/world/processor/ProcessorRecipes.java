@@ -14,8 +14,8 @@ public final class ProcessorRecipes {
     private static final List<ProcessorRecipe> RECIPES = List.of(
             recipe("ancient_metal", ModItems.RAW_ANCIENT_METAL_INGOT.get(), ModItems.SULFUR.get(),
                     ModItems.ANCIENT_METAL_INGOT.get(), 200),
-            recipe("ancient_spell", ModItems.RAW_ANCIENT_SPELL_INGOT.get(), ModItems.FOSSIL_FRAGMENT.get(),
-                    ModItems.ANCIENT_SPELL_INGOT.get(), 260),
+            recipe("magic_shard", ModItems.MAGIC_SHARD_FRAGMENT.get(), ModItems.FOSSIL_FRAGMENT.get(),
+                    ModItems.MAGIC_SHARD.get(), 260),
             recipe("compressed_metal", ModItems.ANCIENT_METAL_INGOT.get(), ModItems.CORE.get(),
                     ModItems.COMPRESSED_ANCIENT_METAL_INGOT.get(), 320),
             recipe("compressed_core", ModItems.CORE.get(), ModItems.ANCIENT_METAL_INGOT.get(),

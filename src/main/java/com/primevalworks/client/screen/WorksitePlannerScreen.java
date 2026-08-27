@@ -2950,15 +2950,19 @@ public final class WorksitePlannerScreen extends Screen {
         int color = selected ? 0xFFE8C18F : rect.contains(mouseX, mouseY) ? 0xFFD4B18B : 0xFFAD876A;
         graphics.fill(rect.x, rect.y, rect.right(), rect.bottom(), color);
         graphics.fill(rect.x, rect.bottom() - 2, rect.right(), rect.bottom(), selected ? GREEN : EDGE);
-        centered(graphics, label, rect.centerX(), rect.y + 5, selected ? INK : MUTED);
+        boldCenteredFit(graphics, label, new Rect(rect.x + 3, rect.y + 2, rect.width - 6, rect.height - 4),
+                selected ? INK : MUTED);
     }
 
     private void drawRule(GuiGraphicsExtractor graphics, Rect rect, String label, String value, int mouseX, int mouseY, int accent) {
         boolean hovered = rect.contains(mouseX, mouseY);
         graphics.fill(rect.x, rect.y, rect.right(), rect.bottom(), hovered ? 0xE8E8C9A7 : 0xCDBF9978);
         graphics.fill(rect.x, rect.y, rect.x + (hovered ? 4 : 2), rect.bottom(), hovered ? accent : EDGE);
-        text(graphics, label, rect.x + 8, rect.y + 6, MUTED);
-        textRight(graphics, value, rect.right() - 8, rect.y + 6, hovered ? accent : INK);
+        int valueWidth = Math.min(rect.width / 2, font().width(boldComponent(value)) + 12);
+        textFit(graphics, label, rect.x + 8, rect.y + 6,
+                Math.max(8, rect.width - valueWidth - 16), MUTED);
+        textRightFit(graphics, value, rect.right() - 8, rect.y + 6,
+                Math.max(8, valueWidth - 4), hovered ? accent : INK);
     }
 
     private void drawBottomBar(GuiGraphicsExtractor graphics, Rect rect, int mouseX, int mouseY) {
@@ -3864,13 +3868,14 @@ public final class WorksitePlannerScreen extends Screen {
         int background = primary ? hovered ? 0xFFF0A451 : 0xFFE18B39 : hovered ? 0xFFE3C39E : 0xFFC9A680;
         graphics.fill(rect.x, rect.y, rect.right(), rect.bottom(), background);
         outline(graphics, rect, primary ? CORAL : EDGE);
-        centered(graphics, label, rect.centerX(), rect.y + 9, primary ? 0xFF382923 : INK);
+        boldCenteredFit(graphics, label, new Rect(rect.x + 4, rect.y + 3, rect.width - 8, rect.height - 6),
+                primary ? 0xFF382923 : INK);
     }
 
     private void drawSmallButton(GuiGraphicsExtractor graphics, Rect rect, String label, boolean selected, int mouseX, int mouseY) {
         graphics.fill(rect.x, rect.y, rect.right(), rect.bottom(), selected ? 0xFFF0C875 : rect.contains(mouseX, mouseY) ? 0xFFE2C6A3 : 0xFFB89070);
         outline(graphics, rect, selected ? AMBER : EDGE);
-        centered(graphics, label, rect.centerX(), rect.y + 7, INK);
+        boldCenteredFit(graphics, label, new Rect(rect.x + 3, rect.y + 2, rect.width - 6, rect.height - 4), INK);
     }
 
     private void boldCenteredFit(GuiGraphicsExtractor graphics, String value, Rect rect, int color) {
@@ -3920,13 +3925,12 @@ public final class WorksitePlannerScreen extends Screen {
         graphics.text(font(), boldComponent(fit(value, maximumWidth)), x, y, color, true);
     }
 
-    private void textRight(GuiGraphicsExtractor graphics, String value, int right, int y, int color) {
+    private void textRightFit(GuiGraphicsExtractor graphics, String value, int right, int y,
+                              int maximumWidth, int color) {
         Component text = boldComponent(value);
-        graphics.text(font(), text, right - font().width(text), y, color, true);
-    }
-
-    private void centered(GuiGraphicsExtractor graphics, String value, int centerX, int y, int color) {
-        graphics.centeredText(font(), boldComponent(value), centerX, y, color);
+        int measuredWidth = Math.max(1, font().width(text));
+        float scale = Math.min(1.0F, maximumWidth / (float)measuredWidth);
+        drawScaledComponent(graphics, text, right - measuredWidth * scale, y, scale, color);
     }
 
     private void centeredFit(GuiGraphicsExtractor graphics, String value, Rect rect, int color) {

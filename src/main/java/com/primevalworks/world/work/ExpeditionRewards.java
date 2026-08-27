@@ -50,7 +50,7 @@ public final class ExpeditionRewards {
             )),
             new Tier("Primordial Frontier", 3, List.of(
                     reward(() -> ModItems.RAW_ANCIENT_METAL_INGOT.get(), 2, 3, 7),
-                    reward(() -> ModItems.RAW_ANCIENT_SPELL_INGOT.get(), 1, 1, 3),
+                    reward(() -> ModItems.MAGIC_SHARD_FRAGMENT.get(), 1, 1, 3),
                     reward(() -> ModItems.COMPRESSED_CORE.get(), 1, 1, 1),
                     reward(() -> ModItems.CORE.get(), 2, 4, 7),
                     reward(() -> ModItems.PTERANODON_WING_FRAGMENT.get(), 1, 2, 3),

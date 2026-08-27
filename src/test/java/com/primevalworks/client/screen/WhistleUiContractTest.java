@@ -34,6 +34,15 @@ final class WhistleUiContractTest {
     }
 
     @Test
+    void fixedWidthPlannerControlsFitLabelsInsideTheirAuthoredSpaces() throws Exception {
+        String planner = Files.readString(CLIENT.resolve("screen/WorksitePlannerScreen.java"));
+        assertTrue(planner.contains("int valueWidth = Math.min(rect.width / 2"));
+        assertTrue(planner.contains("rect.width - valueWidth - 16"));
+        assertTrue(planner.contains("textRightFit(graphics, value"));
+        assertTrue(planner.contains("boldCenteredFit(graphics, label"));
+    }
+
+    @Test
     void whistleConfigIsCompactAndKeepsTheEstablishedMotionLanguage() throws Exception {
         String config = Files.readString(CLIENT.resolve("screen/DinoWhistleScreen.java"));
         assertTrue(config.contains("PANEL_WIDTH = 196"));
@@ -54,6 +63,9 @@ final class WhistleUiContractTest {
         assertTrue(config.contains("updateSearchMotion(deltaTime)"));
         assertTrue(config.contains("mainPanel()") && config.contains("searchPanel()"));
         assertTrue(config.contains("hoverTooltip"));
+        assertTrue(config.contains("fitText(graphics, header"));
+        assertTrue(config.contains("results.w - 16"));
+        assertTrue(config.contains("behaviorValue.w - 10"));
         assertFalse(config.contains("PANEL_INNER"));
         assertFalse(config.contains("CARD_HOVER"));
     }

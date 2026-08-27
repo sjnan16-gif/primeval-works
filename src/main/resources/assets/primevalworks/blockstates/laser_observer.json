@@ -1,1 +1,16 @@
-{"multipart":[{"apply":{"model":"primevalworks:block/laser_observer"}}]}
+{
+  "variants": {
+    "facing=down,powered=false": {"model": "primevalworks:block/laser_observer", "x": 90},
+    "facing=down,powered=true": {"model": "primevalworks:block/laser_observer_powered", "x": 90},
+    "facing=up,powered=false": {"model": "primevalworks:block/laser_observer", "x": 270},
+    "facing=up,powered=true": {"model": "primevalworks:block/laser_observer_powered", "x": 270},
+    "facing=north,powered=false": {"model": "primevalworks:block/laser_observer"},
+    "facing=north,powered=true": {"model": "primevalworks:block/laser_observer_powered"},
+    "facing=east,powered=false": {"model": "primevalworks:block/laser_observer", "y": 90},
+    "facing=east,powered=true": {"model": "primevalworks:block/laser_observer_powered", "y": 90},
+    "facing=south,powered=false": {"model": "primevalworks:block/laser_observer", "y": 180},
+    "facing=south,powered=true": {"model": "primevalworks:block/laser_observer_powered", "y": 180},
+    "facing=west,powered=false": {"model": "primevalworks:block/laser_observer", "y": 270},
+    "facing=west,powered=true": {"model": "primevalworks:block/laser_observer_powered", "y": 270}
+  }
+}

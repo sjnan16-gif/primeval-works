@@ -346,7 +346,7 @@ Personally killing one of your dinosaurs permanently removes it from the roster 
 - Compressed Core
 - Primordial Ingot
 
-There is no Raw Ancient Spell Ingot. Primordial Ingots are created by combining high-tier Ancient Metal with fossil/echo essence in the Ancient Furnace and Runic Anvil chain.
+Magic Shard Fragments come from the highest expeditions. The Processor binds one fragment with a Fossil Fragment into a finished Magic Shard for late-game recipes.
 
 ### Equipment
 

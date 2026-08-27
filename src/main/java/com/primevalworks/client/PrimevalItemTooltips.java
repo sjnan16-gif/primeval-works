@@ -46,12 +46,13 @@ public final class PrimevalItemTooltips {
             case "pteranodon_saddle" -> "Enables Pteranodon flight.";
             case "spinosaurus_saddle" -> "Enables Spinosaurus riding.";
             case "primordial_sword" -> "A powerful ancient blade.";
-            case "raw_ancient_spell_ingot" -> "Processed into Ancient Spell Metal.";
-            case "ancient_spell_ingot" -> "Refined magical metal.";
+            case "magic_shard_fragment" -> "Refined into a Magic Shard.";
+            case "magic_shard" -> "Concentrated primordial magic.";
             case "hardwood" -> "Strong crafting timber.";
             case "silk" -> "Rare precision material.";
             case "raw_ancient_metal_ingot" -> "Processed into Ancient Metal.";
             case "ancient_metal_ingot" -> "Refined ancient metal.";
+            case "ancient_metal_nugget" -> "A small piece of refined ancient metal.";
             case "compressed_ancient_metal_ingot" -> "Dense endgame metal.";
             case "sulfur" -> "Ancient Metal catalyst.";
             case "big_dino_bone" -> "Large dinosaur trophy.";

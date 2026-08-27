@@ -1,0 +1,7 @@
+{
+  "parent": "primevalworks:block/laser_observer",
+  "textures": {
+    "all": "primevalworks:block/laser_observer_powered",
+    "particle": "primevalworks:block/laser_observer_powered"
+  }
+}

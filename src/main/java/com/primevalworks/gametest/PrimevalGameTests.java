@@ -2440,7 +2440,7 @@ public final class PrimevalGameTests {
                 ModItems.TYRANNOSAURUS_TOOTH.get(),
                 ModItems.CORE.get(),
                 ModItems.NESTING_TREAT.get(),
-                ModItems.RAW_ANCIENT_SPELL_INGOT.get(),
+                ModItems.MAGIC_SHARD_FRAGMENT.get(),
                 ModItems.COMPRESSED_CORE.get(),
                 ModItems.SPINOSAURUS_HEAD.get()
         )) {
@@ -2479,7 +2479,7 @@ public final class PrimevalGameTests {
                 "The Primordial Frontier lacks its exceptional Spinosaurus Head find");
         for (var craftedOutput : List.of(
                 ModItems.ANCIENT_METAL_INGOT.get(),
-                ModItems.ANCIENT_SPELL_INGOT.get(),
+                ModItems.MAGIC_SHARD.get(),
                 ModItems.COMPRESSED_ANCIENT_METAL_INGOT.get(),
                 ModItems.PRIMORDIAL_SWORD.get(),
                 ModItems.PTERANODON_SADDLE.get(),
