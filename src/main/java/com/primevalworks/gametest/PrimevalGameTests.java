@@ -187,6 +187,12 @@ public final class PrimevalGameTests {
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> UNMOUNTED_SPINOSAURUS_FLOATS_AT_SURFACE =
             TEST_FUNCTIONS.register("unmounted_spinosaurus_floats_at_surface",
                     () -> PrimevalGameTests::unmountedSpinosaurusFloatsAtSurface);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> SPINOSAURUS_FOLLOWER_SWIMS =
+            TEST_FUNCTIONS.register("spinosaurus_follower_swims",
+                    () -> PrimevalGameTests::spinosaurusFollowerSwims);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> PTERANODON_FOLLOWER_FLIES =
+            TEST_FUNCTIONS.register("pteranodon_follower_flies",
+                    () -> PrimevalGameTests::pteranodonFollowerFlies);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> HEAVY_DINOSAUR_REQUIRES_FLAT_SLEEP_AREA =
             TEST_FUNCTIONS.register("heavy_dinosaur_requires_flat_sleep_area",
                     () -> PrimevalGameTests::heavyDinosaurRequiresFlatSleepArea);
@@ -427,6 +433,16 @@ public final class PrimevalGameTests {
                         isolatedTestData(event, "spinosaurus_surface_float"))
         );
         event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "spinosaurus_follower_swims"),
+                new FunctionGameTestInstance(SPINOSAURUS_FOLLOWER_SWIMS.getKey(),
+                        isolatedTestData(event, "spinosaurus_follow_swim"))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "pteranodon_follower_flies"),
+                new FunctionGameTestInstance(PTERANODON_FOLLOWER_FLIES.getKey(),
+                        isolatedTestData(event, "pteranodon_follow_flight"))
+        );
+        event.registerTest(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "heavy_dinosaur_requires_flat_sleep_area"),
                 new FunctionGameTestInstance(HEAVY_DINOSAUR_REQUIRES_FLAT_SLEEP_AREA.getKey(),
                         isolatedTestData(event, "heavy_sleep_area"))
@@ -626,6 +642,68 @@ public final class PrimevalGameTests {
                     "Unmounted surface buoyancy incorrectly entered the mounted breach state");
             helper.succeed();
         });
+    }
+
+    private static void spinosaurusFollowerSwims(GameTestHelper helper) {
+        BlockPos dinosaurRelative = new BlockPos(1, 1, 1);
+        BlockPos ownerRelative = new BlockPos(7, 2, 7);
+        forceTicking(helper, dinosaurRelative, ownerRelative);
+        for (int x = 0; x <= 7; x++) {
+            for (int z = 0; z <= 7; z++) {
+                helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+                for (int y = 1; y <= 6; y++) {
+                    helper.setBlock(new BlockPos(x, y, z), Blocks.WATER);
+                }
+            }
+        }
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.setUUID(UUID.randomUUID());
+        Vec3 ownerPosition = helper.absolutePos(ownerRelative).getCenter();
+        player.snapTo(ownerPosition.x, ownerPosition.y, ownerPosition.z, 90.0F, 0.0F);
+        player.setNoGravity(true);
+        FieldDodoEntity spinosaurus = helper.spawn(ModEntities.SPINOSAURUS.get(), dinosaurRelative);
+        spinosaurus.setDinosaurOwner(player.getUUID());
+        spinosaurus.setCommandMode(DinosaurCommandMode.FOLLOW);
+        Vec3 start = spinosaurus.position();
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(
+                        spinosaurus.position().subtract(start).horizontalDistanceSqr() > 1.0D
+                                && spinosaurus.isSpinosaurusSwimming(),
+                        "The following Spinosaurus floated in place instead of swimming toward its owner"))
+                .thenExecute(() -> {
+                    spinosaurus.discard();
+                    player.discard();
+                })
+                .thenSucceed();
+    }
+
+    private static void pteranodonFollowerFlies(GameTestHelper helper) {
+        BlockPos dinosaurRelative = new BlockPos(4, 1, 4);
+        BlockPos ownerRelative = new BlockPos(4, 17, 4);
+        forceTicking(helper, dinosaurRelative, ownerRelative);
+        for (int x = 0; x <= 7; x++) for (int z = 0; z <= 7; z++) {
+            helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+        }
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.setUUID(UUID.randomUUID());
+        Vec3 ownerPosition = helper.absolutePos(ownerRelative).getCenter();
+        player.snapTo(ownerPosition.x, ownerPosition.y, ownerPosition.z, 90.0F, 0.0F);
+        FieldDodoEntity pteranodon = helper.spawn(ModEntities.PTERANODON.get(), dinosaurRelative);
+        pteranodon.setDinosaurOwner(player.getUUID());
+        pteranodon.setCommandMode(DinosaurCommandMode.FOLLOW);
+        double startingDistance = pteranodon.distanceToSqr(player);
+        double startingY = pteranodon.getY();
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(
+                        pteranodon.isPteranodonAirborne()
+                                && pteranodon.getY() > startingY + 1.0D
+                                && pteranodon.distanceToSqr(player) < startingDistance - 16.0D,
+                        "The following Pteranodon used ground pathing instead of flying to catch up"))
+                .thenExecute(() -> {
+                    pteranodon.discard();
+                    player.discard();
+                })
+                .thenSucceed();
     }
 
     private static void heavyDinosaurRequiresFlatSleepArea(GameTestHelper helper) {
@@ -3176,6 +3254,9 @@ public final class PrimevalGameTests {
                 77,
                 "minecraft:coal"
         ));
+        original.setCommandMode(DinosaurCommandMode.HOME);
+        helper.assertTrue(original.hasFieldWork(),
+                "Changing command mode erased the saved field assignment instead of suspending it");
 
         TagValueOutput output = TagValueOutput.createWithContext(
                 ProblemReporter.DISCARDING, helper.getLevel().registryAccess());
@@ -3188,11 +3269,11 @@ public final class PrimevalGameTests {
         helper.assertTrue(restored != null, "The follower could not be recreated from its saved state");
         restored.load(TagValueInput.create(
                 ProblemReporter.DISCARDING, helper.getLevel().registryAccess(), snapshot));
-        helper.assertTrue(restored.getCommandMode() == DinosaurCommandMode.FOLLOW,
-                "The saved follower reverted to Home after reload");
+        helper.assertTrue(restored.getCommandMode() == DinosaurCommandMode.HOME,
+                "The saved command mode changed during reload");
         helper.assertTrue(restored.hasFieldWork()
                         && restored.getFieldWorkMode() == DinoWhistleSettings.FieldMode.COLLECT,
-                "The follower lost its field-work mode after reload");
+                "The suspended field-work mode was erased during reload");
         helper.assertTrue(restored.getFieldWorkPattern() == DinoWhistleSettings.Pattern.AREA
                         && restored.isFieldWorkContinuous(),
                 "The follower lost its passive collection behavior after reload");
@@ -3201,6 +3282,9 @@ public final class PrimevalGameTests {
                         && restored.getFieldWorkFirst().filter(passiveAnchor::equals).isPresent()
                         && restored.getFieldWorkSecond().isEmpty(),
                 "The follower lost its passive anchor, leash, or item filter after reload");
+        restored.setCommandMode(DinosaurCommandMode.FOLLOW);
+        helper.assertTrue(restored.hasFieldWork(),
+                "Returning to Follow did not resume the saved field assignment");
         helper.succeed();
     }
 

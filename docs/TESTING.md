@@ -87,6 +87,17 @@ Both `/pw` and `/primevalworks` are valid aliases. Commands require cheats/opera
 - Albino textures preserve shading. Only the authored pupil pixels become red; inspect every species rather than trusting a global tint.
 - Sleeping uses a simple billboard `Z`; work progress appears over the station; transport cargo uses the hotbar frame and species attachment where available.
 
+## Whistle, follower, and persistence checks
+
+1. Hover a Dino Whistle in the player inventory. Its normal vanilla tooltip must remain visible. Hold either left or right Shift: the compact right sidebar should fill the work meter and open configuration after the full hold.
+2. Hold the whistle in the world. Confirm the small right sidebar eases in, reports the live order/target, and does not become a second full-screen panel. Quarry/Lumber may consume attack to mark; Harvest/Collect may not.
+3. Assign a passive Harvest or Collect order, switch the dinosaur to Home and Stay, then back to Follow. The same order, range, filter, and marked settings must resume rather than reset.
+4. Repeat the previous check across a chunk unload, logout/rejoin, full client restart, depot storage/reactivation, and dedicated-server restart. The dinosaur UUID and field order must remain unique and server-authoritative.
+5. Lead a normal follower across open ground, around walls, through a doorway, and more than 30 blocks away. It should repath without zigzagging; after a genuine stall it may recover near the owner, but it must never teleport during ordinary close movement.
+6. Lead an unmounted Spinosaurus through water. It must swim toward the owner instead of its idle buoyancy goal cancelling navigation. Dismount during a breach and confirm it returns to the correct land/water pose without a latched swim animation.
+7. Lead a Pteranodon far enough behind to require flight. It should enter powered catch-up flight, update toward the moving owner without restarting its flap cycle every few ticks, and land/return to normal navigation when close.
+8. With two real players, verify ownership and follower caps independently. One player must not command, overwrite, teleport, or resume another player's dinosaur or saved order.
+
 ## Release gate
 
 - `test build` passes.

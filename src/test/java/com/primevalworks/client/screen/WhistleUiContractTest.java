@@ -57,15 +57,17 @@ final class WhistleUiContractTest {
     }
 
     @Test
-    void inventoryHoverHoldReplacesRightClickAndTheWorldHud() throws Exception {
+    void inventoryHoverHoldUsesVanillaTooltipAndACompactRightSidebar() throws Exception {
         String client = Files.readString(CLIENT.resolve("effect/DinoWhistleClient.java"));
         String item = Files.readString(Path.of(
                 "src/main/java/com/primevalworks/world/item/DinoWhistleItem.java"));
         assertTrue(client.contains("renderInventoryHover"));
+        assertTrue(client.contains("renderHud"));
         assertTrue(client.contains("CONFIGURE_HOLD_NANOS"));
         assertTrue(client.contains("classic_work"));
-        assertTrue(client.contains("HOLD SHIFT TO CONFIGURE"));
-        assertFalse(client.contains("renderHud"));
+        assertTrue(client.contains("HOLD SHIFT IN INVENTORY TO CONFIGURE"));
+        assertTrue(client.contains("InputConstants.KEY_LSHIFT"));
+        assertFalse(client.contains("RenderTooltipEvent"));
         assertFalse(item.contains("InteractionResult use("));
         assertFalse(item.contains("finishUsingItem"));
     }

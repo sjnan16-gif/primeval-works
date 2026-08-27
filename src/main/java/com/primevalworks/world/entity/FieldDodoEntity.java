@@ -64,6 +64,8 @@ import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.OpenDoorGoal;
 import net.minecraft.world.entity.ai.goal.PanicGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.ai.navigation.AmphibiousPathNavigation;
+import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.ai.util.DefaultRandomPos;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
@@ -126,7 +128,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     public static final int MUTATION_SCHEMA = 2;
     private static final int MUTATION_MASK_ALLOWED = MUTATION_HUGE | MUTATION_ALBINO;
     private static final int WORK_STATE_SCHEMA = 4;
-    private static final int OWNERSHIP_SYNC_INTERVAL_TICKS = 600;
+    private static final int OWNERSHIP_SYNC_INTERVAL_TICKS = 100;
     private static final int FOOD_BOX_BASE_FOOD_VALUE = 28;
     private static final double T_REX_MOUTH_REACH = 2.50D;
     private static final float T_REX_ATTACK_ARC_DEGREES = 34.0F;
@@ -503,6 +505,13 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         navigation.getNodeEvaluator().setCanPassDoors(true);
         navigation.setCanFloat(true);
         moveControl = new SizeAwareMoveControl(this);
+    }
+
+    @Override
+    protected PathNavigation createNavigation(Level level) {
+        return getSpecies() == DinosaurSpecies.SPINOSAURUS
+                ? new AmphibiousPathNavigation(this, level)
+                : super.createNavigation(level);
     }
 
     @Override
@@ -1504,7 +1513,6 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         commandMode = mode;
         entityData.set(COMMAND_MODE, mode.ordinal());
         stayPosition = mode == DinosaurCommandMode.STAY ? blockPosition().immutable() : null;
-        if (mode != DinosaurCommandMode.FOLLOW) clearFieldWork();
         cancelWorkAction();
         navigation.stop();
         setTarget(null);
@@ -1934,8 +1942,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         commandMode = DinosaurCommandMode.byId(input.getIntOr("PrimevalCommandMode", 0));
         entityData.set(COMMAND_MODE, commandMode.ordinal());
         stayPosition = input.getLong("PrimevalStayPosition").map(BlockPos::of).orElse(null);
-        fieldWorkEnabled = input.getBooleanOr("PrimevalFieldWorkEnabled", false)
-                && commandMode == DinosaurCommandMode.FOLLOW;
+        fieldWorkEnabled = input.getBooleanOr("PrimevalFieldWorkEnabled", false);
         fieldWorkMode = DinoWhistleSettings.FieldMode.byId(input.getIntOr("PrimevalFieldWorkMode", 0));
         fieldWorkPattern = fieldWorkMode.normalizePattern(
                 DinoWhistleSettings.Pattern.byId(input.getIntOr("PrimevalFieldWorkPattern", 0)));
@@ -2157,8 +2164,8 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             tickNeedsAndIndicator();
             runAssignedWork();
             dampNavigationUntilBodyFacesTravel();
-            if (autonomousTransportFlight && (getSpecies() != DinosaurSpecies.PTERANODON
-                    || !isTransportWorkActive() || isVehicle() || isDinosaurSleeping()
+            if (autonomousTransportFlight && (!isAutonomousPteranodonFlightAllowed()
+                    || isVehicle() || isDinosaurSleeping()
                     || getTarget() != null || onExpedition)) {
                 stopAutonomousTransportFlight();
             }
@@ -2391,13 +2398,18 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     }
 
     private boolean isRaptorTransportPursuitActive() {
-        return raptorTransportRunTicks > 0
+        boolean transporting = raptorTransportRunTicks > 0
                 && isTransportWorkActive()
                 && commandTablePos != null
-                && !onExpedition
                 && workerCooldown <= 0
-                && getHunger() >= PrimevalTuning.server().foodBoxThreshold()
                 && (commandMode == DinosaurCommandMode.FOLLOW || scheduleAllowsWork());
+        ServerPlayer owner = commandMode == DinosaurCommandMode.FOLLOW && !fieldWorkEnabled
+                ? commandOwner() : null;
+        boolean catchingOwner = owner != null && owner.level() == level()
+                && distanceToSqr(owner) > 100.0D;
+        return !onExpedition
+                && getHunger() >= PrimevalTuning.server().foodBoxThreshold()
+                && (transporting || catchingOwner);
     }
 
     private void tickThreatAwareness() {
@@ -3955,7 +3967,11 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
 
     private @Nullable ServerPlayer commandOwner() {
         if (!(level() instanceof ServerLevel serverLevel) || dinosaurOwner == null) return null;
-        return serverLevel.getServer().getPlayerList().getPlayer(dinosaurOwner);
+        ServerPlayer local = serverLevel.players().stream()
+                .filter(player -> player.getUUID().equals(dinosaurOwner))
+                .min(Comparator.comparingDouble(this::distanceToSqr))
+                .orElse(null);
+        return local != null ? local : serverLevel.getServer().getPlayerList().getPlayer(dinosaurOwner);
     }
 
     private int baseRadius() {
@@ -4156,6 +4172,17 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                 && fieldWorkMode == DinoWhistleSettings.FieldMode.COLLECT;
     }
 
+    private boolean isAutonomousPteranodonFlightAllowed() {
+        if (getSpecies() != DinosaurSpecies.PTERANODON) return false;
+        if (isTransportWorkActive()) return true;
+        ServerPlayer owner = commandOwner();
+        return commandMode == DinosaurCommandMode.FOLLOW
+                && !fieldWorkEnabled
+                && owner != null
+                && owner.level() == level()
+                && owner.isAlive();
+    }
+
     private void tickAutonomousTransportFlight(BlockPos target) {
         if (isInWater()) {
             stopAutonomousTransportFlight();
@@ -4163,15 +4190,20 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             return;
         }
         BlockPos immutableTarget = target.immutable();
-        if (!autonomousTransportFlight || !immutableTarget.equals(autonomousTransportTarget)) {
+        if (!autonomousTransportFlight) {
             autonomousTransportFlight = true;
-            autonomousTransportTarget = immutableTarget;
             autonomousTransportAltitude = Math.min(level().getMaxY() - 3.0D,
                     Math.max(getY() + 3.0D, target.getY() + 4.0D));
             navigation.stop();
-            navigationTarget = immutableTarget;
             pteranodonForwardHoldTicks = 0;
+        } else if (autonomousTransportTarget == null
+                || autonomousTransportTarget.distSqr(immutableTarget) >= 16.0D) {
+            double refreshedAltitude = Math.min(level().getMaxY() - 3.0D,
+                    Math.max(getY() + 2.0D, target.getY() + 4.0D));
+            autonomousTransportAltitude = Mth.lerp(0.18D, autonomousTransportAltitude, refreshedAltitude);
         }
+        autonomousTransportTarget = immutableTarget;
+        navigationTarget = immutableTarget;
 
         Vec3 targetCenter = target.getCenter();
         Vec3 horizontalOffset = new Vec3(targetCenter.x - getX(), 0.0D, targetCenter.z - getZ());
@@ -4477,7 +4509,28 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     @Override
     protected void removePassenger(Entity passenger) {
         super.removePassenger(passenger);
+        if (getSpecies() == DinosaurSpecies.SPINOSAURUS) {
+            resetSpinosaurusAfterDismount();
+        }
         if (!level().isClientSide()) DinosaurOwnership.syncRecord(this);
+    }
+
+    private void resetSpinosaurusAfterDismount() {
+        boolean swimming = isInWater();
+        clearSpinosaurusBreach();
+        setNoGravity(false);
+        entityData.set(SPINO_SWIMMING, swimming);
+        entityData.set(SPINO_SWIM_SPEED, swimming ? (float)getDeltaMovement().length() : 0.0F);
+        entityData.set(SPINO_BANK, 0.0F);
+        entityData.set(SPINO_LAND_SPRINTING, false);
+        spinosaurusWasInWater = swimming;
+        spinosaurusThrottle = 0.0F;
+        spinosaurusBankVelocity = 0.0F;
+        spinosaurusControllerYawPrevious = Float.NaN;
+        spinosaurusSteeringVelocity = 0.0F;
+        spinosaurusGroundDropGraceTicks = 0;
+        spinosaurusGroundDropEntrySpeed = 0.0D;
+        if (!swimming) setXRot(0.0F);
     }
 
     @Override
@@ -5320,12 +5373,14 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
 
         @Override
         public boolean canUse() {
-            return getControllingPassenger() == null && isInWater();
+            return getControllingPassenger() == null && isInWater() && !hasDirectedMovementIntent();
         }
 
         @Override
         public boolean canContinueToUse() {
-            return getControllingPassenger() == null && (isInWater() || waterlineGraceTicks > 0);
+            return getControllingPassenger() == null
+                    && !hasDirectedMovementIntent()
+                    && (isInWater() || waterlineGraceTicks > 0);
         }
 
         @Override
@@ -5363,6 +5418,21 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                 setXRot(Mth.approachDegrees(getXRot(), 0.0F, 4.0F));
             }
         }
+    }
+
+    private boolean hasDirectedMovementIntent() {
+        if (getTarget() != null || onExpedition || isVehicle()) return true;
+        if (commandMode == DinosaurCommandMode.FOLLOW) {
+            if (fieldWorkEnabled) return true;
+            ServerPlayer owner = commandOwner();
+            return owner != null && owner.level() == level()
+                    && distanceToSqr(owner) > Math.max(9.0D, getBbWidth() * getBbWidth());
+        }
+        if (commandMode == DinosaurCommandMode.STAY) {
+            return stayPosition != null && distanceToSqr(stayPosition.getCenter()) > 1.0D;
+        }
+        return commandTablePos != null && (workEnabled
+                || distanceToSqr(commandTablePos.getCenter()) > baseRadius() * baseRadius());
     }
 
     private void resetPteranodonGroundState() {
@@ -6174,6 +6244,9 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     private final class FollowCommandOwnerGoal extends Goal {
         private ServerPlayer owner;
         private int refreshTicks;
+        private int stalledTicks;
+        private double lastDistance;
+        private BlockPos lastOwnerPosition;
 
         private FollowCommandOwnerGoal() {
             setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
@@ -6217,27 +6290,70 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         @Override
         public void start() {
             refreshTicks = 0;
+            stalledTicks = 0;
+            lastDistance = owner == null ? Double.MAX_VALUE : distanceToSqr(owner);
+            lastOwnerPosition = owner == null ? null : owner.blockPosition();
         }
 
         @Override
         public void tick() {
             if (owner == null) return;
             getLookControl().setLookAt(owner, getSpecies().turnDegreesPerTick(), 28.0F);
+            double distance = distanceToSqr(owner);
+            if (tickCount % 20 == 0) {
+                if (distance >= lastDistance - 0.35D || navigation.isStuck()) stalledTicks += 20;
+                else stalledTicks = Math.max(0, stalledTicks - 30);
+                lastDistance = distance;
+            }
+            if (getSpecies() == DinosaurSpecies.PTERANODON
+                    && (distance > 96.0D * 96.0D || stalledTicks >= 120)
+                    && owner.onGround()) {
+                stopAutonomousTransportFlight();
+                trySafeFollowerTeleport(owner);
+                stalledTicks = 0;
+                return;
+            }
+            if (getSpecies() == DinosaurSpecies.PTERANODON
+                    && (autonomousTransportFlight || distance > 144.0D)) {
+                tickAutonomousTransportFlight(owner.blockPosition());
+                return;
+            }
+            if (getSpecies() == DinosaurSpecies.PTERANODON && autonomousTransportFlight) {
+                stopAutonomousTransportFlight();
+            }
             if (--refreshTicks <= 0) {
-                refreshTicks = adjustedTickDelay(10);
-                double distance = distanceToSqr(owner);
-                if (distance > 48.0D * 48.0D && owner.onGround()) {
+                refreshTicks = adjustedTickDelay(distance > 256.0D ? 4 : 8);
+                boolean ownerMoved = lastOwnerPosition == null
+                        || lastOwnerPosition.distSqr(owner.blockPosition()) >= 4.0D;
+                lastOwnerPosition = owner.blockPosition();
+                if ((distance > 64.0D * 64.0D || stalledTicks >= 120) && owner.onGround()) {
                     trySafeFollowerTeleport(owner);
-                } else {
-                    navigation.moveTo(owner, getSpecies() == DinosaurSpecies.VELOCIRAPTOR ? 1.26D : 1.08D);
+                    stalledTicks = 0;
+                } else if (ownerMoved || navigation.isDone() || navigation.isStuck()) {
+                    navigation.moveTo(owner, followerMovementSpeed(distance));
                 }
             }
         }
 
         @Override
         public void stop() {
+            if (getSpecies() == DinosaurSpecies.PTERANODON
+                    && autonomousTransportFlight && !isTransportWorkActive()) {
+                stopAutonomousTransportFlight();
+            }
             owner = null;
             navigation.stop();
+            stalledTicks = 0;
+            lastOwnerPosition = null;
+        }
+
+        private double followerMovementSpeed(double distanceSquared) {
+            double distance = Math.sqrt(distanceSquared);
+            double catchup = Mth.clamp((distance - 7.0D) / 22.0D, 0.0D, 1.0D);
+            double base = getSpecies() == DinosaurSpecies.VELOCIRAPTOR ? 1.10D : 1.02D;
+            double maximum = getSpecies() == DinosaurSpecies.VELOCIRAPTOR ? 1.58D
+                    : getSpecies() == DinosaurSpecies.SPINOSAURUS ? 1.32D : 1.38D;
+            return Mth.lerp(catchup, base, maximum);
         }
 
         private double followStartDistanceSqr() {
