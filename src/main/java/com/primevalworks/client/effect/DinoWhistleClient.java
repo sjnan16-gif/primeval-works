@@ -63,24 +63,24 @@ public final class DinoWhistleClient {
         DinoWhistleSettings settings = whistle.isEmpty() ? DinoWhistleSettings.DEFAULT : DinoWhistleSettings.read(whistle);
         if (settings.pattern() != DinoWhistleSettings.Pattern.AREA) areaFirst = null;
         GuiGraphicsExtractor graphics = event.getGuiGraphics();
-        int width = 152;
-        int height = areaFirst == null ? 27 : 38;
+        int width = 170;
+        int height = areaFirst == null ? 30 : 42;
         int x = graphics.guiWidth() - width - 9 + Math.round((1.0F - visibility) * 12.0F);
         int y = Math.max(8, graphics.guiHeight() / 2 - height / 2);
         int alpha = Mth.clamp(Math.round(visibility * 235.0F), 0, 255);
-        graphics.fill(x + 4, y + 4, x + width + 4, y + height + 4, alpha / 3 << 24);
-        graphics.fill(x, y, x + width, y + height, alpha << 24 | 0xC9A77F);
-        graphics.fill(x + 2, y + 2, x + width - 2, y + height - 2, alpha << 24 | 0xDDBB91);
-        graphics.outline(x, y, width, height, alpha << 24 | 0x5F4231);
-        graphics.fill(x + 3, y + 3, x + 6, y + height - 3, alpha << 24 | 0xB85E35);
+        graphics.fill(x + 5, y + 5, x + width + 5, y + height + 5, alpha / 3 << 24);
+        graphics.fill(x, y, x + width, y + height, alpha << 24 | 0x19171C);
+        graphics.fill(x + 2, y + 2, x + width - 2, y + height - 2, alpha << 24 | 0x242027);
+        graphics.outline(x, y, width, height, alpha << 24 | 0x6D4E3B);
+        graphics.fill(x + 3, y + 3, x + 6, y + height - 3, alpha << 24 | 0xD87949);
         drawFitText(graphics, Component.literal(settings.shortLabel()).withStyle(Style.EMPTY.withBold(true)),
-                x + 10, y + 6, width - 18, alpha << 24 | 0x4D3931, 0.67F);
+                x + 10, y + 6, width - 18, alpha << 24 | 0xD7D0CB, 0.76F);
         drawFitText(graphics, Component.literal("ATTACK: MARK  /  HOLD USE: CONFIGURE"),
-                x + 10, y + 16, width - 18, alpha << 24 | 0x645750, 0.54F);
+                x + 10, y + 18, width - 18, alpha << 24 | 0x8D8584, 0.62F);
         if (areaFirst != null) {
             drawText(graphics, Component.literal("CORNER A  " + areaFirst.getX() + "  "
                             + areaFirst.getY() + "  " + areaFirst.getZ()).withStyle(Style.EMPTY.withBold(true)),
-                    x + 10, y + 27, alpha << 24 | 0x477895, 0.56F);
+                    x + 10, y + 30, alpha << 24 | 0x6DA1BD, 0.62F);
         }
 
         if (visible && minecraft.player.isUsingItem()

@@ -1,5 +1,6 @@
 package com.primevalworks.client.screen;
 
+import com.mojang.blaze3d.platform.cursor.CursorTypes;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.primevalworks.network.payload.AssignWhistleFieldWorkPayload;
 import com.primevalworks.network.payload.WhistleFollowerListPayload;
@@ -27,13 +28,24 @@ import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import org.joml.Vector3f;
 
 public final class WhistleFollowerPickerScreen extends Screen {
+    private static final int PANEL_WIDTH = 292;
+    private static final int PANEL = 0xF319171C;
+    private static final int PANEL_INNER = 0xFF242027;
+    private static final int CARD = 0xFF2D282E;
+    private static final int TEXT = 0xFFD7D0CB;
+    private static final int MUTED = 0xFF8D8584;
     private static WhistleFollowerPickerScreen active;
     private final WhistleFollowerListPayload payload;
+    private final long[] hoverStarted;
     private long openedAt;
+    private long renderNow;
+    private long pressedAt;
+    private int pressedIndex = -1;
 
     private WhistleFollowerPickerScreen(WhistleFollowerListPayload payload) {
         super(Component.literal("Choose a Companion"));
         this.payload = payload;
+        this.hoverStarted = new long[Math.max(1, payload.entries().size())];
     }
 
     public static void open(WhistleFollowerListPayload payload) {
@@ -51,30 +63,36 @@ public final class WhistleFollowerPickerScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        int panelWidth = 264;
+        renderNow = Util.getNanos();
+        int panelWidth = PANEL_WIDTH;
         int panelHeight = 49 + Math.max(1, payload.entries().size()) * 48;
         int x = (width - panelWidth) / 2;
         int y = (height - panelHeight) / 2;
-        float progress = Mth.clamp((Util.getNanos() - openedAt) / 240_000_000.0F, 0.0F, 1.0F);
-        float eased = 1.0F - (float)Math.pow(1.0F - progress, 3.0D);
+        Motion motion = motion(panelWidth, panelHeight);
+        float uiMouseX = x + panelWidth * 0.5F + (mouseX - (x + panelWidth * 0.5F)) / motion.scale;
+        float uiMouseY = y + panelHeight * 0.5F
+                + (mouseY - (y + panelHeight * 0.5F) - motion.offsetY) / motion.scale;
+        graphics.fill(0, 0, width, height, 0x72000000);
         graphics.pose().pushMatrix();
-        graphics.pose().translate(x + panelWidth / 2.0F, y + panelHeight / 2.0F);
-        graphics.pose().scale(0.84F + eased * 0.16F, 0.84F + eased * 0.16F);
+        graphics.pose().translate(x + panelWidth / 2.0F, y + panelHeight / 2.0F + motion.offsetY);
+        graphics.pose().scale(motion.scale, motion.scale);
         graphics.pose().translate(-(x + panelWidth / 2.0F), -(y + panelHeight / 2.0F));
-        graphics.fill(x + 5, y + 6, x + panelWidth + 5, y + panelHeight + 6, 0x65000000);
-        graphics.fill(x, y, x + panelWidth, y + panelHeight, 0xF2C9A77F);
-        graphics.fill(x + 3, y + 3, x + panelWidth - 3, y + panelHeight - 3, 0xFFDDBB91);
-        graphics.outline(x, y, panelWidth, panelHeight, 0xFF5F4231);
-        bold(graphics, "CHOOSE A FOLLOWER", x + 12, y + 8, 0xFF6B392D, 0.88F);
+        graphics.fill(x + 6, y + 7, x + panelWidth + 6, y + panelHeight + 7, 0x82000000);
+        graphics.fill(x, y, x + panelWidth, y + panelHeight, PANEL);
+        graphics.fill(x + 3, y + 3, x + panelWidth - 3, y + panelHeight - 3, PANEL_INNER);
+        graphics.outline(x, y, panelWidth, panelHeight, 0xFF3B2A26);
+        graphics.outline(x + 3, y + 3, panelWidth - 6, panelHeight - 6, 0xFF6D4E3B);
+        bold(graphics, "CHOOSE A FOLLOWER", x + 12, y + 8, 0xFFE98A56, 0.94F);
         DinoWhistleSettings.FieldMode mode = DinoWhistleSettings.FieldMode.byId(payload.mode());
-        text(graphics, DinoFieldWorkRules.specialtyName(mode) + "  /  " + payload.range() + " block leash",
-                x + 12, y + 22, 0xFF5C514A, 0.68F);
+        text(graphics, DinoFieldWorkRules.specialtyName(mode).toUpperCase() + "  /  " + payload.range() + " BLOCK RANGE",
+                x + 12, y + 22, 0xFF9A918E, 0.76F);
         if (payload.entries().isEmpty()) {
-            bold(graphics, "NO FOLLOWERS AVAILABLE", x + 22, y + 53, 0xFFA4473A, 0.80F);
-            text(graphics, "Set an active companion to Follow first.", x + 22, y + 67, 0xFF5C514A, 0.68F);
+            bold(graphics, "NO FOLLOWERS AVAILABLE", x + 22, y + 53, 0xFFC76459, 0.86F);
+            text(graphics, "Switch an active companion to Follow first.", x + 22, y + 67, MUTED, 0.76F);
         } else {
             for (int index = 0; index < payload.entries().size(); index++) {
-                drawEntry(graphics, payload.entries().get(index), entryRect(x, y, panelWidth, index), mouseX, mouseY);
+                drawEntry(graphics, payload.entries().get(index), entryRect(x, y, panelWidth, index),
+                        uiMouseX, uiMouseY, index);
             }
         }
         graphics.pose().popMatrix();
@@ -82,37 +100,58 @@ public final class WhistleFollowerPickerScreen extends Screen {
     }
 
     private void drawEntry(GuiGraphicsExtractor graphics, WhistleFollowerListPayload.Entry entry,
-                           Rect rect, int mouseX, int mouseY) {
+                           Rect rect, float mouseX, float mouseY, int index) {
         boolean hovered = rect.contains(mouseX, mouseY);
-        int accent = entry.compatible() ? 0xFF4E8053 : 0xFF8B5E58;
-        graphics.fill(rect.x, rect.y, rect.right(), rect.bottom(), hovered ? 0xFFE9C99B : 0xFFC6A17B);
-        graphics.outline(rect.x, rect.y, rect.w, rect.h, accent);
+        int accent = entry.compatible() ? 0xFF62A269 : 0xFF8B5E58;
+        graphics.fill(rect.x, rect.y, rect.right(), rect.bottom(), hovered ? 0xFF3A3138 : CARD);
+        graphics.outline(rect.x, rect.y, rect.w, rect.h, hovered ? accent : 0xFF51454A);
         graphics.fill(rect.x + 2, rect.y + 2, rect.x + 6, rect.bottom() - 2, accent);
         graphics.item(spawnEgg(entry.species()), rect.x + 11, rect.y + 10);
-        bold(graphics, entry.name().toUpperCase(), rect.x + 36, rect.y + 7,
-                entry.compatible() ? 0xFF4D3931 : 0xFF78645C, 0.78F);
-        String rating = entry.rating() + "/4 FIELD RATING";
-        text(graphics, entry.compatible() ? rating : rating + "  /  CANNOT WORK TARGET",
-                rect.x + 36, rect.y + 23, entry.compatible() ? 0xFF46704B : 0xFFA4473A, 0.66F);
-        if (hovered && entry.compatible()) {
-            graphics.fill(rect.x + 2, rect.y + 2, rect.right() - 2, rect.bottom() - 2, 0x1FFFFFFF);
+        updateHover(index, hovered);
+        float motion = interactionMotion(index, hovered);
+        graphics.pose().pushMatrix();
+        float time = (renderNow - openedAt) / 1_000_000_000.0F;
+        graphics.pose().translate(rect.centerX() + Mth.sin(time * 7.2F + index) * 0.5F * motion,
+                rect.centerY() + Mth.sin(time * 8.5F + index) * 0.25F * motion);
+        graphics.pose().scale(1.0F + Mth.sin(time * 6.2F + index) * 0.012F * motion,
+                1.0F + Mth.sin(time * 6.2F + index) * 0.012F * motion);
+        graphics.pose().translate(-rect.centerX(), -rect.centerY());
+        bold(graphics, entry.name().toUpperCase(), rect.x + 36, rect.y + 6,
+                hovered ? accent : TEXT, 0.88F);
+        DinosaurSpecies species = DinosaurSpecies.byRegistryName(entry.species());
+        DinoWhistleSettings.FieldMode specialty = DinoFieldWorkRules.specialty(species);
+        String detail = specialty == null ? "NO FIELD SPECIALTY"
+                : specialty.title().toUpperCase() + "  /  " + entry.rating() + " STAR";
+        if (!entry.compatible() && specialty != null) detail += "  /  WRONG ORDER";
+        text(graphics, detail, rect.x + 36, rect.y + 23,
+                entry.compatible() ? 0xFF80B87E : 0xFFC47A6A, 0.76F);
+        graphics.pose().popMatrix();
+        if (hovered) {
+            graphics.fill(rect.x + 2, rect.y + 2, rect.right() - 2, rect.bottom() - 2, 0x12FFFFFF);
+            if (entry.compatible()) graphics.requestCursor(CursorTypes.POINTING_HAND);
         }
     }
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         if (event.button() != 0) return super.mouseClicked(event, doubleClick);
-        int panelWidth = 264;
+        int panelWidth = PANEL_WIDTH;
         int panelHeight = 49 + Math.max(1, payload.entries().size()) * 48;
         int x = (width - panelWidth) / 2;
         int y = (height - panelHeight) / 2;
+        Motion motion = motion(panelWidth, panelHeight);
+        double uiMouseX = x + panelWidth * 0.5F + (event.x() - (x + panelWidth * 0.5F)) / motion.scale;
+        double uiMouseY = y + panelHeight * 0.5F
+                + (event.y() - (y + panelHeight * 0.5F) - motion.offsetY) / motion.scale;
         for (int index = 0; index < payload.entries().size(); index++) {
             WhistleFollowerListPayload.Entry entry = payload.entries().get(index);
-            if (entryRect(x, y, panelWidth, index).contains(event.x(), event.y())) {
+            if (entryRect(x, y, panelWidth, index).contains(uiMouseX, uiMouseY)) {
                 if (!entry.compatible()) {
                     PrimevalUiSounds.click(0.72F);
                     return true;
                 }
+                pressedIndex = index;
+                pressedAt = Util.getNanos();
                 ClientPacketDistributor.sendToServer(new AssignWhistleFieldWorkPayload(entry.uuid(),
                         payload.first(), payload.second(), payload.hasSecond()));
                 PrimevalUiSounds.click(1.08F);
@@ -194,9 +233,49 @@ public final class WhistleFollowerPickerScreen extends Screen {
         graphics.pose().popMatrix();
     }
 
+    private void updateHover(int index, boolean hovered) {
+        if (hovered) {
+            if (hoverStarted[index] == 0L) hoverStarted[index] = renderNow;
+        } else {
+            hoverStarted[index] = 0L;
+        }
+    }
+
+    private float interactionMotion(int index, boolean hovered) {
+        float amount = 0.0F;
+        if (hovered && hoverStarted[index] != 0L) {
+            float seconds = (renderNow - hoverStarted[index]) / 1_000_000_000.0F;
+            amount = (1.0F - (float)Math.exp(-seconds * 18.0F)) * (float)Math.exp(-seconds * 2.8F);
+            if (seconds >= 1.35F) amount = 0.0F;
+        }
+        if (pressedIndex == index) {
+            amount = Math.max(amount, Mth.clamp(1.0F - (renderNow - pressedAt) / 280_000_000.0F, 0.0F, 1.0F));
+        }
+        return amount;
+    }
+
+    private static float spring(float progress, float damping, float frequency) {
+        if (progress >= 1.0F) return 1.0F;
+        double wave = Math.cos(frequency * progress) + damping / frequency * Math.sin(frequency * progress);
+        return 1.0F - (float)(Math.exp(-damping * progress) * wave);
+    }
+
+    private Motion motion(int panelWidth, int panelHeight) {
+        long now = renderNow == 0L ? Util.getNanos() : renderNow;
+        float progress = Mth.clamp((now - openedAt) / 290_000_000.0F, 0.0F, 1.0F);
+        float settled = spring(progress, 6.2F, 11.4F);
+        float fit = Math.min(1.0F, Math.min((width - 12.0F) / panelWidth, (height - 12.0F) / panelHeight));
+        return new Motion(Math.max(0.1F, fit * (0.76F + settled * 0.24F)),
+                14.0F * fit * (1.0F - settled));
+    }
+
+    private record Motion(float scale, float offsetY) {}
+
     private record Rect(int x, int y, int w, int h) {
         int right() { return x + w; }
         int bottom() { return y + h; }
+        float centerX() { return x + w * 0.5F; }
+        float centerY() { return y + h * 0.5F; }
         boolean contains(double mouseX, double mouseY) {
             return mouseX >= x && mouseX < right() && mouseY >= y && mouseY < bottom();
         }

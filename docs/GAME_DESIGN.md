@@ -314,7 +314,7 @@ These remain part of the product plan but must not destabilize the core save/gam
 - Fossil Fragment
 - Fossil Brush
 - Signal Baton — links blocks and issues contextual commands
-- Dino Whistle — configures follower-only field work: quarrying, connected lumber, crop harvesting, and loose-item collection. Hold use to configure it, then attack a valid block to mark the order and choose one of the player's current followers.
+- Dino Whistle — configures follower-only field work: quarrying, connected lumber, crop harvesting, and loose-item collection. Hold use to configure it, then attack a valid block to mark the order and choose one compatible follower. Field work is species-locked: Velociraptor retrieves, Tyrannosaurus and Spinosaurus quarry, Parasaurolophus lumbers, and Dodo harvests; the other current species have no field order.
 - Base Upgrade Core I and II
 - Recovery Salve
 - Berry Mash and Meat Ration

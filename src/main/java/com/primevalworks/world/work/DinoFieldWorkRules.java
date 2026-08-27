@@ -1,6 +1,7 @@
 package com.primevalworks.world.work;
 
 import com.primevalworks.PrimevalWorks;
+import com.primevalworks.world.entity.DinosaurSpecies;
 import com.primevalworks.world.entity.FieldDodoEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.tags.BlockTags;
@@ -8,6 +9,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import org.jetbrains.annotations.Nullable;
 
 public final class DinoFieldWorkRules {
     public static final int MAX_CONNECTED_BLOCKS = DinoFieldWorkLimits.MAX_CONNECTED_BLOCKS;
@@ -17,13 +19,25 @@ public final class DinoFieldWorkRules {
     private DinoFieldWorkRules() {
     }
 
-    public static int rating(FieldDodoEntity dinosaur, DinoWhistleSettings.FieldMode mode) {
-        return switch (mode) {
-            case QUARRY -> Math.max(dinosaur.getSpecialtyStars(1), dinosaur.getSpecialtyStars(2));
-            case LUMBER -> Math.max(dinosaur.getSpecialtyStars(3), dinosaur.getSpecialtyStars(4));
-            case HARVEST -> dinosaur.getSpecialtyStars(4);
-            case COLLECT -> dinosaur.getSpecialtyStars(0);
+    @Nullable
+    public static DinoWhistleSettings.FieldMode specialty(DinosaurSpecies species) {
+        return switch (DinoFieldSpecialtyProfile.valueOf(species.name()).role()) {
+            case QUARRY -> DinoWhistleSettings.FieldMode.QUARRY;
+            case LUMBER -> DinoWhistleSettings.FieldMode.LUMBER;
+            case HARVEST -> DinoWhistleSettings.FieldMode.HARVEST;
+            case COLLECT -> DinoWhistleSettings.FieldMode.COLLECT;
+            case NONE -> null;
         };
+    }
+
+    public static int sourceJobIndex(DinosaurSpecies species) {
+        return DinoFieldSpecialtyProfile.valueOf(species.name()).sourceJobIndex();
+    }
+
+    public static int rating(FieldDodoEntity dinosaur, DinoWhistleSettings.FieldMode mode) {
+        DinosaurSpecies species = dinosaur.getSpecies();
+        int source = sourceJobIndex(species);
+        return source >= 0 && specialty(species) == mode ? dinosaur.getSpecialtyStars(source) : 0;
     }
 
     public static String specialtyName(DinoWhistleSettings.FieldMode mode) {

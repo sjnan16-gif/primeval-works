@@ -52,9 +52,9 @@ public record RequestWhistleFollowersPayload(BlockPos first, BlockPos second, bo
             for (FieldDodoEntity dinosaur : DinosaurOwnership.loadedFollowers(player)) {
                 if (entries.size() >= DinosaurOwnership.followerLimit(player)) break;
                 int rating = DinoFieldWorkRules.rating(dinosaur, settings.mode());
-                boolean valid = settings.mode() == DinoWhistleSettings.FieldMode.COLLECT
+                boolean valid = rating > 0 && (settings.mode() == DinoWhistleSettings.FieldMode.COLLECT
                         || DinoFieldWorkRules.validTarget(player.level(), payload.first, settings.mode(), rating)
-                        || settings.pattern() == DinoWhistleSettings.Pattern.AREA;
+                        || settings.pattern() == DinoWhistleSettings.Pattern.AREA);
                 entries.add(new WhistleFollowerListPayload.Entry(dinosaur.getId(), dinosaur.getUUID(),
                         dinosaur.getDisplayName().getString(), dinosaur.getSpecies().registryName(), rating, valid));
             }

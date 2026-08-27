@@ -102,9 +102,7 @@ public final class CompanionScreen extends Screen {
     private static final Rect INFO = new Rect(115, 155, 121, 34);
     private static final Rect FEED = new Rect(309, 82, 58, 14);
     private static final Rect JOBS = new Rect(309, 101, 58, 14);
-    private static final Rect HOME = new Rect(309, 120, 58, 14);
-    private static final Rect STAY = new Rect(309, 139, 58, 14);
-    private static final Rect FOLLOW = new Rect(309, 158, 58, 14);
+    private static final Rect COMMAND = new Rect(309, 120, 58, 14);
 
     private final FieldDodoEntity dodo;
     private final BlockPos commandTablePos;
@@ -212,27 +210,17 @@ public final class CompanionScreen extends Screen {
             pressed(Action.JOBS);
             return true;
         }
-        if (global(layout, HOME).contains(event.x(), event.y())) {
-            requestCommandMode(DinosaurCommandMode.HOME);
-            playUiClick(0.92F);
-            pressed(Action.HOME);
-            return true;
-        }
-        if (global(layout, STAY).contains(event.x(), event.y())) {
-            requestCommandMode(DinosaurCommandMode.STAY);
-            playUiClick(0.98F);
-            pressed(Action.STAY);
-            return true;
-        }
-        if (global(layout, FOLLOW).contains(event.x(), event.y())) {
-            if (state.commandMode != DinosaurCommandMode.FOLLOW && state.followers >= state.followerLimit) {
+        if (global(layout, COMMAND).contains(event.x(), event.y())) {
+            DinosaurCommandMode next = nextCommandMode(state.commandMode);
+            if (next == DinosaurCommandMode.FOLLOW && state.followers >= state.followerLimit) {
                 state.notice = "Follower slots are full. Upgrade Field Command first.";
                 playUiClick(0.72F);
                 return true;
             }
-            requestCommandMode(DinosaurCommandMode.FOLLOW);
-            playUiClick(1.08F);
-            pressed(Action.FOLLOW);
+            requestCommandMode(next);
+            playUiClick(next == DinosaurCommandMode.HOME ? 0.92F
+                    : next == DinosaurCommandMode.STAY ? 0.98F : 1.08F);
+            pressed(Action.COMMAND);
             return true;
         }
         return super.mouseClicked(event, doubleClick);
@@ -299,9 +287,7 @@ public final class CompanionScreen extends Screen {
         drawJobSummary(graphics, layout, uiMouseX, uiMouseY, time);
         drawAction(graphics, global(layout, FEED), "FEED", 0xFFD86B32, Action.FEED, uiMouseX, uiMouseY, time);
         drawAction(graphics, global(layout, JOBS), "JOBS", 0xFF477895, Action.JOBS, uiMouseX, uiMouseY, time);
-        drawCommandAction(graphics, global(layout, HOME), DinosaurCommandMode.HOME, 0xFF547B3F, Action.HOME, uiMouseX, uiMouseY, time);
-        drawCommandAction(graphics, global(layout, STAY), DinosaurCommandMode.STAY, 0xFFB67845, Action.STAY, uiMouseX, uiMouseY, time);
-        drawCommandAction(graphics, global(layout, FOLLOW), DinosaurCommandMode.FOLLOW, 0xFF477895, Action.FOLLOW, uiMouseX, uiMouseY, time);
+        drawCommandAction(graphics, global(layout, COMMAND), uiMouseX, uiMouseY, time);
 
         HoverInfo hover = mainHoverInfo(layout, uiMouseX, uiMouseY);
         if (hover != null) {
@@ -514,16 +500,16 @@ public final class CompanionScreen extends Screen {
                 () -> fittedCenteredText(graphics, label, labelRect, hovered ? accent : INK, 1.0F, true));
     }
 
-    private void drawCommandAction(GuiGraphicsExtractor graphics, Rect rect, DinosaurCommandMode mode,
-                                   int accent, Action action, int mouseX, int mouseY, float time) {
-        boolean locked = mode == DinosaurCommandMode.FOLLOW
-                && state.commandMode != mode && state.followers >= state.followerLimit;
+    private void drawCommandAction(GuiGraphicsExtractor graphics, Rect rect, int mouseX, int mouseY, float time) {
+        DinosaurCommandMode mode = state.commandMode;
+        DinosaurCommandMode next = nextCommandMode(mode);
+        int accent = commandColor(mode);
+        boolean locked = next == DinosaurCommandMode.FOLLOW && state.followers >= state.followerLimit;
         drawAction(graphics, rect, mode.title().toUpperCase(), locked ? 0xFF766F68 : accent,
-                action, mouseX, mouseY, time);
-        if (state.commandMode == mode) {
-            outline(graphics, inset(rect, 2), withAlpha(accent, 210));
-            graphics.fill(rect.right() - 5, rect.y() + 4, rect.right() - 3, rect.bottom() - 4, accent);
-        } else if (locked) {
+                Action.COMMAND, mouseX, mouseY, time);
+        outline(graphics, inset(rect, 2), withAlpha(accent, 210));
+        graphics.fill(rect.right() - 5, rect.y() + 4, rect.right() - 3, rect.bottom() - 4, accent);
+        if (locked) {
             graphics.fill(rect.x() + 2, rect.y() + 2, rect.right() - 2, rect.bottom() - 2, 0x60706A67);
         }
     }
@@ -535,23 +521,17 @@ public final class CompanionScreen extends Screen {
         if (global(layout, JOBS).contains(mouseX, mouseY)) {
             return new HoverInfo("BASE JOBS", "Review specialties and assign permanent work inside the Command Table's base.", 0xFF477895);
         }
-        for (DinosaurCommandMode mode : DinosaurCommandMode.values()) {
-            Rect rect = switch (mode) {
-                case HOME -> HOME;
-                case STAY -> STAY;
-                case FOLLOW -> FOLLOW;
-            };
-            if (global(layout, rect).contains(mouseX, mouseY)) {
-                String detail = mode.description();
-                if (mode == DinosaurCommandMode.FOLLOW) {
-                    detail += " Followers: " + state.followers + "/" + state.followerLimit + ".";
-                    if (state.commandMode != mode && state.followers >= state.followerLimit) {
-                        detail += " Upgrade Field Command to unlock another slot.";
-                    }
+        if (global(layout, COMMAND).contains(mouseX, mouseY)) {
+            DinosaurCommandMode current = state.commandMode;
+            DinosaurCommandMode next = nextCommandMode(current);
+            String detail = current.description() + " Click to switch to " + next.title() + ".";
+            if (next == DinosaurCommandMode.FOLLOW) {
+                detail += " Followers: " + state.followers + "/" + state.followerLimit + ".";
+                if (state.followers >= state.followerLimit) {
+                    detail += " Upgrade Field Command to unlock another slot.";
                 }
-                return new HoverInfo(mode.title().toUpperCase(), detail,
-                        mode == DinosaurCommandMode.FOLLOW ? 0xFF477895 : mode == DinosaurCommandMode.STAY ? 0xFFB67845 : 0xFF547B3F);
             }
+            return new HoverInfo(current.title().toUpperCase(), detail, commandColor(current));
         }
         if (global(layout, FIRST_MUTATION).contains(mouseX, mouseY)) {
             return mutationInfo(mutationAt(0));
@@ -670,7 +650,7 @@ public final class CompanionScreen extends Screen {
         rightText(graphics, record, layout.panel().right() - 13, layout.panel().y() + 8, layout.panel().width() / 2, LABEL, 0.76F, true);
         textLine(
                 graphics,
-                "Choose the job to prioritize. Every dinosaur can still help with all five.",
+                "Choose one base priority. Field work is reserved for species specialists.",
                 layout.panel().x() + 13,
                 layout.panel().y() + 20,
                 layout.panel().width() - 26,
@@ -745,22 +725,48 @@ public final class CompanionScreen extends Screen {
 
     private void drawFieldJobRow(GuiGraphicsExtractor graphics, Rect row, int mouseX, int mouseY, float time) {
         boolean hovered = row.contains(mouseX, mouseY);
-        int color = 0xFF75679A;
+        DinoWhistleSettings.FieldMode specialty = DinoFieldWorkRules.specialty(dodo.getSpecies());
+        int source = DinoFieldWorkRules.sourceJobIndex(dodo.getSpecies());
+        int rating = source < 0 ? 0 : dodo.getSpecialtyStars(source);
+        int color = source < 0 ? 0xFF766F68 : SPECIALTY_COLORS[source];
         graphics.fill(row.x(), row.y(), row.right(), row.bottom(), EDGE_DARK);
         graphics.fill(row.x() + 1, row.y() + 1, row.right() - 1, row.bottom() - 1,
-                hovered ? PAPER_LIGHT : 0xFFAF947C);
+                hovered ? 0xFF393238 : 0xFF242126);
         graphics.fill(row.x() + 2, row.y() + 2, row.x() + 6, row.bottom() - 2, color);
-        graphics.item(Items.IRON_PICKAXE.getDefaultInstance(), row.x() + 10, row.y() + 4);
+        if (source >= 0) {
+            int iconHeight = 16;
+            int iconWidth = Math.max(12, Math.round(SPECIALTY_ICON_WIDTHS[source] * (iconHeight / 8.0F)));
+            blitTinted(graphics, SPECIALTY_ICONS[source],
+                    new Rect(row.x() + 11, row.y() + (row.height() - iconHeight) / 2, iconWidth, iconHeight),
+                    hovered ? 0xFFFFFFFF : 0xFFD0C6BE);
+        } else {
+            graphics.item(Items.IRON_PICKAXE.getDefaultInstance(), row.x() + 10, row.y() + 4);
+            graphics.fill(row.x() + 10, row.y() + 4, row.x() + 26, row.y() + 20, 0x880D0C0E);
+        }
         int textX = row.x() + 36;
-        int quarry = DinoFieldWorkRules.rating(dodo, DinoWhistleSettings.FieldMode.QUARRY);
-        int lumber = DinoFieldWorkRules.rating(dodo, DinoWhistleSettings.FieldMode.LUMBER);
-        int harvest = DinoFieldWorkRules.rating(dodo, DinoWhistleSettings.FieldMode.HARVEST);
-        int collect = DinoFieldWorkRules.rating(dodo, DinoWhistleSettings.FieldMode.COLLECT);
-        textLine(graphics, "FIELD WORK", textX, row.y() + 4, 92, hovered ? color : INK, 1.0F, true);
-        textLine(graphics, "FOLLOW REQUIRED  /  ASSIGN WITH DINO WHISTLE", textX + 98, row.y() + 4,
-                row.width() - 150, hovered ? color : MUTED_INK, 0.86F, true);
-        textLine(graphics, "QUARRY " + quarry + "  LUMBER " + lumber + "  HARVEST " + harvest + "  COLLECT " + collect,
-                textX, row.y() + 16, row.width() - 48, hovered ? color : MUTED_INK, 0.78F, true);
+        String title = specialty == null ? "FIELD WORK" : DinoFieldWorkRules.specialtyName(specialty).toUpperCase();
+        String description = specialty == null
+                ? "No field specialty."
+                : "Assign with the Dino Whistle.";
+        String speed = specialty == null ? "NOT AVAILABLE" : specialtySpeedLabel(source);
+        withTextMotion(graphics, new Rect(textX, row.y() + 2, row.width() - 92, row.height() - 4),
+                time, hovered, false, () -> {
+                    textLine(graphics, title, textX, row.y() + 4, 160,
+                            hovered ? color : 0xFFD3CBC5, 1.0F, true);
+                    textLine(graphics, description, textX, row.y() + 16, row.width() - 230,
+                            hovered ? color : 0xFF928A88, 1.0F, true);
+                    rightText(graphics, speed, row.right() - 66, row.y() + 16, 112,
+                            hovered ? color : 0xFF928A88, 1.0F, true);
+                });
+        if (specialty != null) {
+            int starX = row.right() - 54;
+            int starY = row.y() + (row.height() - 11) / 2;
+            for (int star = 0; star < 4; star++) {
+                Rect starRect = new Rect(starX + star * 12, starY, 11, 11);
+                if (star < rating) blit(graphics, STAR_TEXTURE, starRect);
+                else blitTinted(graphics, STAR_TEXTURE, starRect, 0x453E3B40);
+            }
+        }
         if (hovered) {
             glow(graphics, row, time);
             graphics.requestCursor(CursorTypes.POINTING_HAND);
@@ -808,7 +814,9 @@ public final class CompanionScreen extends Screen {
             }
         }
         if (layout.row(SPECIALTIES.length).contains(mouseX, mouseY)) {
-            state.notice = "Set this companion to Follow, then mark field work with a Dino Whistle.";
+            state.notice = DinoFieldWorkRules.specialty(dodo.getSpecies()) == null
+                    ? "This species has no follower specialty."
+                    : "Set this companion to Follow, then mark field work with a Dino Whistle.";
             playUiClick(0.84F);
             return true;
         }
@@ -1015,6 +1023,22 @@ public final class CompanionScreen extends Screen {
 
     private void requestCommandMode(DinosaurCommandMode mode) {
         ClientPacketDistributor.sendToServer(new DinosaurCommandPayload(dodo.getId(), mode.ordinal()));
+    }
+
+    private static DinosaurCommandMode nextCommandMode(DinosaurCommandMode mode) {
+        return switch (mode) {
+            case HOME -> DinosaurCommandMode.STAY;
+            case STAY -> DinosaurCommandMode.FOLLOW;
+            case FOLLOW -> DinosaurCommandMode.HOME;
+        };
+    }
+
+    private static int commandColor(DinosaurCommandMode mode) {
+        return switch (mode) {
+            case HOME -> 0xFF547B3F;
+            case STAY -> 0xFFB67845;
+            case FOLLOW -> 0xFF477895;
+        };
     }
 
     public static void acceptCommandState(DinosaurCommandStatePayload payload) {
@@ -1565,9 +1589,7 @@ public final class CompanionScreen extends Screen {
     private enum Action {
         FEED,
         JOBS,
-        HOME,
-        STAY,
-        FOLLOW
+        COMMAND
     }
 
     private enum MutationKind {

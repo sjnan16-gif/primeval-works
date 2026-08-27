@@ -3206,7 +3206,18 @@ public final class PrimevalGameTests {
         BlockPos table = helper.absolutePos(tableRelative);
         BlockPos target = helper.absolutePos(targetRelative);
         CommandTableBlock.claimExisting(player, table);
-        FieldDodoEntity dinosaur = helper.spawn(ModEntities.FIELD_DODO.get(), dinosaurRelative);
+        FieldDodoEntity nonspecialist = helper.spawn(ModEntities.STEGOSAURUS.get(), new BlockPos(3, 1, 5));
+        nonspecialist.setCommandMode(DinosaurCommandMode.FOLLOW);
+        nonspecialist.assignFieldWork(new DinoWhistleSettings(
+                DinoWhistleSettings.FieldMode.COLLECT,
+                DinoWhistleSettings.Pattern.SINGLE,
+                false,
+                48
+        ), target, null);
+        helper.assertTrue(!nonspecialist.hasFieldWork(),
+                "A species without a field specialty accepted a whistle order");
+        nonspecialist.discard();
+        FieldDodoEntity dinosaur = helper.spawn(ModEntities.TYRANNOSAURUS.get(), dinosaurRelative);
         helper.assertTrue(DinosaurOwnership.addToActiveIfRoom(player, dinosaur, table),
                 "The quarry test companion could not join the active crew");
         helper.assertTrue(DinosaurOwnership.setCommandMode(player, dinosaur, DinosaurCommandMode.FOLLOW).success(),

@@ -1527,6 +1527,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
 
     public void assignFieldWork(DinoWhistleSettings settings, BlockPos first, @Nullable BlockPos second) {
         if (level().isClientSide() || commandMode != DinosaurCommandMode.FOLLOW) return;
+        if (DinoFieldWorkRules.rating(this, settings.mode()) <= 0) return;
         fieldWorkMode = settings.mode();
         fieldWorkPattern = settings.pattern();
         fieldWorkContinuous = settings.continuous();
@@ -2691,6 +2692,11 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             clearFieldWork();
             return;
         }
+        int rating = DinoFieldWorkRules.rating(this, fieldWorkMode);
+        if (rating <= 0) {
+            clearFieldWork();
+            return;
+        }
         double allowed = fieldWorkRange;
         Vec3 anchor = fieldWorkPattern == DinoWhistleSettings.Pattern.AREA && fieldWorkSecond != null
                 ? Vec3.atCenterOf(fieldWorkFirst).lerp(Vec3.atCenterOf(fieldWorkSecond), 0.5D)
@@ -2721,7 +2727,6 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             }
         }
         BlockPos target = fieldWorkTargets.get(fieldWorkCursor);
-        int rating = DinoFieldWorkRules.rating(this, fieldWorkMode);
         if (!DinoFieldWorkRules.validTarget(level(), target, fieldWorkMode, rating)) {
             fieldWorkCursor++;
             cancelWorkAction();
@@ -2870,12 +2875,8 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     }
 
     private int fieldSupportJobIndex() {
-        return switch (fieldWorkMode) {
-            case QUARRY -> getSpecialtyStars(1) >= getSpecialtyStars(2) ? 1 : 2;
-            case LUMBER -> getSpecialtyStars(3) >= getSpecialtyStars(4) ? 3 : 4;
-            case HARVEST -> 4;
-            case COLLECT -> 0;
-        };
+        int source = DinoFieldWorkRules.sourceJobIndex(getSpecies());
+        return source < 0 ? 0 : source;
     }
 
     private int fieldWorkDuration(int durationTicks) {
