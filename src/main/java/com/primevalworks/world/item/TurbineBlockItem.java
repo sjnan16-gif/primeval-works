@@ -14,16 +14,22 @@ import java.util.function.Consumer;
 
 public final class TurbineBlockItem extends BlockItem implements GeoItem {
     public enum Variant {
-        WIND("wind_turbine", "wind_turbine"),
-        UPGRADED_WIND("wind_turbine", "wind_turbine_upgraded"),
-        WATER("water_turbine", "water_turbine");
+        WIND("wind_turbine", "wind_turbine", 0.0F, -23.0F / 16.0F, 0.5F / 16.0F),
+        UPGRADED_WIND("wind_turbine", "wind_turbine_upgraded", 0.0F, -23.0F / 16.0F, 0.5F / 16.0F),
+        WATER("water_turbine", "water_turbine", 0.0F, -24.0F / 16.0F, 0.0F);
 
         private final String model;
         private final String texture;
+        private final float guiOffsetX;
+        private final float guiOffsetY;
+        private final float guiOffsetZ;
 
-        Variant(String model, String texture) {
+        Variant(String model, String texture, float guiOffsetX, float guiOffsetY, float guiOffsetZ) {
             this.model = model;
             this.texture = texture;
+            this.guiOffsetX = guiOffsetX;
+            this.guiOffsetY = guiOffsetY;
+            this.guiOffsetZ = guiOffsetZ;
         }
 
         public String model() {
@@ -32,6 +38,18 @@ public final class TurbineBlockItem extends BlockItem implements GeoItem {
 
         public String texture() {
             return texture;
+        }
+
+        public float guiOffsetX() {
+            return guiOffsetX;
+        }
+
+        public float guiOffsetY() {
+            return guiOffsetY;
+        }
+
+        public float guiOffsetZ() {
+            return guiOffsetZ;
         }
     }
 

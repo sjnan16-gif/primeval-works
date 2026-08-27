@@ -25,6 +25,16 @@ final class TurbineItemPresentationAssetsTest {
                         && renderer.contains("FIRST_PERSON_RIGHT_HAND -> 0.33F")
                         && renderer.contains("THIRD_PERSON_RIGHT_HAND -> 0.45F"),
                 "The authored multiblock turbine stopped fitting both its slot and held views");
+        assertTrue(renderer.contains("context == ItemDisplayContext.GUI")
+                        && renderer.contains("variant.guiOffsetX()")
+                        && renderer.contains("variant.guiOffsetY()")
+                        && renderer.contains("variant.guiOffsetZ()"),
+                "The turbines are no longer centered from their visible GUI bounds");
+
+        String item = Files.readString(Path.of(
+                "src/main/java/com/primevalworks/world/item/TurbineBlockItem.java"));
+        assertTrue(item.contains("-23.0F / 16.0F") && item.contains("-24.0F / 16.0F"),
+                "The wind and water turbine GUI centers no longer match their authored geometry");
     }
 
     @Test

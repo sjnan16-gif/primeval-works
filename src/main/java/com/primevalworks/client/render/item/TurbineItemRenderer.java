@@ -12,8 +12,11 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemDisplayContext;
 
 public final class TurbineItemRenderer extends GeoItemRenderer<TurbineBlockItem> {
+    private final TurbineBlockItem.Variant variant;
+
     public TurbineItemRenderer(TurbineBlockItem.Variant variant) {
         super(new TurbineItemGeoModel(variant));
+        this.variant = variant;
         useAlternateGuiLighting();
     }
 
@@ -37,5 +40,17 @@ public final class TurbineItemRenderer extends GeoItemRenderer<TurbineBlockItem>
             default -> 0.42F;
         };
         super.scaleModelForRender(renderPassInfo, widthScale * scale, heightScale * scale);
+    }
+
+    @Override
+    public void adjustRenderPose(RenderPassInfo<GeoRenderState> renderPassInfo) {
+        super.adjustRenderPose(renderPassInfo);
+
+        ItemDisplayContext context = renderPassInfo.getOrDefaultGeckolibData(
+                DataTickets.ITEM_RENDER_PERSPECTIVE, ItemDisplayContext.NONE);
+        if (context == ItemDisplayContext.GUI) {
+            renderPassInfo.poseStack().translate(
+                    variant.guiOffsetX(), variant.guiOffsetY(), variant.guiOffsetZ());
+        }
     }
 }
