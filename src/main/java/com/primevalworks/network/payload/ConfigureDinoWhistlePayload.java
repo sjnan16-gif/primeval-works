@@ -1,0 +1,41 @@
+package com.primevalworks.network.payload;
+
+import com.primevalworks.PrimevalWorks;
+import com.primevalworks.world.item.DinoWhistleItem;
+import com.primevalworks.world.work.DinoWhistleSettings;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
+public record ConfigureDinoWhistlePayload(int mode, int pattern, boolean continuous, int range)
+        implements CustomPacketPayload {
+    public static final Type<ConfigureDinoWhistlePayload> TYPE = new Type<>(
+            Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "configure_dino_whistle"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, ConfigureDinoWhistlePayload> STREAM_CODEC = StreamCodec.of(
+            (buffer, payload) -> {
+                buffer.writeVarInt(payload.mode);
+                buffer.writeVarInt(payload.pattern);
+                buffer.writeBoolean(payload.continuous);
+                buffer.writeVarInt(payload.range);
+            }, buffer -> new ConfigureDinoWhistlePayload(buffer.readVarInt(), buffer.readVarInt(),
+                    buffer.readBoolean(), buffer.readVarInt()));
+
+    public static void handle(ConfigureDinoWhistlePayload payload, IPayloadContext context) {
+        if (!(context.player() instanceof ServerPlayer player)) return;
+        context.enqueueWork(() -> {
+            ItemStack whistle = DinoWhistleItem.findHeld(player);
+            if (whistle.isEmpty()) return;
+            new DinoWhistleSettings(DinoWhistleSettings.FieldMode.byId(payload.mode),
+                    DinoWhistleSettings.Pattern.byId(payload.pattern), payload.continuous, payload.range).write(whistle);
+            player.getInventory().setChanged();
+            player.containerMenu.broadcastChanges();
+        });
+    }
+
+    @Override
+    public Type<? extends CustomPacketPayload> type() { return TYPE; }
+}

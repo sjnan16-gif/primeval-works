@@ -24,6 +24,7 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.Identifier;
@@ -443,8 +444,20 @@ public final class EnergyNetworkScreen extends Screen {
 
     private AABB bounds(BlockPos pos) {
         BlockState state = minecraft.level.getBlockState(pos);
+        if (TurbineBlock.isTurbine(state)) return turbineBounds(pos, state);
         VoxelShape shape = state.getShape(minecraft.level, pos);
         return (shape.isEmpty() ? Shapes.block().bounds() : shape.bounds()).move(pos);
+    }
+
+    private static AABB turbineBounds(BlockPos pos, BlockState state) {
+        Direction facing = state.getValue(TurbineBlock.FACING);
+        boolean eastWest = facing.getAxis() == Direction.Axis.Z;
+        double height = TurbineBlock.isWindTurbine(state) ? 4.0D : 3.0D;
+        return eastWest
+                ? new AABB(pos.getX() - 1.0D, pos.getY(), pos.getZ(),
+                        pos.getX() + 2.0D, pos.getY() + height, pos.getZ() + 1.0D)
+                : new AABB(pos.getX(), pos.getY(), pos.getZ() - 1.0D,
+                        pos.getX() + 1.0D, pos.getY() + height, pos.getZ() + 2.0D);
     }
 
     private Vec3 desiredCameraPosition() {
@@ -561,10 +574,14 @@ public final class EnergyNetworkScreen extends Screen {
     private void renderHighlight(PoseStack pose, SubmitNodeCollector submits, BlockPos pos,
                                  int color, float width, Vec3 camera) {
         BlockState state = minecraft.level.getBlockState(pos);
-        if (BaseEnergyRules.isGenerator(state)) {
-            for (BlockPos part : TurbineBlock.structurePositions(pos, state)) {
-                renderSingleHighlight(pose, submits, part, color, width, camera);
-            }
+        if (TurbineBlock.isTurbine(state)) {
+            AABB authoredBounds = turbineBounds(pos, state);
+            VoxelShape authoredShape = Shapes.create(authoredBounds.move(-pos.getX(), -pos.getY(), -pos.getZ()));
+            double x = pos.getX() - camera.x;
+            double y = pos.getY() - camera.y;
+            double z = pos.getZ() - camera.z;
+            submits.submitCustomGeometry(pose, WorksitePlannerScreen.XRAY_HIGHLIGHT_TYPE,
+                    (matrix, vertices) -> renderShape(matrix, vertices, authoredShape, x, y, z, color, width));
             return;
         }
         renderSingleHighlight(pose, submits, pos, color, width, camera);

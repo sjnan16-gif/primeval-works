@@ -30,7 +30,7 @@ Authored entity assets are currently wired for Tyrannosaurus, Field Dodo, Veloci
 
 | Content | Status | Current behavior |
 |---|---|---|
-| Command Table | Working | A single-block base controller with a one-block footprint. It stores up to 500 base energy before upgrades and manages 7-14 active dinosaurs, the depot, work orders, power connections, and the upgrade tree. The starting work radius is 50 blocks. One table is allowed per player and tables need 72 blocks of horizontal separation. |
+| Command Table | Working | A single-block base controller with a one-block footprint. It stores up to 500 base energy before upgrades and manages 7-14 active dinosaurs, the depot, work orders, power connections, the upgrade tree, and one starting follower slot. Two Field Command ranks raise the follower limit to three. The starting work radius is 50 blocks. One table is allowed per player and tables need 72 blocks of horizontal separation. |
 | Food Box | Working | A 10-slot food-only row joined above the complete player inventory panel. A dinosaur below 50 hunger walks over and eats compatible food until full. Transporters can restock it. |
 | Ancient Furnace | Working | Smelts vanilla furnace recipes using base energy only. Its authored throttle ranges from 2.5-10.5 E/S and trades power draw for 0.75x-4.2x processing speed; Fire workers can tend it and Transport workers can supply input or collect output. It releases its energy demand while empty. |
 | Wind Turbine | Working | A 3-by-4 multiblock with two phases. The craftable basic turbine produces 60% output; the Processor upgrades it to full output with a hard-expedition Pteranodon Wing Fragment. Both need open air above the rotor, accept one assigned Energy worker per station, and only rotate while that worker is actively generating. Their item forms use the exact authored model and remain still. |
@@ -51,6 +51,7 @@ Authored entity assets are currently wired for Tyrannosaurus, Field Dodo, Veloci
 - Energy: one Energy dinosaur per valid Wind or Water Turbine, continuous generation, environment validation, stored base energy, consumer assignment, persistence, and per-block demand.
 - Crafting: a Crafting dinosaur uses a selected vanilla Crafting Table, checks the loaded base containers for real recipe ingredients, consumes them transactionally, and leaves the result for a Transport worker.
 - Expeditions: five authored skill-scaled tiers with fixed weighted pools, risk, persistence, and Transport-compatible return cargo.
+- Field following: Home returns a companion to base duty, Stay holds the current area, and Follow enables owner defense and Dino Whistle orders. The whistle can quarry marked stone/ore, fell a bounded connected tree, harvest mature crops, or collect loose ground items. Single, connected, and capped two-corner area patterns support one-time or continuous work within a configurable 16-85-block leash. Field work respects claims/events and never breaks machines, storage, unloaded chunks, or more than its fixed connected/area limits.
 - Feeding: Food Boxes automatically serve compatible food at the authored hunger threshold.
 - Recovery/depot: active work orders, needs, genetics, cooldowns, expeditions, and carried cargo survive depot storage and world saves. Storing a carrier returns its held stack as base cargo instead of deleting or duplicating it.
 

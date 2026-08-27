@@ -32,6 +32,8 @@ import com.primevalworks.world.inventory.FoodBoxMenu;
 import com.primevalworks.world.work.BaseInventoryIndex;
 import com.primevalworks.world.work.ExpeditionRewards;
 import com.primevalworks.world.work.WorkSpecialtyRules;
+import com.primevalworks.world.work.DinosaurCommandMode;
+import com.primevalworks.world.work.DinoWhistleSettings;
 import com.primevalworks.world.processor.ProcessorRecipes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -190,6 +192,12 @@ public final class PrimevalGameTests {
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> HIT_WORKER_RESUMES_ASSIGNMENT =
             TEST_FUNCTIONS.register("hit_worker_resumes_assignment",
                     () -> PrimevalGameTests::hitWorkerResumesAssignment);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> FOLLOWER_ORDER_SURVIVES_RELOAD =
+            TEST_FUNCTIONS.register("follower_order_survives_reload",
+                    () -> PrimevalGameTests::followerOrderSurvivesReload);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> FOLLOWER_QUARRIES_MARKED_BLOCK =
+            TEST_FUNCTIONS.register("follower_quarries_marked_block",
+                    () -> PrimevalGameTests::followerQuarriesMarkedBlock);
 
     private PrimevalGameTests() {
     }
@@ -420,6 +428,16 @@ public final class PrimevalGameTests {
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "hit_worker_resumes_assignment"),
                 new FunctionGameTestInstance(HIT_WORKER_RESUMES_ASSIGNMENT.getKey(),
                         isolatedTestData(event, "hit_worker_resume"))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "follower_order_survives_reload"),
+                new FunctionGameTestInstance(FOLLOWER_ORDER_SURVIVES_RELOAD.getKey(),
+                        isolatedTestData(event, "follower_order_reload"))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "follower_quarries_marked_block"),
+                new FunctionGameTestInstance(FOLLOWER_QUARRIES_MARKED_BLOCK.getKey(),
+                        isolatedTestData(event, "follower_quarry"))
         );
     }
 
@@ -2284,8 +2302,11 @@ public final class PrimevalGameTests {
         helper.setBlock(tablePos, ModBlocks.COMMAND_TABLE.get());
         CommandTableBlockEntity table = helper.getBlockEntity(tablePos, CommandTableBlockEntity.class);
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
+        player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
         player.getAbilities().instabuild = false;
-        helper.assertTrue(table.claim(player.getUUID()), "A fresh Command Table could not be claimed");
+        CommandTableBlock.claimExisting(player, helper.absolutePos(tablePos));
+        helper.assertTrue(table.isOwnedBy(player.getUUID()), "A fresh Command Table could not be claimed");
         helper.assertTrue(table.baseRadius() == 50, "A new base did not begin with a 50-block radius");
         player.getInventory().add(new ItemStack(Items.COPPER_INGOT, 16));
         player.getInventory().add(new ItemStack(Items.OAK_LOG, 24));
@@ -2334,6 +2355,34 @@ public final class PrimevalGameTests {
         helper.assertTrue(table.purchase(player, BaseUpgrade.CREW_PERCHES.id()).success()
                         && table.activeDinosaurCapacity() == 9,
                 "The first crew upgrade did not unlock two real active slots");
+        helper.assertTrue(table.followerCapacity() == 1,
+                "A fresh base did not begin with exactly one follower slot");
+
+        List<FieldDodoEntity> followers = new java.util.ArrayList<>();
+        for (int index = 0; index < 4; index++) {
+            BlockPos relative = new BlockPos(4 + index, 1, 2);
+            helper.setBlock(relative.below(), Blocks.STONE);
+            FieldDodoEntity follower = helper.spawn(ModEntities.FIELD_DODO.get(), relative);
+            helper.assertTrue(DinosaurOwnership.addToActiveIfRoom(player, follower, helper.absolutePos(tablePos)),
+                    "Follower test companion " + index + " could not join the active crew");
+            followers.add(follower);
+        }
+        helper.assertTrue(DinosaurOwnership.setCommandMode(player, followers.get(0), DinosaurCommandMode.FOLLOW).success(),
+                "The first follower slot rejected its companion");
+        helper.assertTrue(!DinosaurOwnership.setCommandMode(player, followers.get(1), DinosaurCommandMode.FOLLOW).success()
+                        && DinosaurOwnership.followerCount(player) == 1,
+                "A fresh base allowed more than one follower");
+        helper.assertTrue(table.purchase(player, BaseUpgrade.FIELD_COMMAND.id()).success()
+                        && table.purchase(player, BaseUpgrade.FIELD_COMMAND.id()).success()
+                        && table.followerCapacity() == 3,
+                "Field Command did not unlock the second and third follower slots");
+        helper.assertTrue(DinosaurOwnership.setCommandMode(player, followers.get(1), DinosaurCommandMode.FOLLOW).success()
+                        && DinosaurOwnership.setCommandMode(player, followers.get(2), DinosaurCommandMode.FOLLOW).success(),
+                "Field Command did not admit the second and third followers");
+        helper.assertTrue(!DinosaurOwnership.setCommandMode(player, followers.get(3), DinosaurCommandMode.FOLLOW).success()
+                        && DinosaurOwnership.followerCount(player) == 3,
+                "The upgraded base exceeded its three-follower hard limit");
+        followers.forEach(FieldDodoEntity::discard);
         helper.succeed();
     }
 
@@ -3098,6 +3147,91 @@ public final class PrimevalGameTests {
                 .thenSucceed();
     }
 
+    private static void followerOrderSurvivesReload(GameTestHelper helper) {
+        BlockPos dinosaurRelative = new BlockPos(2, 1, 2);
+        BlockPos first = helper.absolutePos(new BlockPos(4, 1, 4));
+        BlockPos second = helper.absolutePos(new BlockPos(7, 3, 7));
+        helper.setBlock(new BlockPos(2, 0, 2), Blocks.STONE);
+        FieldDodoEntity original = helper.spawn(ModEntities.FIELD_DODO.get(), dinosaurRelative);
+        original.setCommandMode(DinosaurCommandMode.FOLLOW);
+        original.assignFieldWork(new DinoWhistleSettings(
+                DinoWhistleSettings.FieldMode.HARVEST,
+                DinoWhistleSettings.Pattern.AREA,
+                true,
+                77
+        ), first, second);
+
+        TagValueOutput output = TagValueOutput.createWithContext(
+                ProblemReporter.DISCARDING, helper.getLevel().registryAccess());
+        original.saveWithoutId(output);
+        CompoundTag snapshot = output.buildResult();
+        original.discard();
+
+        FieldDodoEntity restored = ModEntities.FIELD_DODO.get().create(
+                helper.getLevel(), EntitySpawnReason.LOAD);
+        helper.assertTrue(restored != null, "The follower could not be recreated from its saved state");
+        restored.load(TagValueInput.create(
+                ProblemReporter.DISCARDING, helper.getLevel().registryAccess(), snapshot));
+        helper.assertTrue(restored.getCommandMode() == DinosaurCommandMode.FOLLOW,
+                "The saved follower reverted to Home after reload");
+        helper.assertTrue(restored.hasFieldWork()
+                        && restored.getFieldWorkMode() == DinoWhistleSettings.FieldMode.HARVEST,
+                "The follower lost its field-work mode after reload");
+        helper.assertTrue(restored.getFieldWorkPattern() == DinoWhistleSettings.Pattern.AREA
+                        && restored.isFieldWorkContinuous(),
+                "The follower lost its area or continuous settings after reload");
+        helper.assertTrue(restored.getFieldWorkRange() == 77
+                        && restored.getFieldWorkFirst().filter(first::equals).isPresent()
+                        && restored.getFieldWorkSecond().filter(second::equals).isPresent(),
+                "The follower lost its leash or selected corners after reload");
+        helper.succeed();
+    }
+
+    private static void followerQuarriesMarkedBlock(GameTestHelper helper) {
+        BlockPos tableRelative = new BlockPos(1, 1, 1);
+        BlockPos dinosaurRelative = new BlockPos(3, 1, 3);
+        BlockPos targetRelative = new BlockPos(5, 1, 3);
+        forceTicking(helper, tableRelative, dinosaurRelative, targetRelative);
+        for (int x = 0; x <= 7; x++) {
+            for (int z = 0; z <= 6; z++) helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+        }
+        helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
+        helper.setBlock(targetRelative, Blocks.STONE);
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
+        player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
+        player.snapTo(helper.absolutePos(new BlockPos(2, 1, 3)).getCenter().x,
+                helper.absolutePos(new BlockPos(2, 1, 3)).getY(),
+                helper.absolutePos(new BlockPos(2, 1, 3)).getCenter().z, 0.0F, 0.0F);
+        BlockPos table = helper.absolutePos(tableRelative);
+        BlockPos target = helper.absolutePos(targetRelative);
+        CommandTableBlock.claimExisting(player, table);
+        FieldDodoEntity dinosaur = helper.spawn(ModEntities.FIELD_DODO.get(), dinosaurRelative);
+        helper.assertTrue(DinosaurOwnership.addToActiveIfRoom(player, dinosaur, table),
+                "The quarry test companion could not join the active crew");
+        helper.assertTrue(DinosaurOwnership.setCommandMode(player, dinosaur, DinosaurCommandMode.FOLLOW).success(),
+                "The quarry test companion could not enter Follow mode");
+        dinosaur.setInvulnerable(true);
+        dinosaur.assignFieldWork(new DinoWhistleSettings(
+                DinoWhistleSettings.FieldMode.QUARRY,
+                DinoWhistleSettings.Pattern.SINGLE,
+                false,
+                48
+        ), target, null);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(helper.getBlockState(targetRelative).isAir(),
+                        "The follower never completed its server-authoritative quarry order; position="
+                                + dinosaur.position() + ", mode=" + dinosaur.getCommandMode()
+                                + ", fieldEnabled=" + dinosaur.hasFieldWork()
+                                + ", hunger=" + dinosaur.getHunger()
+                                + ", action=" + dinosaur.getWorkAction()
+                                + ", entityTicks=" + dinosaur.tickCount))
+                .thenExecute(() -> helper.assertTrue(!dinosaur.hasFieldWork(),
+                        "A one-time quarry order remained active after its target was finished"))
+                .thenSucceed();
+    }
+
     private static void nightShiftDrainsMood(GameTestHelper helper) {
         BlockPos tableRelative = new BlockPos(0, 1, 0);
         BlockPos dodoRelative = new BlockPos(0, 2, 0);
@@ -3110,6 +3244,7 @@ public final class PrimevalGameTests {
         );
 
         FieldDodoEntity dodo = helper.spawn(ModEntities.FIELD_DODO.get(), dodoRelative);
+        dodo.setInvulnerable(true);
         dodo.assignWork(
                 0,
                 helper.absolutePos(tableRelative),

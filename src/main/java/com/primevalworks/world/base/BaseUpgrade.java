@@ -47,7 +47,11 @@ public enum BaseUpgrade {
 
     CREW_PERCHES(28, "+2 Slots", "Make room for two more workers.", "Adds two active dinosaur slots to this base.", 1, 2, 4, 1, -315, -45),
     PACK_HIERARCHY(29, "+2 Slots", "Settle two more workers into the crew.", "Adds two active dinosaur slots to this base.", 1, 2, 8, 2, 315, 55),
-    ANCIENT_BONDS(30, "+3 Slots", "Hold a larger crew together.", "Adds three active dinosaur slots to this base.", 1, 6, 25, 1, 140, 245);
+    ANCIENT_BONDS(30, "+3 Slots", "Hold a larger crew together.", "Adds three active dinosaur slots to this base.", 1, 6, 25, 1, 140, 245),
+
+    FIELD_COMMAND(31, "Field Command", "Take more companions beyond the walls.",
+            "Each rank adds one follower. Field companions can defend you and answer a Dino Whistle.",
+            2, 3, 10, 1, -280, 245);
 
     private final int id;
     private final String title;
@@ -96,6 +100,13 @@ public enum BaseUpgrade {
         }
         if (this == ANCIENT_BONDS) {
             return List.of(cost("primevalworks:ancient_metal_ingot", 6), cost("primevalworks:compressed_core", 2));
+        }
+        if (this == FIELD_COMMAND) {
+            return currentLevel <= 0
+                    ? List.of(cost("minecraft:lead", 2), cost("primevalworks:fossil_fragment", 6),
+                            cost("minecraft:gold_ingot", 6))
+                    : List.of(cost("minecraft:lead", 4), cost("primevalworks:ancient_metal_ingot", 3),
+                            cost("primevalworks:pteranodon_wing_fragment", 2));
         }
         return switch (baseCost) {
             case 1 -> List.of(

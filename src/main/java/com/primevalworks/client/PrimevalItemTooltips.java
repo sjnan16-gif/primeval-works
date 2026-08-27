@@ -23,6 +23,7 @@ public final class PrimevalItemTooltips {
         if (path.endsWith("_spawn_egg")) return "Spawns this dinosaur.";
         return switch (path) {
             case "fossil_fragment" -> "Restores natural pigment.";
+            case "dino_whistle" -> "Directs following dinosaurs in the field.";
             case "small_dinosaur_egg" -> "Hatches a small dinosaur.";
             case "big_dinosaur_egg" -> "Hatches a medium dinosaur.";
             case "large_dinosaur_egg" -> "Hatches a large dinosaur.";

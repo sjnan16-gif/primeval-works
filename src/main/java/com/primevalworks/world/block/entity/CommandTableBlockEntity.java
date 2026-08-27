@@ -156,6 +156,10 @@ public final class CommandTableBlockEntity extends BlockEntity implements GeoBlo
                 + level(BaseUpgrade.ANCIENT_BONDS) * 3;
     }
 
+    public int followerCapacity() {
+        return 1 + level(BaseUpgrade.FIELD_COMMAND);
+    }
+
     private static int countItem(ServerPlayer player, BaseUpgrade.UpgradeCost cost) {
         int found = 0;
         for (ItemStack stack : player.getInventory().getNonEquipmentItems()) {

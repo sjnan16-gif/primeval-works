@@ -1509,6 +1509,7 @@ public final class CommandTableScreen extends Screen {
             case CREW_PERCHES -> net.minecraft.world.item.Items.LEAD.getDefaultInstance();
             case PACK_HIERARCHY -> net.minecraft.world.item.Items.NAME_TAG.getDefaultInstance();
             case ANCIENT_BONDS -> net.minecraft.world.item.Items.TOTEM_OF_UNDYING.getDefaultInstance();
+            case FIELD_COMMAND -> net.minecraft.world.item.Items.GOAT_HORN.getDefaultInstance();
             case ANCIENT_NETWORK -> net.minecraft.world.item.Items.AMETHYST_SHARD.getDefaultInstance();
         };
     }

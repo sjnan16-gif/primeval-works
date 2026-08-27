@@ -9,6 +9,7 @@ import com.primevalworks.world.block.CommandTableBlock;
 import com.primevalworks.world.block.TurbinePartBlock;
 import com.primevalworks.world.block.entity.CommandTableBlockEntity;
 import com.primevalworks.world.work.BaseInventoryIndex;
+import com.primevalworks.world.work.DinosaurCommandMode;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
@@ -185,6 +186,7 @@ public final class DinosaurOwnership {
             FieldDodoEntity stored = storedRecord == null ? null : findOrLoad(player.level().getServer(), storedRecord);
             if (stored != null) {
                 returnCarriedCargo(stored);
+                stored.setCommandMode(DinosaurCommandMode.HOME);
                 upsert(records, capture(stored));
                 stored.unlinkFromCommandTable();
                 stored.discard();
@@ -198,6 +200,9 @@ public final class DinosaurOwnership {
         }
         writeActive(player.getPersistentData(), active);
 
+        int restoredFollowers = 0;
+        int followerLimit = tableLevel.getBlockEntity(tablePos) instanceof CommandTableBlockEntity table
+                && table.isOwnedBy(player.getUUID()) ? table.followerCapacity() : 1;
         for (int index = 0; index < active.size(); index++) {
             OwnedDinosaur record = find(records, active.get(index)).orElse(null);
             if (record == null) continue;
@@ -209,6 +214,10 @@ public final class DinosaurOwnership {
             }
             if (dinosaur == null) continue;
             dinosaur.setDinosaurOwner(player.getUUID());
+            if (dinosaur.getCommandMode() == DinosaurCommandMode.FOLLOW) {
+                if (restoredFollowers >= followerLimit) dinosaur.setCommandMode(DinosaurCommandMode.HOME);
+                else restoredFollowers++;
+            }
             boolean changingBase = dinosaur.getCommandTablePos().filter(tablePos::equals).isEmpty();
             dinosaur.linkToCommandTable(tablePos);
             if (changingBase) moveToSlot(dinosaur, tablePos, index);
@@ -221,6 +230,7 @@ public final class DinosaurOwnership {
             FieldDodoEntity dinosaur = findLoaded(player.level().getServer(), record.id());
             if (dinosaur != null) {
                 returnCarriedCargo(dinosaur);
+                dinosaur.setCommandMode(DinosaurCommandMode.HOME);
                 upsert(records, capture(dinosaur));
                 dinosaur.discard();
             }
@@ -289,6 +299,7 @@ public final class DinosaurOwnership {
                     : findOrLoad(player.level().getServer(), outgoingRecord);
             if (outgoing != null) {
                 returnCarriedCargo(outgoing);
+                outgoing.setCommandMode(DinosaurCommandMode.HOME);
                 upsert(records, capture(outgoing));
                 outgoing.discard();
             }
@@ -301,6 +312,10 @@ public final class DinosaurOwnership {
         if (incomingEntity == null) incomingEntity = spawn(player.level(), incoming, slotPosition(tablePos, targetSlot));
         if (incomingEntity == null) return new SwapResult(false, "There is no safe room beside the Command Table.");
         incomingEntity.setDinosaurOwner(player.getUUID());
+        if (incomingEntity.getCommandMode() == DinosaurCommandMode.FOLLOW
+                && followerCount(player) >= followerLimit(player)) {
+            incomingEntity.setCommandMode(DinosaurCommandMode.HOME);
+        }
         incomingEntity.linkToCommandTable(tablePos);
         moveToSlot(incomingEntity, tablePos, targetSlot);
         writeRecords(player.getPersistentData(), records);
@@ -327,6 +342,7 @@ public final class DinosaurOwnership {
             }
             if (dinosaur == null) continue;
             returnCarriedCargo(dinosaur);
+            dinosaur.setCommandMode(DinosaurCommandMode.HOME);
             upsert(records, capture(dinosaur));
             dinosaur.unlinkFromCommandTable();
             dinosaur.discard();
@@ -355,6 +371,7 @@ public final class DinosaurOwnership {
         String name = find(records, dinosaurId).map(OwnedDinosaur::name).orElse("Dinosaur");
         if (dinosaur != null) {
             returnCarriedCargo(dinosaur);
+            dinosaur.setCommandMode(DinosaurCommandMode.HOME);
             upsert(records, capture(dinosaur));
             name = dinosaur.getDisplayName().getString();
             dinosaur.unlinkFromCommandTable();
@@ -416,6 +433,69 @@ public final class DinosaurOwnership {
 
     public static int activeLimit(ServerPlayer player, BlockPos tablePos) {
         return activeLimit(player, player.level(), tablePos);
+    }
+
+    public static int followerLimit(ServerPlayer player) {
+        CommandTableBlock.ClaimedTable claimed = CommandTableBlock.getClaimedTable(player).orElse(null);
+        if (claimed == null) return 1;
+        claimed.level().getChunkAt(claimed.pos());
+        if (claimed.level().getBlockEntity(claimed.pos()) instanceof CommandTableBlockEntity table
+                && table.isOwnedBy(player.getUUID())) {
+            return table.followerCapacity();
+        }
+        return 1;
+    }
+
+    public static int followerCount(ServerPlayer player) {
+        Set<UUID> active = Set.copyOf(activeIds(player));
+        int followers = 0;
+        for (OwnedDinosaur record : records(player)) {
+            if (!active.contains(record.id()) || record.recoveryUntilTick() > player.level().getGameTime()) continue;
+            FieldDodoEntity loaded = findLoaded(player.level().getServer(), record.id());
+            DinosaurCommandMode mode = loaded != null
+                    ? loaded.getCommandMode()
+                    : DinosaurCommandMode.byId(record.snapshot().getIntOr("PrimevalCommandMode", 0));
+            if (mode == DinosaurCommandMode.FOLLOW) followers++;
+        }
+        return followers;
+    }
+
+    public static List<FieldDodoEntity> loadedFollowers(ServerPlayer player) {
+        Set<UUID> active = Set.copyOf(activeIds(player));
+        List<FieldDodoEntity> followers = new ArrayList<>();
+        for (UUID id : active) {
+            FieldDodoEntity dinosaur = findLoaded(player.level().getServer(), id);
+            if (dinosaur != null && dinosaur.isOwnedBy(player.getUUID())
+                    && dinosaur.getCommandMode() == DinosaurCommandMode.FOLLOW
+                    && !dinosaur.isOnExpedition() && !dinosaur.isIncapacitated()) {
+                followers.add(dinosaur);
+            }
+        }
+        return List.copyOf(followers);
+    }
+
+    public static SwapResult setCommandMode(ServerPlayer player, FieldDodoEntity dinosaur,
+                                            DinosaurCommandMode mode) {
+        if (!dinosaur.isAlive() || !dinosaur.isOwnedBy(player.getUUID())) {
+            return new SwapResult(false, "That companion is no longer available.");
+        }
+        if (!activeIds(player).contains(dinosaur.getUUID())) {
+            return new SwapResult(false, "Only active base companions can follow commands.");
+        }
+        if (dinosaur.isOnExpedition() || dinosaur.isIncapacitated()) {
+            return new SwapResult(false, "That companion cannot change commands right now.");
+        }
+        if (mode == DinosaurCommandMode.FOLLOW
+                && dinosaur.getCommandMode() != DinosaurCommandMode.FOLLOW
+                && followerCount(player) >= followerLimit(player)) {
+            return new SwapResult(false, "Follower slots are full. Upgrade Field Command at the Command Table.");
+        }
+        dinosaur.setCommandMode(mode);
+        return new SwapResult(true, switch (mode) {
+            case HOME -> dinosaur.getDisplayName().getString() + " is returning to base duty.";
+            case STAY -> dinosaur.getDisplayName().getString() + " will hold this position.";
+            case FOLLOW -> dinosaur.getDisplayName().getString() + " is following you.";
+        });
     }
 
     private static int activeLimit(ServerPlayer player, ServerLevel tableLevel, BlockPos tablePos) {

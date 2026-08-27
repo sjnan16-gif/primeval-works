@@ -314,7 +314,7 @@ These remain part of the product plan but must not destabilize the core save/gam
 - Fossil Fragment
 - Fossil Brush
 - Signal Baton — links blocks and issues contextual commands
-- Dino Whistle — emergency recall of owned active companions
+- Dino Whistle — configures follower-only field work: quarrying, connected lumber, crop harvesting, and loose-item collection. Hold use to configure it, then attack a valid block to mark the order and choose one of the player's current followers.
 - Base Upgrade Core I and II
 - Recovery Salve
 - Berry Mash and Meat Ration

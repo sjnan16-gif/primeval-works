@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "tools",
+  "pattern": [" FH", " CL", "H  "],
+  "key": {
+    "F": "primevalworks:fossil_fragment",
+    "H": "primevalworks:hardwood",
+    "C": "minecraft:copper_ingot",
+    "L": "minecraft:lead"
+  },
+  "result": {"id": "primevalworks:dino_whistle"}
+}

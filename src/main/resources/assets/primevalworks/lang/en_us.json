@@ -3,6 +3,7 @@
   "screen.primevalworks.command_table": "Command Table",
   "block.primevalworks.command_table": "Command Table",
   "item.primevalworks.fossil_fragment": "Fossil Fragment",
+  "item.primevalworks.dino_whistle": "Dino Whistle",
   "message.primevalworks.fossil_fragment.restored": "%s's original colouring returns. Its Albino traits remain.",
   "item.primevalworks.field_dodo_spawn_egg": "Field Dodo Egg",
   "entity.primevalworks.field_dodo": "Field Dodo",

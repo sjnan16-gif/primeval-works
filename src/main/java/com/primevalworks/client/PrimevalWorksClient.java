@@ -5,6 +5,7 @@ import com.primevalworks.client.effect.DinosaurFootstepEffects;
 import com.primevalworks.client.effect.PteranodonFlightFeedback;
 import com.primevalworks.client.effect.PteranodonFirstPersonPose;
 import com.primevalworks.client.effect.DinosaurHatchReveal;
+import com.primevalworks.client.effect.DinoWhistleClient;
 import com.primevalworks.client.model.entity.DinosaurVisualProfile;
 import com.primevalworks.client.render.entity.FieldDodoRenderer;
 import com.primevalworks.client.render.WorksiteIndicatorRenderer;
@@ -22,6 +23,7 @@ import com.primevalworks.client.screen.ProcessorScreen;
 import com.primevalworks.client.screen.EnergyNetworkScreen;
 import com.primevalworks.client.screen.AncientFurnaceScreen;
 import com.primevalworks.client.screen.DartTurretScreen;
+import com.primevalworks.client.screen.WhistleFollowerPickerScreen;
 import com.primevalworks.client.render.entity.DartProjectileRenderer;
 import com.primevalworks.config.PrimevalConfig;
 import com.primevalworks.registry.ModBlocks;
@@ -81,11 +83,13 @@ public final class PrimevalWorksClient {
         });
         NeoForge.EVENT_BUS.addListener(PrimevalWorksClient::openCompanionScreen);
         NeoForge.EVENT_BUS.addListener(PrimevalWorksClient::mountedDinosaurAttack);
+        NeoForge.EVENT_BUS.addListener(DinoWhistleClient::handleAttack);
         NeoForge.EVENT_BUS.addListener(RenderHandEvent.class, PrimevalWorksClient::hidePlannerHand);
         NeoForge.EVENT_BUS.addListener(RenderBlockScreenEffectEvent.class, PrimevalWorksClient::hidePlannerBlockOverlay);
         NeoForge.EVENT_BUS.addListener(SubmitCustomGeometryEvent.class, WorksitePlannerScreen::submitWorldGeometry);
         NeoForge.EVENT_BUS.addListener(SubmitCustomGeometryEvent.class, EnergyNetworkScreen::submitWorldGeometry);
         NeoForge.EVENT_BUS.addListener(SubmitCustomGeometryEvent.class, WorksiteIndicatorRenderer::submitGeometry);
+        NeoForge.EVENT_BUS.addListener(SubmitCustomGeometryEvent.class, WhistleFollowerPickerScreen::submitWorldGeometry);
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, PteranodonFlightFeedback::tickInput);
         NeoForge.EVENT_BUS.addListener(MovementInputUpdateEvent.class,
                 PteranodonFlightFeedback::preserveSpinosaurusLandSprint);
@@ -94,6 +98,7 @@ public final class PrimevalWorksClient {
         NeoForge.EVENT_BUS.addListener(ViewportEvent.ComputeFov.class, PteranodonFlightFeedback::applyFov);
         NeoForge.EVENT_BUS.addListener(RenderGuiEvent.Post.class, PteranodonFlightFeedback::renderFlightHud);
         NeoForge.EVENT_BUS.addListener(RenderGuiEvent.Post.class, DinosaurHatchReveal::render);
+        NeoForge.EVENT_BUS.addListener(RenderGuiEvent.Post.class, DinoWhistleClient::renderHud);
     }
 
     private static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
@@ -114,7 +119,8 @@ public final class PrimevalWorksClient {
 
     private static void hidePlannerHand(RenderHandEvent event) {
         if (Minecraft.getInstance().screen instanceof WorksitePlannerScreen
-                || Minecraft.getInstance().screen instanceof EnergyNetworkScreen) {
+                || Minecraft.getInstance().screen instanceof EnergyNetworkScreen
+                || Minecraft.getInstance().screen instanceof WhistleFollowerPickerScreen) {
             event.setCanceled(true);
             return;
         }
@@ -149,7 +155,9 @@ public final class PrimevalWorksClient {
                     && minecraft.player.getMainHandItem().is(ModItems.FOSSIL_FRAGMENT.get());
             boolean holdingNestingTreat = minecraft.player != null
                     && minecraft.player.getMainHandItem().is(ModItems.NESTING_TREAT.get());
-            if (holdingFossilFragment || holdingNestingTreat || holdingMountSaddle || dodo.isSaddledMount()
+            boolean holdingWhistle = minecraft.player != null
+                    && !com.primevalworks.world.item.DinoWhistleItem.findHeld(minecraft.player).isEmpty();
+            if (holdingFossilFragment || holdingNestingTreat || holdingMountSaddle || holdingWhistle || dodo.isSaddledMount()
                     && minecraft.player != null && !minecraft.player.isShiftKeyDown()) {
                 return;
             }
@@ -248,7 +256,7 @@ public final class PrimevalWorksClient {
             return null;
         }
         BlockPos saved = dodo.getCommandTablePos().orElse(null);
-        if (saved != null && minecraft.level.getBlockState(saved).is(ModBlocks.COMMAND_TABLE.get())) {
+        if (saved != null) {
             return saved;
         }
         BlockPos center = dodo.blockPosition();

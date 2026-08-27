@@ -13,6 +13,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import com.primevalworks.world.item.DinosaurEggItem;
 import com.primevalworks.world.item.DinosaurEggBlockItem;
 import com.primevalworks.world.item.TurbineBlockItem;
+import com.primevalworks.world.item.DinoWhistleItem;
 
 import java.util.List;
 
@@ -20,6 +21,8 @@ public final class ModItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(PrimevalWorks.MOD_ID);
 
     public static final DeferredItem<Item> FOSSIL_FRAGMENT = ITEMS.registerSimpleItem("fossil_fragment");
+    public static final DeferredItem<Item> DINO_WHISTLE = ITEMS.registerItem(
+            "dino_whistle", DinoWhistleItem::new);
     public static final DeferredItem<SpawnEggItem> TYRANNOSAURUS_SPAWN_EGG = ITEMS.registerItem(
             "tyrannosaurus_spawn_egg",
             properties -> new DinosaurEggItem(properties.spawnEgg(ModEntities.TYRANNOSAURUS.get()))
