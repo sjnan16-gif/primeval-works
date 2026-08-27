@@ -23,17 +23,18 @@ final class WhistleUiContractTest {
 
         assertUsesBubble(CLIENT.resolve("screen/DinoWhistleScreen.java"));
         assertUsesBubble(CLIENT.resolve("screen/WhistleFollowerPickerScreen.java"));
-        assertUsesBubble(CLIENT.resolve("effect/DinoWhistleClient.java"));
     }
 
     @Test
-    void whistleConfigMatchesTheCommandTableFootprintAndMotionLanguage() throws Exception {
+    void whistleConfigIsCompactAndKeepsTheEstablishedMotionLanguage() throws Exception {
         String config = Files.readString(CLIENT.resolve("screen/DinoWhistleScreen.java"));
-        assertTrue(config.contains("PANEL_WIDTH = 195"));
-        assertTrue(config.contains("PANEL_HEIGHT = 148"));
+        assertTrue(config.contains("PANEL_WIDTH = 164"));
+        assertTrue(config.contains("PANEL_HEIGHT = 110"));
+        assertTrue(config.contains("MAX_PANEL_SCALE = 1.0F"));
         assertTrue(config.contains("PrimevalBubbleUi.spring"));
-        assertTrue(config.contains("PANEL_SIZE_MULTIPLIER = 0.88F"));
         assertTrue(config.contains("whistle_range_button.png"));
+        assertTrue(config.contains("drawSeparator"));
+        assertTrue(config.contains("hoverTooltip"));
         assertFalse(config.contains("PANEL_INNER"));
         assertFalse(config.contains("CARD_HOVER"));
     }
@@ -57,19 +58,22 @@ final class WhistleUiContractTest {
     }
 
     @Test
-    void inventoryHoverHoldUsesVanillaTooltipAndACompactRightSidebar() throws Exception {
+    void rightClickOpensConfigurationWithoutAWorldSidebarOrHoldTimer() throws Exception {
         String client = Files.readString(CLIENT.resolve("effect/DinoWhistleClient.java"));
         String item = Files.readString(Path.of(
                 "src/main/java/com/primevalworks/world/item/DinoWhistleItem.java"));
-        assertTrue(client.contains("renderInventoryHover"));
-        assertTrue(client.contains("renderHud"));
-        assertTrue(client.contains("CONFIGURE_HOLD_NANOS"));
-        assertTrue(client.contains("classic_work"));
-        assertTrue(client.contains("HOLD SHIFT IN INVENTORY TO CONFIGURE"));
-        assertTrue(client.contains("InputConstants.KEY_LSHIFT"));
-        assertFalse(client.contains("RenderTooltipEvent"));
-        assertFalse(item.contains("InteractionResult use("));
-        assertFalse(item.contains("finishUsingItem"));
+        assertTrue(client.contains("handleInventoryRightClick"));
+        assertTrue(client.contains("handleHeldRightClick"));
+        assertTrue(client.contains("InteractionHand.MAIN_HAND")
+                && client.contains("getContainerSize() - 1"));
+        assertTrue(client.contains("event.getButton() != 1"));
+        assertFalse(client.contains("renderInventoryHover"));
+        assertFalse(client.contains("renderHud"));
+        assertFalse(client.contains("CONFIGURE_HOLD_NANOS"));
+        assertFalse(client.contains("SIDEBAR_WIDTH"));
+        assertFalse(client.contains("KEY_LSHIFT"));
+        assertTrue(item.contains("Right-click to configure."));
+        assertFalse(item.contains("Hold Shift"));
     }
 
     @Test

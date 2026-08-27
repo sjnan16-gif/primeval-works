@@ -36,12 +36,20 @@ public final class DinoWhistleItem extends Item {
     public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,
                                 Consumer<Component> tooltip, TooltipFlag flag) {
         DinoWhistleSettings settings = DinoWhistleSettings.read(stack);
-        tooltip.accept(Component.literal("Directs one following dinosaur.").withStyle(ChatFormatting.GRAY));
-        tooltip.accept(Component.literal("Mode: ").withStyle(ChatFormatting.DARK_GRAY)
+        tooltip.accept(Component.literal("Directs one of your following dinosaurs.").withStyle(ChatFormatting.GRAY));
+        tooltip.accept(Component.literal("────────────").withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.accept(Component.literal("Order  ").withStyle(ChatFormatting.DARK_GRAY)
                 .append(Component.literal(settings.mode().title()).withStyle(ChatFormatting.GOLD)));
         tooltip.accept(Component.literal(settings.mode().targetDescription(settings.pattern()))
                 .withStyle(ChatFormatting.GRAY));
-        tooltip.accept(Component.literal("Hold Shift in your inventory to configure.")
+        tooltip.accept(Component.literal("Range  ").withStyle(ChatFormatting.DARK_GRAY)
+                .append(Component.literal(settings.range() + " blocks").withStyle(ChatFormatting.WHITE)));
+        if (settings.filtersItems()) {
+            tooltip.accept(Component.literal("Filter  ").withStyle(ChatFormatting.DARK_GRAY)
+                    .append(Component.literal(settings.itemFilter()).withStyle(ChatFormatting.AQUA)));
+        }
+        tooltip.accept(Component.literal("────────────").withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.accept(Component.literal("Right-click to configure.")
                 .withStyle(ChatFormatting.YELLOW));
     }
 }

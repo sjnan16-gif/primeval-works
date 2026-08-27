@@ -22,6 +22,7 @@ import com.primevalworks.world.base.BaseUpgrade;
 import com.primevalworks.world.base.BaseEnergyRules;
 import com.primevalworks.world.entity.DinosaurMutationRules;
 import com.primevalworks.world.entity.DinosaurGeneticPerformanceRules;
+import com.primevalworks.world.entity.DinosaurProgression;
 import com.primevalworks.world.entity.DinosaurSpecies;
 import com.primevalworks.world.entity.FieldDodoEntity;
 import com.primevalworks.world.egg.DinosaurEggGenome;
@@ -190,6 +191,12 @@ public final class PrimevalGameTests {
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> SPINOSAURUS_FOLLOWER_SWIMS =
             TEST_FUNCTIONS.register("spinosaurus_follower_swims",
                     () -> PrimevalGameTests::spinosaurusFollowerSwims);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> SPINOSAURUS_FOLLOWER_CATCHES_ON_LAND =
+            TEST_FUNCTIONS.register("spinosaurus_follower_catches_on_land",
+                    () -> PrimevalGameTests::spinosaurusFollowerCatchesOnLand);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> PASSIVE_WORKER_CATCHES_OWNER =
+            TEST_FUNCTIONS.register("passive_worker_catches_owner",
+                    () -> PrimevalGameTests::passiveWorkerCatchesOwner);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> PTERANODON_FOLLOWER_FLIES =
             TEST_FUNCTIONS.register("pteranodon_follower_flies",
                     () -> PrimevalGameTests::pteranodonFollowerFlies);
@@ -436,6 +443,16 @@ public final class PrimevalGameTests {
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "spinosaurus_follower_swims"),
                 new FunctionGameTestInstance(SPINOSAURUS_FOLLOWER_SWIMS.getKey(),
                         isolatedTestData(event, "spinosaurus_follow_swim"))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "spinosaurus_follower_catches_on_land"),
+                new FunctionGameTestInstance(SPINOSAURUS_FOLLOWER_CATCHES_ON_LAND.getKey(),
+                        isolatedTestData(event, "spinosaurus_follow_land"))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "passive_worker_catches_owner"),
+                new FunctionGameTestInstance(PASSIVE_WORKER_CATCHES_OWNER.getKey(),
+                        isolatedTestData(event, "passive_worker_follow"))
         );
         event.registerTest(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "pteranodon_follower_flies"),
@@ -701,6 +718,72 @@ public final class PrimevalGameTests {
                         "The following Pteranodon used ground pathing instead of flying to catch up"))
                 .thenExecute(() -> {
                     pteranodon.discard();
+                    player.discard();
+                })
+                .thenSucceed();
+    }
+
+    private static void spinosaurusFollowerCatchesOnLand(GameTestHelper helper) {
+        BlockPos dinosaurRelative = new BlockPos(2, 1, 3);
+        BlockPos ownerRelative = new BlockPos(20, 1, 3);
+        forceTicking(helper, dinosaurRelative, ownerRelative);
+        for (int x = 0; x <= 22; x++) for (int z = 0; z <= 6; z++) {
+            helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+        }
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.setUUID(UUID.randomUUID());
+        Vec3 ownerPosition = helper.absolutePos(ownerRelative).getCenter();
+        player.snapTo(ownerPosition.x, ownerPosition.y, ownerPosition.z, 90.0F, 0.0F);
+        FieldDodoEntity spinosaurus = helper.spawn(ModEntities.SPINOSAURUS.get(), dinosaurRelative);
+        spinosaurus.setDinosaurOwner(player.getUUID());
+        spinosaurus.setCommandMode(DinosaurCommandMode.FOLLOW);
+        double startingDistance = spinosaurus.distanceToSqr(player);
+        Vec3 startingPosition = spinosaurus.position();
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(
+                        spinosaurus.position().subtract(startingPosition).horizontalDistanceSqr() > 4.0D
+                                && spinosaurus.distanceToSqr(player) < startingDistance * 0.72D,
+                        "The land-following Spinosaurus stayed planted instead of catching its owner; position="
+                                + spinosaurus.position() + ", pathDone=" + spinosaurus.getNavigation().isDone()))
+                .thenExecute(() -> {
+                    spinosaurus.discard();
+                    player.discard();
+                })
+                .thenSucceed();
+    }
+
+    private static void passiveWorkerCatchesOwner(GameTestHelper helper) {
+        BlockPos dinosaurRelative = new BlockPos(2, 1, 3);
+        BlockPos ownerRelative = new BlockPos(16, 1, 3);
+        forceTicking(helper, dinosaurRelative, ownerRelative);
+        for (int x = 0; x <= 18; x++) for (int z = 0; z <= 6; z++) {
+            helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+        }
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.setUUID(UUID.randomUUID());
+        Vec3 ownerPosition = helper.absolutePos(ownerRelative).getCenter();
+        player.snapTo(ownerPosition.x, ownerPosition.y, ownerPosition.z, 90.0F, 0.0F);
+        FieldDodoEntity dodo = helper.spawn(ModEntities.FIELD_DODO.get(), dinosaurRelative);
+        dodo.setDinosaurOwner(player.getUUID());
+        dodo.setCommandMode(DinosaurCommandMode.FOLLOW);
+        dodo.assignPassiveFieldWork(new DinoWhistleSettings(
+                DinoWhistleSettings.FieldMode.HARVEST,
+                DinoWhistleSettings.Pattern.AREA,
+                48));
+        double startingDistance = dodo.distanceToSqr(player);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(
+                        dodo.distanceToSqr(player) < startingDistance * 0.50D,
+                        "Passive field work still cancelled Follow pursuit; position=" + dodo.position()
+                                + ", order=" + dodo.getFieldWorkMode()
+                                + ", pathDone=" + dodo.getNavigation().isDone()))
+                .thenExecute(() -> helper.assertTrue(dodo.hasFieldWork()
+                                && dodo.getFieldWorkMode() == DinoWhistleSettings.FieldMode.HARVEST,
+                        "Catching the owner erased the passive field assignment"))
+                .thenExecute(() -> {
+                    dodo.discard();
                     player.discard();
                 })
                 .thenSucceed();
@@ -1777,10 +1860,12 @@ public final class PrimevalGameTests {
                         helper.getBlockState(pistonRelative).getValue(PistonBaseBlock.EXTENDED),
                         "The energized Reinforced Piston did not respond to its redstone input"
                 ))
-                .thenExecute(() -> {
+                .thenWaitUntil(() -> {
                     helper.assertBlockPresent(Blocks.OBSIDIAN, obsidianRelative.relative(Direction.EAST));
                     helper.assertBlockPresent(Blocks.CRYING_OBSIDIAN,
                             stickyObsidianRelative.relative(Direction.EAST));
+                })
+                .thenExecute(() -> {
                     helper.setBlock(stickyRedstoneRelative, Blocks.AIR);
                 })
                 .thenExecuteAfter(5, () -> helper.assertBlockPresent(
@@ -2204,16 +2289,25 @@ public final class PrimevalGameTests {
                 0, 3, 1, 0, 0, 0, 0, 1, true, true);
 
         helper.startSequence()
-                .thenWaitUntil(() -> helper.assertTrue(stegosaurus.getWorkAction() == 2
-                                && stegosaurus.getWorkActionDuration() == Math.round(
-                                        WorkSpecialtyRules.actionDurationTicks(
-                                                WorkSpecialtyRules.FIRE_TENDING_TICKS, 3)
-                                                / (DinosaurSpecies.STEGOSAURUS.passiveWorkSpeedMultiplier(
-                                                        1, stegosaurus.getPassiveStrength())
-                                                * DinosaurGeneticPerformanceRules.workSpeedMultiplier(
-                                                        stegosaurus.getGeneticQuality()))),
+                .thenWaitUntil(() -> {
+                    int baseDuration = WorkSpecialtyRules.actionDurationTicks(
+                            WorkSpecialtyRules.FIRE_TENDING_TICKS, 3);
+                    int mutationDuration = Math.max(1,
+                            Math.round(baseDuration / stegosaurus.getMutationStatMultiplier()));
+                    int upgradedDuration = Math.max(1,
+                            Math.round(mutationDuration * CommandTableBlock.workDurationMultiplier(
+                                    helper.getLevel(), helper.absolutePos(tableRelative), 1)));
+                    int expectedDuration = Math.max(1, Math.round(upgradedDuration
+                            / (DinosaurSpecies.STEGOSAURUS.passiveWorkSpeedMultiplier(
+                            1, stegosaurus.getPassiveStrength())
+                            * DinosaurGeneticPerformanceRules.workSpeedMultiplier(
+                            stegosaurus.getGeneticQuality()))
+                            * DinosaurProgression.workDurationMultiplier(stegosaurus.getDinosaurLevel())));
+                    helper.assertTrue(stegosaurus.getWorkAction() == 2
+                                    && stegosaurus.getWorkActionDuration() == expectedDuration,
                         "The Stegosaurus never entered its balanced three-star fire work cycle; action="
                                 + stegosaurus.getWorkAction() + ", duration=" + stegosaurus.getWorkActionDuration()
+                                + ", expected=" + expectedDuration
                                 + ", position=" + stegosaurus.position()
                                 + ", sleeping=" + stegosaurus.isDinosaurSleeping()
                                 + ", hunger=" + stegosaurus.getHunger()
@@ -2221,7 +2315,8 @@ public final class PrimevalGameTests {
                                 + ", target=" + (stegosaurus.getTarget() == null
                                         ? "none" : stegosaurus.getTarget().getType().toString())
                                 + ", input=" + furnace.getItem(0)
-                                + ", fuel=" + furnace.getItem(1)))
+                                + ", fuel=" + furnace.getItem(1));
+                })
                 .thenWaitUntil(() -> helper.assertTrue(furnace.countItem(Items.IRON_INGOT) == 1,
                         "Fire work did not finish the loaded furnace; action=" + stegosaurus.getWorkAction()
                                 + ", progress=" + stegosaurus.getWorkActionProgress()
@@ -2886,6 +2981,9 @@ public final class PrimevalGameTests {
         BlockPos zombieRelative = new BlockPos(15, 1, 7);
         forceTicking(helper, dinosaurRelative, zombieRelative);
         FieldDodoEntity dinosaur = helper.spawn(ModEntities.TYRANNOSAURUS.get(), dinosaurRelative);
+        // Keep the spacing contract deterministic. Huge mutation reach/scale has its
+        // own coverage and should not randomly widen this normal T-Rex scenario.
+        dinosaur.setMutationMaskForTesting(0);
         var zombie = helper.spawn(EntityType.HUSK, zombieRelative);
         zombie.setNoAi(true);
         zombie.getAttribute(Attributes.MAX_HEALTH).setBaseValue(200.0D);
