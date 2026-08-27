@@ -26,33 +26,6 @@ public final class PrimevalBubbleUi {
         blit(graphics, x + width - border, y + height - border, border, border, 84, 12, 2, 2);
     }
 
-    public static void drawDark(GuiGraphicsExtractor graphics, int x, int y, int width, int height) {
-        draw(graphics, x, y, width, height);
-        graphics.fill(x + 2, y + 2, x + width - 2, y + height - 2, 0xC718161B);
-        graphics.fill(x + 3, y + 3, x + width - 3, y + 4, 0x18FFFFFF);
-    }
-
-    public static void drawDarkControl(
-            GuiGraphicsExtractor graphics,
-            int x,
-            int y,
-            int width,
-            int height,
-            int accent,
-            boolean selected,
-            boolean hovered
-    ) {
-        drawDark(graphics, x, y, width, height);
-        int alpha = selected ? 66 : hovered ? 38 : 16;
-        graphics.fill(x + 2, y + 2, x + width - 2, y + height - 2,
-                (alpha << 24) | (accent & 0x00FFFFFF));
-        graphics.fill(x + 3, y + 3, x + 6, y + height - 3,
-                (selected ? 0xFF000000 : 0xA0000000) | (accent & 0x00FFFFFF));
-        if (hovered) {
-            graphics.fill(x + 3, y + 3, x + width - 3, y + height - 3, 0x16FFFFFF);
-        }
-    }
-
     public static float spring(float progress, float damping, float frequency) {
         if (progress >= 1.0F) return 1.0F;
         double wave = Math.cos(frequency * progress)

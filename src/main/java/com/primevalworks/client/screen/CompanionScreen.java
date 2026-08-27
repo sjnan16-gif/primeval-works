@@ -730,15 +730,16 @@ public final class CompanionScreen extends Screen {
         int rating = source < 0 ? 0 : dodo.getSpecialtyStars(source);
         int color = source < 0 ? 0xFF766F68 : SPECIALTY_COLORS[source];
         drawBubble(graphics, row, 2);
-        graphics.fill(row.x() + 2, row.y() + 2, row.right() - 2, row.bottom() - 2,
-                hovered ? 0xB9393238 : 0xCA242126);
+        if (hovered) {
+            graphics.fill(row.x() + 2, row.y() + 2, row.right() - 2, row.bottom() - 2, 0x20FFFFFF);
+        }
         graphics.fill(row.x() + 3, row.y() + 3, row.x() + 6, row.bottom() - 3, color);
         if (source >= 0) {
             int iconHeight = 16;
             int iconWidth = Math.max(12, Math.round(SPECIALTY_ICON_WIDTHS[source] * (iconHeight / 8.0F)));
             blitTinted(graphics, SPECIALTY_ICONS[source],
                     new Rect(row.x() + 11, row.y() + (row.height() - iconHeight) / 2, iconWidth, iconHeight),
-                    hovered ? 0xFFFFFFFF : 0xFFD0C6BE);
+                    0xFFFFFFFF);
         } else {
             graphics.item(Items.IRON_PICKAXE.getDefaultInstance(), row.x() + 10, row.y() + 4);
             graphics.fill(row.x() + 10, row.y() + 4, row.x() + 26, row.y() + 20, 0x880D0C0E);
@@ -752,11 +753,11 @@ public final class CompanionScreen extends Screen {
         withTextMotion(graphics, new Rect(textX, row.y() + 2, row.width() - 92, row.height() - 4),
                 time, hovered, false, () -> {
                     textLine(graphics, title, textX, row.y() + 4, 160,
-                            hovered ? color : 0xFFD3CBC5, 1.0F, true);
+                            hovered ? color : INK, 1.0F, true);
                     textLine(graphics, description, textX, row.y() + 16, row.width() - 230,
-                            hovered ? color : 0xFF928A88, 1.0F, true);
+                            hovered ? color : MUTED_INK, 1.0F, true);
                     rightText(graphics, speed, row.right() - 66, row.y() + 16, 112,
-                            hovered ? color : 0xFF928A88, 1.0F, true);
+                            hovered ? color : MUTED_INK, 1.0F, true);
                 });
         if (specialty != null) {
             int starX = row.right() - 54;

@@ -77,16 +77,16 @@ public final class DinoWhistleClient {
         graphics.pose().scale(scale, scale);
         graphics.pose().translate(-(x + width * 0.5F), -(y + height * 0.5F));
         graphics.fill(x + 5, y + 5, x + width + 5, y + height + 5, 0x54000000);
-        PrimevalBubbleUi.drawDark(graphics, x, y, width, height);
+        PrimevalBubbleUi.draw(graphics, x, y, width, height);
         graphics.fill(x + 3, y + 3, x + 6, y + height - 3, alpha << 24 | 0xD87949);
         drawFitText(graphics, Component.literal(settings.shortLabel()).withStyle(Style.EMPTY.withBold(true)),
-                x + 10, y + 6, width - 18, alpha << 24 | 0xD7D0CB, 0.76F);
-        drawFitText(graphics, Component.literal("ATTACK: MARK  /  HOLD USE: CONFIGURE"),
-                x + 10, y + 18, width - 18, alpha << 24 | 0x8D8584, 0.62F);
+                x + 10, y + 6, width - 18, alpha << 24 | 0x494341, 0.76F);
+        drawFitText(graphics, Component.literal("ATTACK: MARK  /  HOLD USE: EDIT"),
+                x + 10, y + 18, width - 18, alpha << 24 | 0x6E6764, 0.62F);
         if (areaFirst != null) {
             drawText(graphics, Component.literal("CORNER A  " + areaFirst.getX() + "  "
                             + areaFirst.getY() + "  " + areaFirst.getZ()).withStyle(Style.EMPTY.withBold(true)),
-                    x + 10, y + 30, alpha << 24 | 0x6DA1BD, 0.62F);
+                    x + 10, y + 30, alpha << 24 | 0x477895, 0.62F);
         }
 
         if (visible && minecraft.player.isUsingItem()

@@ -28,9 +28,10 @@ import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import org.joml.Vector3f;
 
 public final class WhistleFollowerPickerScreen extends Screen {
-    private static final int PANEL_WIDTH = 292;
-    private static final int TEXT = 0xFFD7D0CB;
-    private static final int MUTED = 0xFF8D8584;
+    private static final int PANEL_WIDTH = 276;
+    private static final int INK = 0xFF494341;
+    private static final int MUTED_INK = 0xFF6E6764;
+    private static final int LABEL = 0xFFC74F43;
     private static WhistleFollowerPickerScreen active;
     private final WhistleFollowerListPayload payload;
     private final long[] hoverStarted;
@@ -66,7 +67,7 @@ public final class WhistleFollowerPickerScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         renderNow = Util.getNanos();
         int panelWidth = PANEL_WIDTH;
-        int panelHeight = 49 + Math.max(1, payload.entries().size()) * 48;
+        int panelHeight = 36 + Math.max(1, payload.entries().size()) * 44;
         int x = (width - panelWidth) / 2;
         int y = (height - panelHeight) / 2;
         updateParallax(mouseX, mouseY);
@@ -78,19 +79,17 @@ public final class WhistleFollowerPickerScreen extends Screen {
         graphics.pose().translate(motion.pivotX + motion.offsetX, motion.pivotY + motion.offsetY);
         graphics.pose().scale(motion.scale, motion.scale);
         graphics.pose().translate(-motion.pivotX, -motion.pivotY);
-        graphics.fill(x + 6, y + 7, x + panelWidth + 6, y + panelHeight + 7, 0x82000000);
-        PrimevalBubbleUi.drawDark(graphics, x, y, panelWidth, panelHeight);
-        PrimevalBubbleUi.drawDark(graphics, x + 8, y + 7, panelWidth - 16, 29);
-        bold(graphics, "CHOOSE A FOLLOWER", x + 17, y + 12, 0xFFE98A56, 0.94F);
+        drawBubble(graphics, new Rect(x, y, panelWidth, 32));
+        bold(graphics, "CHOOSE A FOLLOWER", x + 10, y + 6, LABEL, 0.94F);
         DinoWhistleSettings.FieldMode mode = DinoWhistleSettings.FieldMode.byId(payload.mode());
         text(graphics, DinoFieldWorkRules.specialtyName(mode).toUpperCase() + "  /  " + payload.range() + " BLOCK RANGE",
-                x + 17, y + 25, 0xFF9A918E, 0.76F);
+                x + 10, y + 19, MUTED_INK, 0.76F);
         if (payload.entries().isEmpty()) {
             Rect empty = entryRect(x, y, panelWidth, 0);
-            PrimevalBubbleUi.drawDarkControl(graphics, empty.x, empty.y, empty.w, empty.h,
-                    0xFFC76459, false, false);
+            drawBubble(graphics, empty);
+            graphics.fill(empty.x + 3, empty.y + 3, empty.x + 6, empty.bottom() - 3, 0xFFC76459);
             bold(graphics, "NO FOLLOWERS AVAILABLE", empty.x + 10, empty.y + 7, 0xFFC76459, 0.86F);
-            text(graphics, "Switch an active companion to Follow first.", empty.x + 10, empty.y + 23, MUTED, 0.76F);
+            text(graphics, "Set a companion to Follow first.", empty.x + 10, empty.y + 23, MUTED_INK, 0.76F);
         } else {
             for (int index = 0; index < payload.entries().size(); index++) {
                 drawEntry(graphics, payload.entries().get(index), entryRect(x, y, panelWidth, index),
@@ -105,8 +104,11 @@ public final class WhistleFollowerPickerScreen extends Screen {
                            Rect rect, float mouseX, float mouseY, int index) {
         boolean hovered = rect.contains(mouseX, mouseY);
         int accent = entry.compatible() ? 0xFF62A269 : 0xFF8B5E58;
-        PrimevalBubbleUi.drawDarkControl(graphics, rect.x, rect.y, rect.w, rect.h,
-                accent, entry.compatible(), hovered);
+        drawBubble(graphics, rect);
+        graphics.fill(rect.x + 3, rect.y + 3, rect.x + 6, rect.bottom() - 3, accent);
+        if (hovered) {
+            graphics.fill(rect.x + 2, rect.y + 2, rect.right() - 2, rect.bottom() - 2, 0x20FFFFFF);
+        }
         graphics.item(spawnEgg(entry.species()), rect.x + 11, rect.y + 10);
         updateHover(index, hovered);
         float motion = interactionMotion(index, hovered);
@@ -118,14 +120,14 @@ public final class WhistleFollowerPickerScreen extends Screen {
                 1.0F + Mth.sin(time * 6.2F + index) * 0.012F * motion);
         graphics.pose().translate(-rect.centerX(), -rect.centerY());
         bold(graphics, entry.name().toUpperCase(), rect.x + 36, rect.y + 6,
-                hovered ? accent : TEXT, 0.88F);
+                hovered ? accent : INK, 0.88F);
         DinosaurSpecies species = DinosaurSpecies.byRegistryName(entry.species());
         DinoWhistleSettings.FieldMode specialty = DinoFieldWorkRules.specialty(species);
         String detail = specialty == null ? "NO FIELD SPECIALTY"
                 : specialty.title().toUpperCase() + "  /  " + entry.rating() + " STAR";
         if (!entry.compatible() && specialty != null) detail += "  /  WRONG ORDER";
         text(graphics, detail, rect.x + 36, rect.y + 23,
-                entry.compatible() ? 0xFF80B87E : 0xFFC47A6A, 0.76F);
+                hovered ? accent : MUTED_INK, 0.76F);
         graphics.pose().popMatrix();
         if (hovered) {
             if (entry.compatible()) graphics.requestCursor(CursorTypes.POINTING_HAND);
@@ -136,7 +138,7 @@ public final class WhistleFollowerPickerScreen extends Screen {
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         if (event.button() != 0) return super.mouseClicked(event, doubleClick);
         int panelWidth = PANEL_WIDTH;
-        int panelHeight = 49 + Math.max(1, payload.entries().size()) * 48;
+        int panelHeight = 36 + Math.max(1, payload.entries().size()) * 44;
         int x = (width - panelWidth) / 2;
         int y = (height - panelHeight) / 2;
         Motion motion = motion(x, y, panelWidth, panelHeight);
@@ -202,7 +204,12 @@ public final class WhistleFollowerPickerScreen extends Screen {
     }
 
     private Rect entryRect(int x, int y, int panelWidth, int index) {
-        return new Rect(x + 10, y + 38 + index * 48, panelWidth - 20, 42);
+        return new Rect(x, y + 36 + index * 44, panelWidth, 40);
+    }
+
+    private void drawBubble(GuiGraphicsExtractor graphics, Rect rect) {
+        graphics.fill(rect.x + 4, rect.y + 5, rect.right() + 4, rect.bottom() + 5, 0x43000000);
+        PrimevalBubbleUi.draw(graphics, rect.x, rect.y, rect.w, rect.h);
     }
 
     private static ItemStack spawnEgg(String species) {
@@ -266,13 +273,13 @@ public final class WhistleFollowerPickerScreen extends Screen {
     private Motion motion(int x, int y, int panelWidth, int panelHeight) {
         long now = renderNow == 0L ? Util.getNanos() : renderNow;
         float elapsedTicks = (now - openedAt) / 50_000_000.0F;
-        float progress = Mth.clamp(elapsedTicks / 30.0F, 0.0F, 1.0F);
-        float settled = PrimevalBubbleUi.spring(progress, 7.2F, 10.5F);
-        float fade = smoothStep(Mth.clamp(elapsedTicks / 22.0F, 0.0F, 1.0F));
+        float progress = Mth.clamp(elapsedTicks / 24.0F, 0.0F, 1.0F);
+        float settled = PrimevalBubbleUi.spring(progress, 6.2F, 11.4F);
+        float fade = smoothStep(Mth.clamp(elapsedTicks / 18.0F, 0.0F, 1.0F));
         float fit = Math.min(1.0F, Math.min((width - 12.0F) / panelWidth, (height - 12.0F) / panelHeight));
-        float scale = Math.max(0.1F, fit * (0.95F + settled * 0.05F));
-        float offsetX = (width * 0.60F + panelWidth * 0.32F) * (1.0F - settled) + parallaxX * fade;
-        float offsetY = 8.0F * (1.0F - settled) + parallaxY * fade;
+        float scale = Math.max(0.1F, fit * (0.74F + settled * 0.26F));
+        float offsetX = parallaxX * fade;
+        float offsetY = 18.0F * (1.0F - settled) + parallaxY * fade;
         return new Motion(x + panelWidth * 0.5F, y + panelHeight * 0.5F, offsetX, offsetY, scale);
     }
 

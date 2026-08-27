@@ -39,9 +39,25 @@ final class WhistleUiContractTest {
         }
     }
 
+    @Test
+    void whistleUsesSimpleCyclingRowsInsteadOfACustomDashboard() throws Exception {
+        String config = Files.readString(CLIENT.resolve("screen/DinoWhistleScreen.java"));
+        assertTrue(config.contains("orderRect"));
+        assertTrue(config.contains("targetRect"));
+        assertTrue(config.contains("runRect"));
+        assertTrue(config.contains("rangeRect"));
+        assertTrue(config.contains("% values.length"));
+        assertFalse(config.contains("modeRect"));
+        assertFalse(config.contains("patternRect"));
+    }
+
     private static void assertUsesBubble(Path path) throws Exception {
         String source = Files.readString(path);
         assertTrue(source.contains("PrimevalBubbleUi.draw"),
                 path.getFileName() + " replaced the authored bubble with a code-drawn panel");
+        assertFalse(source.contains("drawDark"),
+                path.getFileName() + " covered the authored bubble with a custom dark panel");
+        assertFalse(source.contains("drawDarkControl"),
+                path.getFileName() + " replaced authored controls with custom cards");
     }
 }

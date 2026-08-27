@@ -16,15 +16,15 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
 public final class DinoWhistleScreen extends Screen {
-    private static final int PANEL_WIDTH = 382;
-    private static final int PANEL_HEIGHT = 206;
-    private static final int TEXT = 0xFFD8D1CB;
-    private static final int MUTED = 0xFF918987;
-    private static final int TITLE = 0xFFE98A56;
-    private static final int[] MODE_COLORS = {0xFFC76A43, 0xFF6F9B62, 0xFFD09A24, 0xFF5B91B0};
-    private static final int[] PATTERN_COLORS = {0xFF9A7B60, 0xFF6D8E9D, 0xFF7D6D9D};
+    private static final int PANEL_WIDTH = 270;
+    private static final int PANEL_HEIGHT = 208;
+    private static final int INK = 0xFF494341;
+    private static final int MUTED_INK = 0xFF6E6764;
+    private static final int LABEL = 0xFFC74F43;
+    private static final int[] MODE_COLORS = {0xFFC54B2D, 0xFF547B3F, 0xFFD09A16, 0xFF477895};
+    private static final int[] PATTERN_COLORS = {0xFF8A512E, 0xFF477895, 0xFF76598E};
 
-    private final long[] hoverStarted = new long[9];
+    private final long[] hoverStarted = new long[4];
     private DinoWhistleSettings settings;
     private long openedAt;
     private long renderNow;
@@ -74,114 +74,104 @@ public final class DinoWhistleScreen extends Screen {
     }
 
     private void drawPanel(GuiGraphicsExtractor graphics, Rect panel, float mouseX, float mouseY) {
-        graphics.fill(panel.x + 6, panel.y + 7, panel.right() + 6, panel.bottom() + 7, 0x68000000);
-        PrimevalBubbleUi.drawDark(graphics, panel.x, panel.y, panel.w, panel.h);
+        Rect header = headerRect(panel);
+        drawBubble(graphics, header);
+        bold(graphics, "DINO WHISTLE", header.x + 10, header.y + 5, LABEL, 0.96F);
+        rightText(graphics, "CLICK A ROW TO CHANGE IT", header.right() - 9, header.y + 17,
+                header.w - 18, MUTED_INK, 0.66F);
 
-        Rect header = new Rect(panel.x + 8, panel.y + 8, panel.w - 16, 31);
-        PrimevalBubbleUi.drawDark(graphics, header.x, header.y, header.w, header.h);
-        bold(graphics, "DINO WHISTLE", header.x + 9, header.y + 5, TITLE, 1.0F);
-        fitText(graphics, "Set a field order for one of your following companions.",
-                header.x + 9, header.y + 17, header.w - 18, MUTED, 0.76F, true);
+        Rect order = orderRect(panel);
+        drawCycleRow(graphics, order, 0, order.contains(mouseX, mouseY), modeColor(),
+                "ORDER", settings.mode().title().toUpperCase());
 
-        for (int index = 0; index < DinoWhistleSettings.FieldMode.values().length; index++) {
-            DinoWhistleSettings.FieldMode mode = DinoWhistleSettings.FieldMode.values()[index];
-            Rect card = modeRect(panel, index);
-            boolean selected = settings.mode() == mode;
-            boolean hovered = card.contains(mouseX, mouseY);
-            drawControl(graphics, card, index, selected, hovered, MODE_COLORS[index],
-                    mode.title().toUpperCase(), 0.90F);
-        }
+        Rect target = targetRect(panel);
+        drawCycleRow(graphics, target, 1, target.contains(mouseX, mouseY), patternColor(),
+                "TARGET", settings.pattern().title().toUpperCase());
 
-        for (int index = 0; index < DinoWhistleSettings.Pattern.values().length; index++) {
-            DinoWhistleSettings.Pattern pattern = DinoWhistleSettings.Pattern.values()[index];
-            Rect card = patternRect(panel, index);
-            boolean selected = settings.pattern() == pattern;
-            boolean hovered = card.contains(mouseX, mouseY);
-            drawControl(graphics, card, 4 + index, selected, hovered, PATTERN_COLORS[index],
-                    pattern.title().toUpperCase(), 0.88F);
-        }
+        Rect run = runRect(panel);
+        drawCycleRow(graphics, run, 2, run.contains(mouseX, mouseY),
+                settings.continuous() ? 0xFF547B3F : 0xFF8A512E,
+                "RUN", settings.continuous() ? "CONTINUOUS" : "ONE TIME");
 
-        Rect repeat = repeatRect(panel);
-        boolean repeatHovered = repeat.contains(mouseX, mouseY);
-        int repeatColor = settings.continuous() ? 0xFF6E9D67 : 0xFFB17A54;
-        drawControl(graphics, repeat, 7, true, repeatHovered, repeatColor,
-                settings.continuous() ? "CONTINUOUS" : "ONE TIME", 0.88F);
-
-        drawRange(graphics, panel, mouseX, mouseY);
-        drawHelp(graphics, panel, mouseX, mouseY);
+        drawRange(graphics, rangeRect(panel), mouseX, mouseY);
+        drawHelp(graphics, helpRect(panel), hoveredHelp(panel, mouseX, mouseY));
     }
 
-    private void drawControl(GuiGraphicsExtractor graphics, Rect card, int key, boolean selected,
-                             boolean hovered, int accent, String label, float scale) {
-        PrimevalBubbleUi.drawDarkControl(graphics, card.x, card.y, card.w, card.h, accent, selected, hovered);
-        if (hovered) graphics.requestCursor(CursorTypes.POINTING_HAND);
-        drawMovingText(graphics, card, key, hovered, () -> centeredBold(graphics,
-                label, card, selected || hovered ? accent : TEXT, scale));
+    private void drawCycleRow(GuiGraphicsExtractor graphics, Rect row, int key, boolean hovered,
+                              int accent, String label, String value) {
+        drawBubble(graphics, row);
+        graphics.fill(row.x + 3, row.y + 3, row.x + 6, row.bottom() - 3, accent);
+        if (hovered) {
+            graphics.fill(row.x + 2, row.y + 2, row.right() - 2, row.bottom() - 2, 0x20FFFFFF);
+            graphics.requestCursor(CursorTypes.POINTING_HAND);
+        }
+        drawMovingText(graphics, row, key, hovered, () -> {
+            bold(graphics, label, row.x + 12, row.y + 9, hovered ? accent : MUTED_INK, 0.88F);
+            rightText(graphics, value + "  >", row.right() - 10, row.y + 9,
+                    row.w - 80, hovered ? accent : INK, 0.88F);
+        });
     }
 
-    private void drawRange(GuiGraphicsExtractor graphics, Rect panel, float mouseX, float mouseY) {
-        Rect range = rangeRect(panel);
+    private void drawRange(GuiGraphicsExtractor graphics, Rect range, float mouseX, float mouseY) {
         boolean hovered = range.contains(mouseX, mouseY);
-        updateHover(8, hovered || draggingRange);
-        PrimevalBubbleUi.drawDarkControl(graphics, range.x, range.y, range.w, range.h,
-                0xFFD9A04F, draggingRange, hovered);
-        if (hovered) graphics.requestCursor(CursorTypes.POINTING_HAND);
-
-        bold(graphics, "WORK RANGE", range.x + 10, range.y + 5,
-                hovered ? 0xFFD9A04F : MUTED, 0.80F);
+        int accent = 0xFFD09A16;
+        drawBubble(graphics, range);
+        graphics.fill(range.x + 3, range.y + 3, range.x + 6, range.bottom() - 3, accent);
+        if (hovered || draggingRange) {
+            graphics.fill(range.x + 2, range.y + 2, range.right() - 2, range.bottom() - 2, 0x20FFFFFF);
+            graphics.requestCursor(CursorTypes.POINTING_HAND);
+        }
+        updateHover(3, hovered || draggingRange);
+        bold(graphics, "RANGE", range.x + 12, range.y + 5,
+                hovered || draggingRange ? accent : MUTED_INK, 0.84F);
         rightText(graphics, settings.range() + " BLOCKS", range.right() - 9, range.y + 5,
-                range.w / 2.0F, hovered ? 0xFFD9A04F : TEXT, 0.80F);
-        int trackLeft = range.x + 94;
-        int trackRight = range.right() - 82;
-        int trackY = range.y + 10;
-        graphics.fill(trackLeft, trackY, trackRight, trackY + 3, 0xFF3D3739);
+                78, hovered || draggingRange ? accent : INK, 0.84F);
+
+        int trackLeft = range.x + 72;
+        int trackRight = range.right() - 68;
+        int trackY = range.y + 18;
+        graphics.fill(trackLeft, trackY, trackRight, trackY + 3, 0xFF88664F);
         float ratio = (settings.range() - DinoWhistleSettings.MIN_RANGE)
                 / (float)(DinoWhistleSettings.MAX_RANGE - DinoWhistleSettings.MIN_RANGE);
         int knobX = trackLeft + Math.round(ratio * (trackRight - trackLeft));
-        float pulse = interactionMotion(8, hovered || draggingRange);
-        float knobScale = 1.0F + pulse * 0.08F;
+        float pulse = interactionMotion(3, hovered || draggingRange);
+        float knobScale = 1.0F + pulse * 0.09F;
         graphics.pose().pushMatrix();
         graphics.pose().translate(knobX, trackY + 1.5F);
         graphics.pose().scale(knobScale, knobScale);
         graphics.pose().translate(-knobX, -(trackY + 1.5F));
-        graphics.fill(knobX - 4, range.y + 5, knobX + 5, range.bottom() - 5, 0xFFD9A04F);
+        graphics.fill(knobX - 3, range.y + 13, knobX + 4, range.bottom() - 4, accent);
         graphics.pose().popMatrix();
     }
 
-    private void drawHelp(GuiGraphicsExtractor graphics, Rect panel, float mouseX, float mouseY) {
-        Help help = hoveredHelp(panel, mouseX, mouseY);
-        Rect helpRect = new Rect(panel.x + 8, panel.bottom() - 45, panel.w - 16, 37);
-        PrimevalBubbleUi.drawDarkControl(graphics, helpRect.x, helpRect.y, helpRect.w, helpRect.h,
-                help.color, true, false);
-        fitText(graphics, help.title, helpRect.x + 10, helpRect.y + 6,
-                helpRect.w - 20, help.color, 0.88F, true);
-        fitText(graphics, help.detail, helpRect.x + 10, helpRect.y + 20,
-                helpRect.w - 20, TEXT, 0.78F, true);
+    private void drawHelp(GuiGraphicsExtractor graphics, Rect rect, Help help) {
+        drawBubble(graphics, rect);
+        graphics.fill(rect.x + 3, rect.y + 3, rect.x + 6, rect.bottom() - 3, help.color);
+        fitText(graphics, help.title, rect.x + 12, rect.y + 6,
+                rect.w - 24, help.color, 0.86F, true);
+        fitText(graphics, help.detail, rect.x + 12, rect.y + 21,
+                rect.w - 24, INK, 0.72F, true);
     }
 
     private Help hoveredHelp(Rect panel, float mouseX, float mouseY) {
-        for (int index = 0; index < DinoWhistleSettings.FieldMode.values().length; index++) {
-            if (modeRect(panel, index).contains(mouseX, mouseY)) {
-                DinoWhistleSettings.FieldMode mode = DinoWhistleSettings.FieldMode.values()[index];
-                return new Help(mode.title().toUpperCase(), mode.description(), MODE_COLORS[index]);
-            }
+        if (orderRect(panel).contains(mouseX, mouseY)) {
+            return new Help("ORDER / " + settings.mode().title().toUpperCase(),
+                    settings.mode().description(), modeColor());
         }
-        for (int index = 0; index < DinoWhistleSettings.Pattern.values().length; index++) {
-            if (patternRect(panel, index).contains(mouseX, mouseY)) {
-                DinoWhistleSettings.Pattern pattern = DinoWhistleSettings.Pattern.values()[index];
-                return new Help(pattern.title().toUpperCase(), pattern.description(), PATTERN_COLORS[index]);
-            }
+        if (targetRect(panel).contains(mouseX, mouseY)) {
+            return new Help("TARGET / " + settings.pattern().title().toUpperCase(),
+                    settings.pattern().description(), patternColor());
         }
-        if (repeatRect(panel).contains(mouseX, mouseY)) {
+        if (runRect(panel).contains(mouseX, mouseY)) {
             return settings.continuous()
-                    ? new Help("CONTINUOUS", "Rescans after every completed pass.", 0xFF6E9D67)
-                    : new Help("ONE TIME", "Stops when the marked order is complete.", 0xFFB17A54);
+                    ? new Help("RUN / CONTINUOUS", "Starts another pass after the current order is finished.", 0xFF547B3F)
+                    : new Help("RUN / ONE TIME", "Stops after the marked order has been completed.", 0xFF8A512E);
         }
         if (rangeRect(panel).contains(mouseX, mouseY)) {
-            return new Help("WORK RANGE", "Maximum distance the worker may travel from you.", 0xFFD9A04F);
+            return new Help("RANGE / " + settings.range() + " BLOCKS",
+                    "The farthest your assigned worker may travel from you.", 0xFFD09A16);
         }
-        DinoWhistleSettings.FieldMode mode = settings.mode();
-        return new Help(mode.title().toUpperCase(), mode.description(), MODE_COLORS[mode.ordinal()]);
+        return new Help("HOW TO USE", "Attack a block to mark it. Hold use to edit this whistle.", LABEL);
     }
 
     @Override
@@ -189,34 +179,33 @@ public final class DinoWhistleScreen extends Screen {
         if (event.button() != 0) return super.mouseClicked(event, doubleClick);
         Rect panel = panel();
         Motion motion = motion(panel);
-        double uiMouseX = motion.inverseX(event.x());
-        double uiMouseY = motion.inverseY(event.y());
-        for (int index = 0; index < DinoWhistleSettings.FieldMode.values().length; index++) {
-            if (modeRect(panel, index).contains(uiMouseX, uiMouseY)) {
-                settings = new DinoWhistleSettings(DinoWhistleSettings.FieldMode.values()[index],
-                        settings.pattern(), settings.continuous(), settings.range());
-                changed(0.96F, index);
-                return true;
-            }
-        }
-        for (int index = 0; index < DinoWhistleSettings.Pattern.values().length; index++) {
-            if (patternRect(panel, index).contains(uiMouseX, uiMouseY)) {
-                settings = new DinoWhistleSettings(settings.mode(), DinoWhistleSettings.Pattern.values()[index],
-                        settings.continuous(), settings.range());
-                changed(1.04F, 4 + index);
-                return true;
-            }
-        }
-        if (repeatRect(panel).contains(uiMouseX, uiMouseY)) {
-            settings = new DinoWhistleSettings(settings.mode(), settings.pattern(),
-                    !settings.continuous(), settings.range());
-            changed(1.0F, 7);
+        double mouseX = motion.inverseX(event.x());
+        double mouseY = motion.inverseY(event.y());
+        if (orderRect(panel).contains(mouseX, mouseY)) {
+            DinoWhistleSettings.FieldMode[] values = DinoWhistleSettings.FieldMode.values();
+            settings = new DinoWhistleSettings(values[(settings.mode().ordinal() + 1) % values.length],
+                    settings.pattern(), settings.continuous(), settings.range());
+            changed(0.96F, 0);
             return true;
         }
-        if (rangeRect(panel).contains(uiMouseX, uiMouseY)) {
+        if (targetRect(panel).contains(mouseX, mouseY)) {
+            DinoWhistleSettings.Pattern[] values = DinoWhistleSettings.Pattern.values();
+            settings = new DinoWhistleSettings(settings.mode(),
+                    values[(settings.pattern().ordinal() + 1) % values.length],
+                    settings.continuous(), settings.range());
+            changed(1.02F, 1);
+            return true;
+        }
+        if (runRect(panel).contains(mouseX, mouseY)) {
+            settings = new DinoWhistleSettings(settings.mode(), settings.pattern(),
+                    !settings.continuous(), settings.range());
+            changed(1.06F, 2);
+            return true;
+        }
+        if (rangeRect(panel).contains(mouseX, mouseY)) {
             draggingRange = true;
-            pressed(8);
-            updateRange(uiMouseX);
+            pressed(3);
+            updateRange(mouseX);
             return true;
         }
         return super.mouseClicked(event, doubleClick);
@@ -242,8 +231,8 @@ public final class DinoWhistleScreen extends Screen {
 
     private void updateRange(double mouseX) {
         Rect range = rangeRect(panel());
-        int trackLeft = range.x + 94;
-        int trackRight = range.right() - 82;
+        int trackLeft = range.x + 72;
+        int trackRight = range.right() - 68;
         float ratio = Mth.clamp((float)((mouseX - trackLeft) / (trackRight - trackLeft)), 0.0F, 1.0F);
         int value = Math.round(Mth.lerp(ratio, DinoWhistleSettings.MIN_RANGE, DinoWhistleSettings.MAX_RANGE));
         if (value != settings.range()) {
@@ -282,27 +271,26 @@ public final class DinoWhistleScreen extends Screen {
         return new Rect((width - PANEL_WIDTH) / 2, (height - PANEL_HEIGHT) / 2, PANEL_WIDTH, PANEL_HEIGHT);
     }
 
-    private Rect modeRect(Rect panel, int index) {
-        return new Rect(panel.x + 8 + index * 91, panel.y + 47, 86, 28);
-    }
+    private Rect headerRect(Rect panel) { return new Rect(panel.x, panel.y, panel.w, 30); }
+    private Rect orderRect(Rect panel) { return new Rect(panel.x, panel.y + 34, panel.w, 29); }
+    private Rect targetRect(Rect panel) { return new Rect(panel.x, panel.y + 67, panel.w, 29); }
+    private Rect runRect(Rect panel) { return new Rect(panel.x, panel.y + 100, panel.w, 29); }
+    private Rect rangeRect(Rect panel) { return new Rect(panel.x, panel.y + 133, panel.w, 31); }
+    private Rect helpRect(Rect panel) { return new Rect(panel.x, panel.y + 168, panel.w, 40); }
 
-    private Rect patternRect(Rect panel, int index) {
-        return new Rect(panel.x + 8 + index * 91, panel.y + 83, 86, 28);
-    }
+    private int modeColor() { return MODE_COLORS[settings.mode().ordinal()]; }
+    private int patternColor() { return PATTERN_COLORS[settings.pattern().ordinal()]; }
 
-    private Rect repeatRect(Rect panel) {
-        return new Rect(panel.right() - 94, panel.y + 83, 86, 28);
-    }
-
-    private Rect rangeRect(Rect panel) {
-        return new Rect(panel.x + 8, panel.y + 119, panel.w - 16, 28);
+    private void drawBubble(GuiGraphicsExtractor graphics, Rect rect) {
+        graphics.fill(rect.x + 4, rect.y + 5, rect.right() + 4, rect.bottom() + 5, 0x43000000);
+        PrimevalBubbleUi.draw(graphics, rect.x, rect.y, rect.w, rect.h);
     }
 
     private void updateParallax(int mouseX, int mouseY) {
         float delta = Mth.clamp((renderNow - previousFrame) / 1_000_000_000.0F, 0.0F, 0.05F);
         previousFrame = renderNow;
-        float targetX = Mth.clamp((mouseX - width * 0.5F) / Math.max(1.0F, width * 0.5F), -1.0F, 1.0F) * -3.2F;
-        float targetY = Mth.clamp((mouseY - height * 0.5F) / Math.max(1.0F, height * 0.5F), -1.0F, 1.0F) * -2.0F;
+        float targetX = Mth.clamp((mouseX - width * 0.5F) / Math.max(1.0F, width * 0.5F), -1.0F, 1.0F) * -1.8F;
+        float targetY = Mth.clamp((mouseY - height * 0.5F) / Math.max(1.0F, height * 0.5F), -1.0F, 1.0F) * -1.1F;
         float blend = 1.0F - (float)Math.exp(-delta * 9.0F);
         parallaxX = Mth.lerp(blend, parallaxX, targetX);
         parallaxY = Mth.lerp(blend, parallaxY, targetY);
@@ -311,13 +299,13 @@ public final class DinoWhistleScreen extends Screen {
     private Motion motion(Rect panel) {
         long now = renderNow == 0L ? Util.getNanos() : renderNow;
         float elapsedTicks = (now - openedAt) / 50_000_000.0F;
-        float progress = Mth.clamp(elapsedTicks / 34.0F, 0.0F, 1.0F);
-        float settled = PrimevalBubbleUi.spring(progress, 7.2F, 10.5F);
-        float fade = smoothStep(Mth.clamp(elapsedTicks / 24.0F, 0.0F, 1.0F));
+        float progress = Mth.clamp(elapsedTicks / 24.0F, 0.0F, 1.0F);
+        float settled = PrimevalBubbleUi.spring(progress, 6.2F, 11.4F);
+        float fade = smoothStep(Mth.clamp(elapsedTicks / 18.0F, 0.0F, 1.0F));
         float fit = Math.min(1.0F, Math.min((width - 12.0F) / PANEL_WIDTH, (height - 12.0F) / PANEL_HEIGHT));
-        float scale = Math.max(0.1F, fit * (0.955F + 0.045F * settled));
-        float offsetX = (width * 0.72F + panel.w * 0.35F) * (1.0F - settled) + parallaxX * fade;
-        float offsetY = parallaxY * fade;
+        float scale = Math.max(0.1F, fit * (0.74F + 0.26F * settled));
+        float offsetX = parallaxX * fade;
+        float offsetY = 18.0F * (1.0F - settled) + parallaxY * fade;
         return new Motion(panel.centerX(), panel.centerY(), offsetX, offsetY, scale);
     }
 
@@ -370,14 +358,6 @@ public final class DinoWhistleScreen extends Screen {
                     Mth.clamp(1.0F - (renderNow - pressedAt) / 320_000_000.0F, 0.0F, 1.0F));
         }
         return amount;
-    }
-
-    private void centeredBold(GuiGraphicsExtractor graphics, String value, Rect rect, int color, float requestedScale) {
-        Component component = Component.literal(value).withStyle(Style.EMPTY.withBold(true));
-        float scale = Math.min(requestedScale, (rect.w - 10.0F) / Math.max(1, font.width(component)));
-        float x = rect.centerX() - font.width(component) * scale * 0.5F;
-        float y = rect.centerY() - font.lineHeight * scale * 0.5F;
-        drawText(graphics, component, x, y, color, scale);
     }
 
     private void bold(GuiGraphicsExtractor graphics, String value, float x, float y, int color, float scale) {
