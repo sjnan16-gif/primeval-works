@@ -1401,18 +1401,11 @@ public final class WorksitePlannerScreen extends Screen {
 
     private void drawSearchPaperPanel(GuiGraphicsExtractor graphics, Rect panel, int alpha) {
         graphics.fill(panel.x + 4, panel.y + 5, panel.right() + 4, panel.bottom() + 5, withAlpha(0xFF000000, Math.round(alpha * 0.28F)));
-        graphics.fill(panel.x, panel.y, panel.right(), panel.bottom(), withAlpha(0xFF4A332C, alpha));
-        graphics.fill(panel.x + 2, panel.y + 2, panel.right() - 2, panel.bottom() - 2, withAlpha(0xFF88664F, alpha));
-        graphics.fill(panel.x + 4, panel.y + 4, panel.right() - 4, panel.bottom() - 4, withAlpha(0xFFD0AD89, alpha));
-        for (int y = panel.y + 7; y < panel.bottom() - 5; y += 7) {
-            graphics.fill(panel.x + 5, y, panel.right() - 5, y + 1, withAlpha(0xFFFFFFFF, Math.round(alpha * 0.07F)));
-        }
+        PrimevalUiCrop.paperPanel(graphics, panel.x, panel.y, panel.width, panel.height, alpha);
     }
 
     private void drawSearchInventorySlot(GuiGraphicsExtractor graphics, Rect rect, boolean hovered, int index, int alpha) {
-        graphics.fill(rect.x, rect.y, rect.right(), rect.bottom(), withAlpha(0xFF4A332C, alpha));
-        graphics.fill(rect.x + 1, rect.y + 1, rect.right() - 1, rect.bottom() - 1, withAlpha(0xFF9A765A, alpha));
-        graphics.fill(rect.x + 2, rect.y + 2, rect.right() - 2, rect.bottom() - 2, withAlpha(0xFFD7B392, alpha));
+        PrimevalUiCrop.paperSlot(graphics, rect.x, rect.y, rect.width, rect.height, alpha);
         if (hovered) {
             int pulse = 92 + Math.round((Mth.sin(renderTimeTicks * 0.24F + index) + 1.0F) * 46.0F);
             outline(graphics, new Rect(rect.x - 1, rect.y - 1, rect.width + 2, rect.height + 2), withAlpha(0xFFFFFFFF, pulse));

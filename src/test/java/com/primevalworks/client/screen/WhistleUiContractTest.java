@@ -15,13 +15,21 @@ final class WhistleUiContractTest {
     private static final Path CLIENT = Path.of("src/main/java/com/primevalworks/client");
 
     @Test
-    void everyWhistleSurfaceUsesTheAuthoredSpaceBubble() throws Exception {
+    void whistleSurfacesUseTheAuthoredBubbleAssets() throws Exception {
         BufferedImage space = ImageIO.read(Path.of(
                 "src/main/resources/assets/primevalworks/textures/gui/space.png").toFile());
         assertEquals(86, space.getWidth());
         assertEquals(14, space.getHeight());
+        BufferedImage crop = ImageIO.read(Path.of(
+                "src/main/resources/assets/primevalworks/textures/gui/ui_crop.png").toFile());
+        assertEquals(427, crop.getWidth());
+        assertEquals(240, crop.getHeight());
 
-        assertUsesBubble(CLIENT.resolve("screen/DinoWhistleScreen.java"));
+        String config = Files.readString(CLIENT.resolve("screen/DinoWhistleScreen.java"));
+        assertTrue(config.contains("PrimevalUiCrop.paperBubble"));
+        assertTrue(config.contains("PrimevalUiCrop.paperInset"));
+        assertTrue(config.contains("PrimevalUiCrop.paperSlot"));
+        assertTrue(config.contains("PrimevalUiCrop.paperPanel"));
         assertUsesBubble(CLIENT.resolve("screen/WhistleFollowerPickerScreen.java"));
     }
 
@@ -32,7 +40,8 @@ final class WhistleUiContractTest {
         assertTrue(config.contains("PANEL_HEIGHT = 142"));
         assertTrue(config.contains("MAX_PANEL_SCALE = 1.08F"));
         assertTrue(config.contains("PrimevalBubbleUi.spring"));
-        assertTrue(config.contains("whistle_range_button.png"));
+        assertTrue(config.contains("PrimevalUiCrop.paperTrack"));
+        assertTrue(config.contains("PrimevalUiCrop.paperKnob"));
         assertTrue(config.contains("drawInsetBubble"));
         assertTrue(config.contains("drawSearchPaperPanel"));
         assertTrue(config.contains("drawSearchInventorySlot"));

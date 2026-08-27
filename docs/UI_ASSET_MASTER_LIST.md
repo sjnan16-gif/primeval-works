@@ -28,6 +28,7 @@ tooltips, dimming, and animation.
 | `energy_top.png` | 427 x 240 | Energy network camera and consumer selection |
 | `processor_ui.png` | 427 x 240 | Processor recipe/input/fuel/catalyst/output screen |
 | `food_box.png` | 427 x 240 | Source reference; the current compact Food Box is assembled from slots and `space.png` |
+| `ui_crop.png` | 427 x 240 | Reusable paper/dark atlas for panels, bubbles, slots, dividers, patterned tracks and slider knobs; crop through `PrimevalUiCrop` only |
 | `space.png` | 86 x 14 | Reusable 9-slice text bubble |
 | `hotbar.png` | 18 x 18 | Reusable item/action slot |
 | hunger/mood/health bars and icons | existing sizes | All condition bars |
