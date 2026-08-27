@@ -10,15 +10,21 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
 public final class DinoWhistleClient {
+    private static BlockPos areaFirst;
+    private static DinoWhistleSettings.FieldMode areaMode;
+    private static ResourceKey<Level> areaDimension;
+
     private DinoWhistleClient() {}
 
     public static void handleAttack(InputEvent.InteractionKeyMappingTriggered event) {
@@ -31,6 +37,7 @@ public final class DinoWhistleClient {
         event.setSwingHand(false);
         DinoWhistleSettings settings = DinoWhistleSettings.read(whistle);
         if (!settings.mode().requiresMark()) {
+            clearAreaSelection();
             return;
         }
         if (!(minecraft.hitResult instanceof BlockHitResult hit)) {
@@ -38,10 +45,33 @@ public final class DinoWhistleClient {
             return;
         }
         BlockPos selected = hit.getBlockPos().immutable();
-        if (!DinoFieldWorkRules.validTarget(minecraft.level, selected, settings.mode(), 4)) {
+        boolean areaOrder = settings.mode() == DinoWhistleSettings.FieldMode.QUARRY
+                && settings.pattern() == DinoWhistleSettings.Pattern.AREA;
+        boolean choosingFirst = !areaOrder || areaFirst == null || areaMode != settings.mode()
+                || !minecraft.level.dimension().equals(areaDimension);
+        if (choosingFirst && !DinoFieldWorkRules.validTarget(minecraft.level, selected, settings.mode(), 4)) {
             minecraft.player.sendOverlayMessage(Component.literal(settings.mode().markHint(settings.pattern())));
             return;
         }
+        if (areaOrder) {
+            if (areaFirst == null || areaMode != settings.mode()) {
+                areaFirst = selected;
+                areaMode = settings.mode();
+                areaDimension = minecraft.level.dimension();
+                minecraft.player.sendOverlayMessage(Component.literal("First corner saved. Mark the opposite corner."));
+                return;
+            }
+            if (!DinoFieldWorkRules.areaWithinLimits(areaFirst, selected)) {
+                minecraft.player.sendOverlayMessage(Component.literal(
+                        "That area is too large. Mark a closer opposite corner."));
+                return;
+            }
+            BlockPos first = areaFirst;
+            clearAreaSelection();
+            ClientPacketDistributor.sendToServer(new RequestWhistleFollowersPayload(first, selected, true));
+            return;
+        }
+        clearAreaSelection();
         ClientPacketDistributor.sendToServer(new RequestWhistleFollowersPayload(selected, selected, false));
     }
 
@@ -55,6 +85,7 @@ public final class DinoWhistleClient {
         int inventorySlot = resolveInventorySlot(minecraft, hovered);
         if (inventorySlot < 0) return;
         event.setCanceled(true);
+        clearAreaSelection();
         DinoWhistleScreen.open(hovered.getItem(), inventorySlot);
     }
 
@@ -70,6 +101,7 @@ public final class DinoWhistleClient {
         int inventorySlot = hand == InteractionHand.MAIN_HAND
                 ? minecraft.player.getInventory().getSelectedSlot()
                 : minecraft.player.getInventory().getContainerSize() - 1;
+        clearAreaSelection();
         DinoWhistleScreen.open(whistle, inventorySlot);
     }
 
@@ -88,5 +120,11 @@ public final class DinoWhistleClient {
             match = index;
         }
         return match;
+    }
+
+    private static void clearAreaSelection() {
+        areaFirst = null;
+        areaMode = null;
+        areaDimension = null;
     }
 }

@@ -209,9 +209,12 @@ public final class PrimevalGameTests {
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> FOLLOWER_ORDER_SURVIVES_RELOAD =
             TEST_FUNCTIONS.register("follower_order_survives_reload",
                     () -> PrimevalGameTests::followerOrderSurvivesReload);
-    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> FOLLOWER_AUTOMATICALLY_QUARRIES_NEARBY_BLOCK =
-            TEST_FUNCTIONS.register("follower_automatically_quarries_nearby_block",
-                    () -> PrimevalGameTests::followerAutomaticallyQuarriesNearbyBlock);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> FOLLOWER_QUARRIES_MARKED_VEIN =
+            TEST_FUNCTIONS.register("follower_quarries_marked_vein",
+                    () -> PrimevalGameTests::followerQuarriesMarkedVein);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> FOLLOWER_CLEARS_MARKED_QUARRY_AREA =
+            TEST_FUNCTIONS.register("follower_clears_marked_quarry_area",
+                    () -> PrimevalGameTests::followerClearsMarkedQuarryArea);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> FOLLOWER_PASSIVELY_HARVESTS_CROPS =
             TEST_FUNCTIONS.register("follower_passively_harvests_crops",
                     () -> PrimevalGameTests::followerPassivelyHarvestsCrops);
@@ -475,9 +478,14 @@ public final class PrimevalGameTests {
                         isolatedTestData(event, "follower_order_reload"))
         );
         event.registerTest(
-                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "follower_automatically_quarries_nearby_block"),
-                new FunctionGameTestInstance(FOLLOWER_AUTOMATICALLY_QUARRIES_NEARBY_BLOCK.getKey(),
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "follower_quarries_marked_vein"),
+                new FunctionGameTestInstance(FOLLOWER_QUARRIES_MARKED_VEIN.getKey(),
                         isolatedTestData(event, "follower_quarry"))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "follower_clears_marked_quarry_area"),
+                new FunctionGameTestInstance(FOLLOWER_CLEARS_MARKED_QUARRY_AREA.getKey(),
+                        isolatedTestData(event, "follower_quarry_area"))
         );
         event.registerTest(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "follower_passively_harvests_crops"),
@@ -3386,16 +3394,20 @@ public final class PrimevalGameTests {
         helper.succeed();
     }
 
-    private static void followerAutomaticallyQuarriesNearbyBlock(GameTestHelper helper) {
+    private static void followerQuarriesMarkedVein(GameTestHelper helper) {
         BlockPos tableRelative = new BlockPos(1, 1, 1);
         BlockPos dinosaurRelative = new BlockPos(3, 1, 3);
         BlockPos targetRelative = new BlockPos(5, 1, 3);
-        forceTicking(helper, tableRelative, dinosaurRelative, targetRelative);
+        BlockPos connectedRelative = targetRelative.above();
+        BlockPos differentRelative = targetRelative.east();
+        forceTicking(helper, tableRelative, dinosaurRelative, targetRelative, connectedRelative, differentRelative);
         for (int x = 0; x <= 7; x++) {
             for (int z = 0; z <= 6; z++) helper.setBlock(new BlockPos(x, 0, z), Blocks.DIRT);
         }
         helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
         helper.setBlock(targetRelative, Blocks.IRON_ORE);
+        helper.setBlock(connectedRelative, Blocks.IRON_ORE);
+        helper.setBlock(differentRelative, Blocks.STONE);
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
@@ -3421,23 +3433,72 @@ public final class PrimevalGameTests {
         helper.assertTrue(DinosaurOwnership.setCommandMode(player, dinosaur, DinosaurCommandMode.FOLLOW).success(),
                 "The quarry test companion could not enter Follow mode");
         dinosaur.setInvulnerable(true);
-        dinosaur.assignPassiveFieldWork(new DinoWhistleSettings(
+        dinosaur.assignFieldWork(new DinoWhistleSettings(
                 DinoWhistleSettings.FieldMode.QUARRY,
-                DinoWhistleSettings.Pattern.AREA,
+                DinoWhistleSettings.Pattern.CONNECTED,
                 48
-        ));
+        ), target, null);
 
         helper.startSequence()
-                .thenWaitUntil(() -> helper.assertTrue(helper.getBlockState(targetRelative).isAir(),
-                        "The follower never completed its automatic nearby quarry order; position="
+                .thenWaitUntil(() -> helper.assertTrue(helper.getBlockState(targetRelative).isAir()
+                                && helper.getBlockState(connectedRelative).isAir(),
+                        "The follower never completed its marked connected quarry order; position="
                                 + dinosaur.position() + ", mode=" + dinosaur.getCommandMode()
                                 + ", fieldEnabled=" + dinosaur.hasFieldWork()
                                 + ", hunger=" + dinosaur.getHunger()
                                 + ", action=" + dinosaur.getWorkAction()
                                 + ", entityTicks=" + dinosaur.tickCount))
-                .thenExecute(() -> helper.assertTrue(dinosaur.hasFieldWork()
-                                && dinosaur.getFieldWorkMode() == DinoWhistleSettings.FieldMode.QUARRY,
-                        "Automatic quarry duty stopped after its first nearby block"))
+                .thenExecute(() -> helper.assertTrue(!dinosaur.hasFieldWork()
+                                && helper.getBlockState(differentRelative).is(Blocks.STONE),
+                        "The connected quarry order either stayed active or crossed into another block type"))
+                .thenSucceed();
+    }
+
+    private static void followerClearsMarkedQuarryArea(GameTestHelper helper) {
+        BlockPos tableRelative = new BlockPos(1, 1, 1);
+        BlockPos dinosaurRelative = new BlockPos(3, 1, 3);
+        BlockPos firstRelative = new BlockPos(5, 1, 3);
+        BlockPos secondRelative = new BlockPos(6, 2, 4);
+        BlockPos stoneRelative = new BlockPos(6, 1, 3);
+        BlockPos dirtRelative = new BlockPos(5, 2, 4);
+        BlockPos woodRelative = new BlockPos(6, 2, 4);
+        forceTicking(helper, tableRelative, dinosaurRelative, firstRelative, secondRelative);
+        for (int x = 0; x <= 8; x++) {
+            for (int z = 0; z <= 7; z++) helper.setBlock(new BlockPos(x, 0, z), Blocks.DIRT);
+        }
+        helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
+        helper.setBlock(firstRelative, Blocks.IRON_ORE);
+        helper.setBlock(stoneRelative, Blocks.STONE);
+        helper.setBlock(dirtRelative, Blocks.DIRT);
+        helper.setBlock(woodRelative, Blocks.OAK_PLANKS);
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
+        player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
+        player.snapTo(helper.absolutePos(new BlockPos(2, 1, 3)).getCenter().x,
+                helper.absolutePos(new BlockPos(2, 1, 3)).getY(),
+                helper.absolutePos(new BlockPos(2, 1, 3)).getCenter().z, 0.0F, 0.0F);
+        BlockPos table = helper.absolutePos(tableRelative);
+        CommandTableBlock.claimExisting(player, table);
+        FieldDodoEntity dinosaur = helper.spawn(ModEntities.TYRANNOSAURUS.get(), dinosaurRelative);
+        helper.assertTrue(DinosaurOwnership.addToActiveIfRoom(player, dinosaur, table),
+                "The area quarry companion could not join the active crew");
+        helper.assertTrue(DinosaurOwnership.setCommandMode(player, dinosaur, DinosaurCommandMode.FOLLOW).success(),
+                "The area quarry companion could not enter Follow mode");
+        dinosaur.setInvulnerable(true);
+        dinosaur.assignFieldWork(new DinoWhistleSettings(
+                DinoWhistleSettings.FieldMode.QUARRY,
+                DinoWhistleSettings.Pattern.AREA,
+                48
+        ), helper.absolutePos(firstRelative), helper.absolutePos(secondRelative));
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(helper.getBlockState(firstRelative).isAir()
+                                && helper.getBlockState(stoneRelative).isAir()
+                                && helper.getBlockState(dirtRelative).isAir()
+                                && helper.getBlockState(woodRelative).isAir(),
+                        "The marked quarry area did not clear every safe block type inside its corners"))
+                .thenExecute(() -> helper.assertTrue(!dinosaur.hasFieldWork(),
+                        "The bounded quarry area remained active after it was cleared"))
                 .thenSucceed();
     }
 

@@ -39,7 +39,11 @@ final class WhistleUiContractTest {
         assertTrue(config.contains("SEARCH_PANEL_WIDTH = 198"));
         assertTrue(config.contains("SEARCH_PANEL_HEIGHT = 128"));
         assertTrue(config.contains("hoverTooltip = null"));
-        assertTrue(config.contains("SEARCH INVENTORY"));
+        assertTrue(config.contains("ITEM TYPES"));
+        assertTrue(config.contains("refreshCatalogueItems"));
+        assertTrue(config.contains("searchScrollRow"));
+        assertTrue(config.contains("updateSearchMotion(deltaTime)"));
+        assertTrue(config.contains("mainPanel()") && config.contains("searchPanel()"));
         assertTrue(config.contains("hoverTooltip"));
         assertFalse(config.contains("PANEL_INNER"));
         assertFalse(config.contains("CARD_HOVER"));
@@ -55,7 +59,8 @@ final class WhistleUiContractTest {
         assertTrue(config.contains("settings.mode().targetTitle(settings.pattern())"));
         assertTrue(config.contains("filterSlot"));
         assertTrue(config.contains("centeredText(graphics, \"+\""));
-        assertTrue(config.contains("filteredInventory"));
+        assertTrue(config.contains("filteredCatalogue"));
+        assertTrue(config.contains("BuiltInRegistries.ITEM"));
         assertTrue(config.contains("draggedItem"));
         assertFalse(config.contains("runRect"));
         assertFalse(config.contains("ONCE"));
@@ -101,6 +106,18 @@ final class WhistleUiContractTest {
         assertTrue(cancel >= 0 && blockHit > cancel,
                 "The whistle can punch or swing when the crosshair is not on a block");
         assertTrue(client.contains("DinoFieldWorkRules.validTarget"));
+        assertTrue(client.contains("areaFirst"));
+        assertTrue(client.contains("areaDimension"));
+        assertTrue(client.contains("First corner saved"));
+    }
+
+    @Test
+    void remoteCompanionWorkIsReplacedByOneLargeCallBackAction() throws Exception {
+        String companion = Files.readString(CLIENT.resolve("screen/CompanionScreen.java"));
+        assertTrue(companion.contains("outsideBaseTogether()"));
+        assertTrue(companion.contains("callBack ? \"CALL BACK\" : \"JOBS\""));
+        assertTrue(companion.contains("requestCommandMode(DinosaurCommandMode.HOME)"));
+        assertTrue(companion.contains("new Rect(303, JOBS.y(), 69, JOBS.height())"));
     }
 
     private static void assertUsesBubble(Path path) throws Exception {

@@ -8,6 +8,7 @@ import com.primevalworks.network.payload.FeedDodoPayload;
 import com.primevalworks.network.payload.DinosaurCommandPayload;
 import com.primevalworks.network.payload.DinosaurCommandStatePayload;
 import com.primevalworks.registry.ModEntities;
+import com.primevalworks.world.block.CommandTableBlock;
 import com.primevalworks.world.entity.FieldDodoEntity;
 import com.primevalworks.world.work.DinosaurCommandMode;
 import com.primevalworks.world.work.DinoFieldWorkRules;
@@ -194,7 +195,14 @@ public final class CompanionScreen extends Screen {
             pressed(Action.FEED);
             return true;
         }
-        if (global(layout, JOBS).contains(event.x(), event.y())) {
+        if (jobsActionRect(layout).contains(event.x(), event.y())) {
+            if (outsideBaseTogether()) {
+                requestCommandMode(DinosaurCommandMode.HOME);
+                playUiClick(1.02F);
+                pressed(Action.JOBS);
+                onClose();
+                return true;
+            }
             pendingJobIndex = state.assignmentIndex;
             jobMenuOpen = true;
             restartTransition();
@@ -203,6 +211,11 @@ public final class CompanionScreen extends Screen {
             return true;
         }
         if (global(layout, INFO).contains(event.x(), event.y())) {
+            if (outsideBaseTogether()) {
+                state.notice = "Call this companion back before changing its base work.";
+                playUiClick(0.72F);
+                return true;
+            }
             pendingJobIndex = state.assignmentIndex;
             jobMenuOpen = true;
             restartTransition();
@@ -286,9 +299,11 @@ public final class CompanionScreen extends Screen {
         drawBars(graphics, layout, time);
         drawJobSummary(graphics, layout, uiMouseX, uiMouseY, time);
         drawAction(graphics, global(layout, FEED), "FEED", 0xFFD86B32, Action.FEED, uiMouseX, uiMouseY, time);
-        Rect jobs = global(layout, JOBS);
-        drawAction(graphics, jobs, "JOBS", 0xFF477895, Action.JOBS, uiMouseX, uiMouseY, time);
-        if (state.commandMode == DinosaurCommandMode.FOLLOW) {
+        Rect jobs = jobsActionRect(layout);
+        boolean callBack = outsideBaseTogether();
+        drawAction(graphics, jobs, callBack ? "CALL BACK" : "JOBS",
+                callBack ? 0xFFD09A16 : 0xFF477895, Action.JOBS, uiMouseX, uiMouseY, time);
+        if (state.commandMode == DinosaurCommandMode.FOLLOW && !callBack) {
             graphics.fill(jobs.x() + 2, jobs.y() + 2, jobs.right() - 2, jobs.bottom() - 2, 0x52605B58);
         }
         drawCommandAction(graphics, global(layout, COMMAND), uiMouseX, uiMouseY, time);
@@ -464,14 +479,14 @@ public final class CompanionScreen extends Screen {
                     textX, info.y() + 3, textWidth, textColor, 0.88F, true);
             if (state.assignmentIndex == 4) {
                 textLine(graphics, "Timed route outside the base.",
-                        textX, info.y() + 13, textWidth, INK, 0.76F, true);
+                        textX, info.y() + 13, textWidth, textColor, 0.76F, true);
                 textLine(graphics, "Returns with fixed tier rewards.",
-                        textX, info.y() + 20, textWidth, INK, 0.76F, true);
+                        textX, info.y() + 20, textWidth, textColor, 0.76F, true);
                 textLine(graphics, specialtyStars(state.assignmentIndex) + " STAR  /  " + specialtySpeedLabel(state.assignmentIndex),
                         textX, info.y() + 27, textWidth, hovered ? color : MUTED_INK, 0.70F, true);
             } else {
                 textLine(graphics, shortJobDescription(state.assignmentIndex),
-                        textX, info.y() + 14, textWidth, INK, 0.82F, true);
+                        textX, info.y() + 14, textWidth, textColor, 0.82F, true);
                 textLine(graphics, specialtyStars(state.assignmentIndex) + " STAR  /  " + specialtySpeedLabel(state.assignmentIndex),
                         textX, info.y() + 24, textWidth, hovered ? color : MUTED_INK, 0.82F, true);
             }
@@ -522,7 +537,11 @@ public final class CompanionScreen extends Screen {
         if (global(layout, FEED).contains(mouseX, mouseY)) {
             return new HoverInfo("FEED", "Choose suitable food from your inventory and feed this companion now.", 0xFFD86B32);
         }
-        if (global(layout, JOBS).contains(mouseX, mouseY)) {
+        if (jobsActionRect(layout).contains(mouseX, mouseY)) {
+            if (outsideBaseTogether()) {
+                return new HoverInfo("CALL BACK",
+                        "Send this companion home before changing its permanent base assignment.", 0xFFD09A16);
+            }
             return state.commandMode == DinosaurCommandMode.FOLLOW
                     ? new HoverInfo("BASE JOBS PAUSED",
                     "Base assignments are locked while this dinosaur follows you. Open the page to review its field specialty.",
@@ -719,14 +738,15 @@ public final class CompanionScreen extends Screen {
         int iconWidth = Math.max(12, Math.round(SPECIALTY_ICON_WIDTHS[index] * (iconHeight / 8.0F)));
         blit(graphics, SPECIALTY_ICONS[index], new Rect(row.x() + 11, row.y() + (row.height() - iconHeight) / 2, iconWidth, iconHeight));
         int textX = row.x() + 36;
-        withTextMotion(graphics, new Rect(textX, row.y() + 2, row.width() - 92, row.height() - 4), time, hovered, selected, () -> {
-            textLine(graphics, SPECIALTIES[index].toUpperCase(), textX, row.y() + 4, 100, hovered ? color : INK, 1.0F, true);
+        withTextMotion(graphics, new Rect(textX, row.y() + 1, row.width() - 92, row.height() - 3), time, hovered, selected, () -> {
+            textLine(graphics, SPECIALTIES[index].toUpperCase(), textX, row.y() + 2, 100, hovered ? color : INK, 1.0F, true);
             if (active) {
-                textLine(graphics, "CURRENT", textX + 105, row.y() + 4, 54, hovered ? color : MUTED_INK, 1.0F, true);
+                textLine(graphics, "CURRENT", textX + 105, row.y() + 2, 54, hovered ? color : MUTED_INK, 1.0F, true);
             }
-            textLine(graphics, shortJobDescription(index), textX, row.y() + 16, row.width() - 230,
+            int descriptionWidth = index == 4 ? row.width() - 200 : row.width() - 230;
+            textLine(graphics, shortJobDescription(index), textX, row.y() + 13, descriptionWidth,
                     hovered ? color : MUTED_INK, 1.0F, true);
-            rightText(graphics, specialtySpeedLabel(index), row.right() - 66, row.y() + 16, 112, hovered ? color : MUTED_INK, 1.0F, true);
+            rightText(graphics, specialtySpeedLabel(index), row.right() - 66, row.y() + 13, 112, hovered ? color : MUTED_INK, 1.0F, true);
         });
 
         int starX = row.right() - 54;
@@ -777,13 +797,13 @@ public final class CompanionScreen extends Screen {
                 ? "No field specialty."
                 : following ? "Assign with the Dino Whistle." : "Follow required.";
         String speed = specialty == null ? "NOT AVAILABLE" : specialtySpeedLabel(source);
-        withTextMotion(graphics, new Rect(textX, row.y() + 2, row.width() - 92, row.height() - 4),
+        withTextMotion(graphics, new Rect(textX, row.y() + 1, row.width() - 92, row.height() - 3),
                 time, hovered, false, () -> {
-                    textLine(graphics, title, textX, row.y() + 4, 160,
+                    textLine(graphics, title, textX, row.y() + 2, 160,
                             hovered ? color : INK, 1.0F, true);
-                    textLine(graphics, description, textX, row.y() + 16, row.width() - 230,
+                    textLine(graphics, description, textX, row.y() + 13, row.width() - 230,
                             hovered ? color : MUTED_INK, 1.0F, true);
-                    rightText(graphics, speed, row.right() - 66, row.y() + 16, 112,
+                    rightText(graphics, speed, row.right() - 66, row.y() + 13, 112,
                             hovered ? color : MUTED_INK, 1.0F, true);
                 });
         if (specialty != null) {
@@ -1111,7 +1131,7 @@ public final class CompanionScreen extends Screen {
             case 1 -> "Runs furnaces and heat stations.";
             case 2 -> "Supplies the base power network.";
             case 3 -> "Works through crafting queues.";
-            default -> "Leaves on timed routes and returns with rewards.";
+            default -> "Timed routes; returns with rewards.";
         };
     }
 
@@ -1261,6 +1281,18 @@ public final class CompanionScreen extends Screen {
         int x = (width - panelWidth) / 2;
         int y = (height - panelHeight) / 2;
         return new FeedPickerLayout(new Rect(x, y, panelWidth, panelHeight), x + 14, y + 30);
+    }
+
+    private Rect jobsActionRect(Layout layout) {
+        return global(layout, outsideBaseTogether() ? new Rect(303, JOBS.y(), 69, JOBS.height()) : JOBS);
+    }
+
+    private boolean outsideBaseTogether() {
+        if (minecraft == null || minecraft.player == null || minecraft.level == null) return false;
+        double radius = CommandTableBlock.baseRadius(minecraft.level, commandTablePos);
+        double radiusSquared = radius * radius;
+        return dodo.distanceToSqr(commandTablePos.getCenter()) > radiusSquared
+                && minecraft.player.distanceToSqr(commandTablePos.getCenter()) > radiusSquared;
     }
 
     private Rect feedSlot(FeedPickerLayout picker, int inventorySlot) {

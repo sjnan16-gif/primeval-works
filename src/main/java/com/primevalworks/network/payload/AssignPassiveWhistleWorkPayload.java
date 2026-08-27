@@ -47,7 +47,7 @@ public record AssignPassiveWhistleWorkPayload(int inventorySlot, UUID dinosaurId
                     || DinoFieldWorkRules.rating(dinosaur, settings.mode()) <= 0) return;
             dinosaur.assignPassiveFieldWork(settings);
             String duty = switch (settings.mode()) {
-                case QUARRY -> "mining nearby stone and ore.";
+                case QUARRY -> "waiting for a marked quarry.";
                 case HARVEST -> "tending nearby crops.";
                 case COLLECT -> "retrieving nearby items.";
                 case LUMBER -> "waiting for a marked tree.";

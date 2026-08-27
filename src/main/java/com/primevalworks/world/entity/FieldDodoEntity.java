@@ -2759,8 +2759,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             runFieldCollection(owner);
             return;
         }
-        if (fieldWorkMode == DinoWhistleSettings.FieldMode.HARVEST
-                || fieldWorkMode == DinoWhistleSettings.FieldMode.QUARRY) {
+        if (fieldWorkMode == DinoWhistleSettings.FieldMode.HARVEST) {
             fieldWorkFirst = blockPosition().immutable();
         }
         if (fieldWorkTargets.isEmpty() || fieldWorkCursor >= fieldWorkTargets.size()) {
@@ -2808,10 +2807,6 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         fieldWorkTargets.clear();
         fieldWorkCursor = 0;
         int rating = DinoFieldWorkRules.rating(this, fieldWorkMode);
-        if (fieldWorkMode == DinoWhistleSettings.FieldMode.QUARRY && fieldWorkMode.isPassive()) {
-            rebuildNearbyQuarryTargets(rating);
-            return;
-        }
         if (fieldWorkMode == DinoWhistleSettings.FieldMode.HARVEST) {
             rebuildNearbyHarvestTargets(rating);
             return;
@@ -2825,7 +2820,6 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         }
         if (fieldWorkPattern == DinoWhistleSettings.Pattern.AREA) {
             if (!DinoFieldWorkRules.areaWithinLimits(fieldWorkFirst, fieldWorkSecond)) return;
-            BlockState originState = level().getBlockState(fieldWorkFirst);
             BlockPos min = new BlockPos(Math.min(fieldWorkFirst.getX(), fieldWorkSecond.getX()),
                     Math.min(fieldWorkFirst.getY(), fieldWorkSecond.getY()),
                     Math.min(fieldWorkFirst.getZ(), fieldWorkSecond.getZ()));
@@ -2834,10 +2828,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                     Math.max(fieldWorkFirst.getZ(), fieldWorkSecond.getZ()));
             for (BlockPos candidate : BlockPos.betweenClosed(min, max)) {
                 if (fieldWorkTargets.size() >= DinoFieldWorkRules.MAX_AREA_BLOCKS) break;
-                BlockState candidateState = level().getBlockState(candidate);
-                boolean matchesMarkedType = fieldWorkMode != DinoWhistleSettings.FieldMode.QUARRY
-                        || candidateState.is(originState.getBlock());
-                if (matchesMarkedType && DinoFieldWorkRules.validTarget(level(), candidate, fieldWorkMode, rating)) {
+                if (DinoFieldWorkRules.validTarget(level(), candidate, fieldWorkMode, rating)) {
                     fieldWorkTargets.add(candidate.immutable());
                 }
             }
@@ -2887,23 +2878,6 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             }
         }
         fieldWorkTargets.sort(Comparator.comparingDouble(pos -> distanceToSqr(pos.getCenter())));
-    }
-
-    private void rebuildNearbyQuarryTargets(int rating) {
-        BlockPos center = blockPosition();
-        int horizontalRadius = Math.min(14, fieldWorkRange);
-        int verticalRadius = Math.min(6, Math.max(3, fieldWorkRange / 8));
-        List<BlockPos> candidates = new ArrayList<>();
-        BlockPos min = center.offset(-horizontalRadius, -verticalRadius, -horizontalRadius);
-        BlockPos max = center.offset(horizontalRadius, verticalRadius, horizontalRadius);
-        for (BlockPos candidate : BlockPos.betweenClosed(min, max)) {
-            if (DinoFieldWorkRules.validTarget(level(), candidate,
-                    DinoWhistleSettings.FieldMode.QUARRY, rating)) {
-                candidates.add(candidate.immutable());
-            }
-        }
-        candidates.sort(Comparator.comparingDouble(pos -> distanceToSqr(pos.getCenter())));
-        candidates.stream().limit(DinoFieldWorkRules.MAX_CONNECTED_BLOCKS).forEach(fieldWorkTargets::add);
     }
 
     private boolean breakFieldBlock(ServerLevel serverLevel, ServerPlayer owner, BlockPos target, int rating) {
@@ -5825,9 +5799,9 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             double distance = horizontalDistanceTo(target);
             double idealDistance = getBbWidth() * 0.5D
                     + target.getBbWidth() * 0.5D
-                    + mouthReach * (spinosaurus ? 0.90D : 0.70D);
-            double closeDistance = idealDistance - (spinosaurus ? 0.68D : 0.82D);
-            double approachDistance = idealDistance + (spinosaurus ? 0.36D : 0.38D);
+                    + mouthReach * (spinosaurus ? 0.72D : 0.70D);
+            double closeDistance = idealDistance - (spinosaurus ? 0.55D : 0.82D);
+            double approachDistance = idealDistance + (spinosaurus ? 0.24D : 0.38D);
             float yawError = yawErrorTo(target);
             getLookControl().setLookAt(target, getSpecies().turnDegreesPerTick() * 1.25F, 20.0F);
             rejectWrongWayMomentum(target);
@@ -5856,7 +5830,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             }
 
             boolean readyToCommit = spinosaurus
-                    ? distance <= getBbWidth() * 0.5D + target.getBbWidth() * 0.5D + mouthReach + 0.18D
+                    ? distance <= idealDistance + 0.22D
                             && Math.abs(yawError) <= 62.0F
                     : isWithinMeleeAttackRange(target);
             if (attackCooldownTicks == 0

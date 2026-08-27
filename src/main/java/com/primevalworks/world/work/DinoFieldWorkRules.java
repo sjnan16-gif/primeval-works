@@ -56,8 +56,7 @@ public final class DinoFieldWorkRules {
         if (state.isAir() || state.getDestroySpeed(level, pos) < 0.0F || level.getBlockEntity(pos) != null) return false;
         if (state.getBlock().getDescriptionId().startsWith("block." + PrimevalWorks.MOD_ID + ".")) return false;
         return switch (mode) {
-            case QUARRY -> state.is(BlockTags.MINEABLE_WITH_PICKAXE)
-                    && state.getDestroySpeed(level, pos) <= maximumHardness(rating);
+            case QUARRY -> state.getDestroySpeed(level, pos) <= maximumHardness(rating);
             case LUMBER -> state.is(BlockTags.LOGS);
             case HARVEST -> state.getBlock() instanceof CropBlock crop && crop.isMaxAge(state);
             case COLLECT -> true;

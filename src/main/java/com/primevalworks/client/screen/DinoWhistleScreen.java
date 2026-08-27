@@ -23,17 +23,19 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 
 public final class DinoWhistleScreen extends Screen {
     private static final int PANEL_WIDTH = 196;
     private static final int PANEL_HEIGHT = 142;
+    private static final int PANEL_GAP = 8;
     private static final int SEARCH_PANEL_WIDTH = 198;
     private static final int SEARCH_PANEL_HEIGHT = 128;
     private static final float MAX_PANEL_SCALE = 1.08F;
@@ -47,8 +49,9 @@ public final class DinoWhistleScreen extends Screen {
     private static DinoWhistleScreen active;
 
     private final int inventorySlot;
-    private final long[] hoverStarted = new long[8];
+    private final long[] hoverStarted = new long[16];
     private final List<PassiveWhistleFollowersPayload.Entry> followers = new ArrayList<>();
+    private final List<ItemStack> catalogueItems = new ArrayList<>();
     private DinoWhistleSettings settings;
     private EditBox searchBox;
     private ItemStack draggedItem = ItemStack.EMPTY;
@@ -64,6 +67,7 @@ public final class DinoWhistleScreen extends Screen {
     private float searchVelocity;
     private boolean searchOpen;
     private boolean draggingRange;
+    private int searchScrollRow;
 
     private DinoWhistleScreen(ItemStack whistle, int inventorySlot) {
         super(Component.literal("Dino Whistle"));
@@ -89,32 +93,26 @@ public final class DinoWhistleScreen extends Screen {
     protected void init() {
         openedAt = Util.getNanos();
         previousFrame = openedAt;
-        searchBox = new EditBox(font, 0, 0, 80, 12, Component.literal("Search inventory"));
+        searchBox = new EditBox(font, 0, 0, 80, 12, Component.literal("Search item types"));
         searchBox.setBordered(false);
         searchBox.setMaxLength(40);
         searchBox.setTextColor(INK);
         searchBox.setTextShadow(true);
-        searchBox.setHint(Component.literal("Search inventory"));
+        searchBox.setHint(Component.literal("Search item types"));
         searchBox.setVisible(false);
         addRenderableWidget(searchBox);
+        refreshCatalogueItems();
         requestFollowers();
         PrimevalUiSounds.open(this);
-    }
-
-    @Override
-    public void tick() {
-        super.tick();
-        float target = searchOpen ? 1.0F : 0.0F;
-        float acceleration = (target - searchReveal) * 64.0F - searchVelocity * 15.0F;
-        searchVelocity += acceleration * 0.05F;
-        searchReveal = Mth.clamp(searchReveal + searchVelocity * 0.05F, 0.0F, 1.0F);
     }
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         renderNow = Util.getNanos();
         hoverTooltip = null;
-        updateParallax(mouseX, mouseY);
+        float deltaTime = frameDelta();
+        updateParallax(mouseX, mouseY, deltaTime);
+        updateSearchMotion(deltaTime);
         Motion motion = motion();
         float logicalMouseX = (float)motion.inverseX(mouseX);
         float logicalMouseY = (float)motion.inverseY(mouseY);
@@ -126,12 +124,7 @@ public final class DinoWhistleScreen extends Screen {
         drawPanel(graphics, mainPanel(), logicalMouseX, logicalMouseY);
         if (searchReveal > 0.005F) {
             hoverTooltip = null;
-            int shade = Math.round(118.0F * searchReveal);
-            Rect main = mainPanel();
-            graphics.fill(main.x, main.y, main.right(), main.bottom(), shade << 24 | 0x08050D);
-            if (searchOpen || searchReveal > 0.28F) {
-                drawSearchPicker(graphics, searchPanel(), logicalMouseX, logicalMouseY);
-            }
+            drawSearchPicker(graphics, searchPanel(), logicalMouseX, logicalMouseY);
         }
         graphics.pose().popMatrix();
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
@@ -156,29 +149,37 @@ public final class DinoWhistleScreen extends Screen {
                 duty, MUTED, 0.66F);
 
         Rect order = orderRect(panel);
-        drawCycleRow(graphics, order, 0, order.contains(mouseX, mouseY), modeColor(),
-                "ORDER", settings.mode().title().toUpperCase(Locale.ROOT));
-        if (order.contains(mouseX, mouseY)) {
-            hoverTooltip = tooltip(settings.mode().title(), modeColor(),
-                    settings.mode().description(), "Click to choose the next field order.");
-        }
+        boolean orderHovered = order.contains(mouseX, mouseY);
+        drawInteractiveRegion(graphics, order, 0, orderHovered, () -> {
+            drawCycleRow(graphics, order, orderHovered, modeColor(),
+                    "ORDER", settings.mode().title().toUpperCase(Locale.ROOT));
+            if (orderHovered) {
+                hoverTooltip = tooltip(settings.mode().title(), modeColor(),
+                        settings.mode().description(), "Click to choose the next field order.");
+            }
+        });
 
         Rect behavior = behaviorRect(panel);
+        boolean cycles = settings.mode() == DinoWhistleSettings.FieldMode.QUARRY;
         boolean behaviorHovered = behavior.contains(mouseX, mouseY);
-        drawBubble(graphics, behavior);
-        if (behaviorHovered) {
-            graphics.fill(behavior.x + 2, behavior.y + 2, behavior.right() - 2, behavior.bottom() - 2,
-                    0x18FFFFFF);
-            hoverTooltip = tooltip(settings.mode().targetTitle(settings.pattern()), modeColor(),
-                    settings.mode().targetDescription(settings.pattern()),
-                    settings.mode().markHint(settings.pattern()));
-        }
-        Rect behaviorValue = new Rect(behavior.x + 61, behavior.y + 3, behavior.w - 64, behavior.h - 6);
-        drawInsetBubble(graphics, behaviorValue);
-        drawMovingText(graphics, behavior, 1, behaviorHovered, () -> {
+        drawInteractiveRegion(graphics, behavior, 1, behaviorHovered, () -> {
+            drawBubble(graphics, behavior);
+            if (behaviorHovered) {
+                graphics.fill(behavior.x + 2, behavior.y + 2, behavior.right() - 2, behavior.bottom() - 2,
+                        0x18FFFFFF);
+                if (cycles) graphics.requestCursor(CursorTypes.POINTING_HAND);
+                hoverTooltip = tooltip(settings.mode().targetTitle(settings.pattern()), modeColor(),
+                        settings.mode().targetDescription(settings.pattern()),
+                        cycles ? "Click to switch between a connected vein and a marked area."
+                                : settings.mode().markHint(settings.pattern()));
+            }
+            Rect behaviorValue = new Rect(behavior.x + 61, behavior.y + 3, behavior.w - 64, behavior.h - 6);
+            drawInsetBubble(graphics, behaviorValue);
             bold(graphics, settings.mode().isPassive() ? "BEHAVIOR" : "TARGET",
                     behavior.x + 7, behavior.y + 11, behaviorHovered ? modeColor() : MUTED, 0.72F);
-            bold(graphics, settings.mode().targetTitle(settings.pattern()).toUpperCase(Locale.ROOT),
+            String target = settings.mode().targetTitle(settings.pattern()).toUpperCase(Locale.ROOT)
+                    + (cycles ? "  >" : "");
+            bold(graphics, target,
                     behaviorValue.x + 5, behaviorValue.y + 4,
                     behaviorHovered ? modeColor() : INK, 0.74F);
             drawWrappedText(graphics, settings.mode().targetDescription(settings.pattern()),
@@ -186,8 +187,14 @@ public final class DinoWhistleScreen extends Screen {
                     behaviorHovered ? modeColor() : MUTED, 0.62F, 2);
         });
 
-        drawRange(graphics, rangeRect(panel), mouseX, mouseY);
-        drawFollowerRow(graphics, followerRect(panel), mouseX, mouseY);
+        Rect range = rangeRect(panel);
+        boolean rangeHovered = range.contains(mouseX, mouseY);
+        drawInteractiveRegion(graphics, range, 2, rangeHovered || draggingRange,
+                () -> drawRange(graphics, range, mouseX, mouseY));
+        Rect followers = followerRect(panel);
+        boolean followersHovered = followers.contains(mouseX, mouseY);
+        drawInteractiveRegion(graphics, followers, 3, followersHovered,
+                () -> drawFollowerRow(graphics, followers, mouseX, mouseY));
     }
 
     private void drawFollowerRow(GuiGraphicsExtractor graphics, Rect row, float mouseX, float mouseY) {
@@ -242,8 +249,8 @@ public final class DinoWhistleScreen extends Screen {
 
     private void drawFollowerSlot(GuiGraphicsExtractor graphics, Rect slot,
                                   PassiveWhistleFollowersPayload.Entry entry, boolean hovered, int index) {
-        updateHover(index + 2, hovered);
-        float scale = 1.0F + interactionMotion(index + 2, hovered) * 0.07F;
+        updateHover(index + 4, hovered);
+        float scale = 1.0F + interactionMotion(index + 4, hovered) * 0.07F;
         graphics.pose().pushMatrix();
         graphics.pose().translate(slot.centerX(), slot.centerY());
         graphics.pose().scale(scale, scale);
@@ -255,8 +262,8 @@ public final class DinoWhistleScreen extends Screen {
         }
         FieldDodoEntity dinosaur = entity(entry.entityId());
         if (dinosaur != null) {
-            DinosaurPreviewUi.draw(graphics, dinosaur, slot.x + 2, slot.y + 2,
-                    slot.w - 4, slot.h - 4, 42.0F, -25.0F);
+            DinosaurPreviewUi.draw(graphics, dinosaur, slot.x + 1, slot.y + 3,
+                    slot.w - 4, slot.h - 5, 42.0F, -25.0F);
         }
         if (!entry.compatible()) {
             graphics.fill(slot.x + 2, slot.y + 2, slot.right() - 2, slot.bottom() - 2, 0x92211C20);
@@ -291,7 +298,7 @@ public final class DinoWhistleScreen extends Screen {
         blit(graphics, RANGE_BUTTON, new Rect(knobX - 5, trackY - 5, 10, 10));
     }
 
-    private void drawCycleRow(GuiGraphicsExtractor graphics, Rect row, int key, boolean hovered,
+    private void drawCycleRow(GuiGraphicsExtractor graphics, Rect row, boolean hovered,
                               int accent, String label, String value) {
         drawBubble(graphics, row);
         if (hovered) {
@@ -300,10 +307,8 @@ public final class DinoWhistleScreen extends Screen {
         }
         Rect valueBubble = new Rect(row.x + 54, row.y + 3, row.w - 57, row.h - 6);
         drawInsetBubble(graphics, valueBubble);
-        drawMovingText(graphics, row, key, hovered, () -> {
-            bold(graphics, label, row.x + 7, row.y + 7, hovered ? accent : MUTED, 0.70F);
-            centeredText(graphics, value + "  >", valueBubble, hovered ? accent : INK, 0.74F);
-        });
+        bold(graphics, label, row.x + 7, row.y + 7, hovered ? accent : MUTED, 0.70F);
+        centeredText(graphics, value + "  >", valueBubble, hovered ? accent : INK, 0.74F);
     }
 
     private void drawSearchPicker(GuiGraphicsExtractor graphics, Rect panel, float mouseX, float mouseY) {
@@ -311,7 +316,6 @@ public final class DinoWhistleScreen extends Screen {
         float scale = 0.88F + 0.12F * settled;
         float offsetY = 12.0F * (1.0F - settled);
         int alpha = Math.round(255.0F * Mth.clamp(searchReveal * 1.25F, 0.0F, 1.0F));
-        if (!searchOpen) alpha = Math.max(190, alpha);
         graphics.pose().pushMatrix();
         graphics.pose().translate(panel.centerX(), panel.bottom() + offsetY);
         graphics.pose().scale(scale, scale);
@@ -333,18 +337,23 @@ public final class DinoWhistleScreen extends Screen {
         int revealedWidth = Math.max(4, Math.round(search.w * searchReveal));
         drawBubble(graphics, new Rect(search.x, search.y, revealedWidth, search.h));
         if (searchBox != null && searchBox.getValue().isBlank() && searchReveal > 0.82F) {
-            bold(graphics, "SEARCH INVENTORY", search.x + 6, search.y + 5, MUTED, 0.66F);
+            bold(graphics, "SEARCH ITEM TYPES", search.x + 6, search.y + 5, MUTED, 0.66F);
         }
 
         Rect results = searchResults(panel);
         drawSearchPaperPanel(graphics, results, alpha);
-        bold(graphics, "YOUR INVENTORY  /  DRAG A FILTER", results.x + 8, results.y + 6,
+        List<ItemStack> items = filteredCatalogue();
+        int maximumRow = Math.max(0, (items.size() - 1) / 9 - 3);
+        searchScrollRow = Mth.clamp(searchScrollRow, 0, maximumRow);
+        String header = items.isEmpty() ? "NO MATCHES" : items.size() + " ITEM TYPES  /  DRAG A FILTER";
+        bold(graphics, header, results.x + 8, results.y + 6,
                 modeColor(), 0.70F);
 
-        List<ItemStack> items = filteredInventory();
+        int startIndex = searchScrollRow * 9;
         for (int index = 0; index < 36; index++) {
             Rect slot = searchItemSlot(results, index);
-            ItemStack stack = index < items.size() ? items.get(index) : ItemStack.EMPTY;
+            int itemIndex = startIndex + index;
+            ItemStack stack = itemIndex < items.size() ? items.get(itemIndex) : ItemStack.EMPTY;
             boolean hovered = slot.contains(mouseX, mouseY);
             drawSearchInventorySlot(graphics, slot, hovered && !stack.isEmpty(), index, alpha);
             if (!stack.isEmpty()) {
@@ -355,9 +364,14 @@ public final class DinoWhistleScreen extends Screen {
                 graphics.requestCursor(CursorTypes.POINTING_HAND);
                 hoverTooltip = List.of(
                         stack.getHoverName().copy().withStyle(Style.EMPTY.withBold(true)),
-                        Component.literal("Drag into the filter slot.").withStyle(style -> style.withColor(0x6E6764))
+                        Component.literal("Drag into the cargo filter slot.").withStyle(style -> style.withColor(0x6E6764))
                 );
             }
+        }
+        if (maximumRow > 0) {
+            String page = (searchScrollRow + 1) + " / " + (maximumRow + 1) + "  •  SCROLL";
+            rightText(graphics, page, results.right() - 8, results.bottom() - 10,
+                    results.w - 16, MUTED, 0.58F);
         }
         graphics.pose().popMatrix();
     }
@@ -376,10 +390,12 @@ public final class DinoWhistleScreen extends Screen {
                 searchBox.setFocused(true);
                 return true;
             }
-            List<ItemStack> items = filteredInventory();
+            List<ItemStack> items = filteredCatalogue();
+            int startIndex = searchScrollRow * 9;
             for (int index = 0; index < 36; index++) {
-                if (!searchItemSlot(results, index).contains(mouseX, mouseY) || index >= items.size()) continue;
-                ItemStack stack = items.get(index);
+                int itemIndex = startIndex + index;
+                if (!searchItemSlot(results, index).contains(mouseX, mouseY) || itemIndex >= items.size()) continue;
+                ItemStack stack = items.get(itemIndex);
                 if (!stack.isEmpty()) {
                     draggedItem = stack.copyWithCount(1);
                     pressed(6);
@@ -403,6 +419,14 @@ public final class DinoWhistleScreen extends Screen {
             settings = copy(mode, mode.normalizePattern(settings.pattern()), settings.range(), settings.itemFilter());
             changed(0.96F, 0);
             requestFollowers();
+            return true;
+        }
+        if (settings.mode() == DinoWhistleSettings.FieldMode.QUARRY
+                && behaviorRect(panel).contains(localX, mouseY)) {
+            DinoWhistleSettings.Pattern pattern = settings.pattern() == DinoWhistleSettings.Pattern.AREA
+                    ? DinoWhistleSettings.Pattern.CONNECTED : DinoWhistleSettings.Pattern.AREA;
+            settings = copy(settings.mode(), pattern, settings.range(), settings.itemFilter());
+            changed(1.02F, 1);
             return true;
         }
         if (rangeRect(panel).contains(localX, mouseY)) {
@@ -431,6 +455,21 @@ public final class DinoWhistleScreen extends Screen {
             }
         }
         return super.mouseClicked(event, doubleClick);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        Motion motion = motion();
+        double logicalX = motion.inverseX(mouseX);
+        double logicalY = motion.inverseY(mouseY);
+        Rect panel = searchPanel();
+        if (searchReveal > 0.08F && searchResults(panel).contains(logicalX, logicalY)) {
+            List<ItemStack> filtered = filteredCatalogue();
+            int maximumRow = Math.max(0, (filtered.size() - 1) / 9 - 3);
+            searchScrollRow = Mth.clamp(searchScrollRow + (scrollY < 0.0D ? 1 : -1), 0, maximumRow);
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
     @Override
@@ -486,6 +525,7 @@ public final class DinoWhistleScreen extends Screen {
 
     private void openSearch() {
         searchOpen = true;
+        searchScrollRow = 0;
         if (searchBox != null) {
             setFocused(searchBox);
             searchBox.setFocused(true);
@@ -530,18 +570,33 @@ public final class DinoWhistleScreen extends Screen {
         searchBox.setVisible(searchOpen && searchReveal > 0.82F);
     }
 
-    private List<ItemStack> filteredInventory() {
-        if (minecraft == null || minecraft.player == null) return List.of();
-        Inventory inventory = minecraft.player.getInventory();
-        List<ItemStack> ordered = new ArrayList<>(36);
-        for (int slot = 9; slot < 36; slot++) ordered.add(inventory.getItem(slot));
-        for (int slot = 0; slot < 9; slot++) ordered.add(inventory.getItem(slot));
+    private void refreshCatalogueItems() {
+        catalogueItems.clear();
+        for (var item : BuiltInRegistries.ITEM) {
+            ItemStack stack = item.getDefaultInstance();
+            if (!stack.isEmpty() && item != Items.AIR) catalogueItems.add(stack.copyWithCount(1));
+        }
+        catalogueItems.sort(Comparator
+                .comparing((ItemStack stack) -> stack.getHoverName().getString(), String.CASE_INSENSITIVE_ORDER)
+                .thenComparing(stack -> BuiltInRegistries.ITEM.getKey(stack.getItem()).toString()));
+    }
+
+    private List<ItemStack> filteredCatalogue() {
         String query = searchBox == null ? "" : searchBox.getValue().trim().toLowerCase(Locale.ROOT);
-        if (query.isBlank()) return ordered;
-        return ordered.stream().filter(stack -> !stack.isEmpty()).filter(stack -> {
+        if (query.isBlank()) return catalogueItems;
+        String normalized = query.replace('_', ' ').trim();
+        String stem = normalized.endsWith("ies") && normalized.length() > 4
+                ? normalized.substring(0, normalized.length() - 3)
+                : normalized.endsWith("y") && normalized.length() > 2
+                        ? normalized.substring(0, normalized.length() - 1)
+                        : normalized.endsWith("s") && normalized.length() > 3
+                                ? normalized.substring(0, normalized.length() - 1)
+                                : normalized;
+        return catalogueItems.stream().filter(stack -> {
             String name = stack.getHoverName().getString().toLowerCase(Locale.ROOT);
             String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString().toLowerCase(Locale.ROOT);
-            return name.contains(query) || id.contains(query.replace(' ', '_'));
+            return name.contains(normalized) || id.contains(normalized.replace(' ', '_'))
+                    || stem.length() >= 3 && (name.contains(stem) || id.contains(stem.replace(' ', '_')));
         }).toList();
     }
 
@@ -598,8 +653,22 @@ public final class DinoWhistleScreen extends Screen {
     @Override public boolean isPauseScreen() { return false; }
     @Override public boolean isInGameUi() { return true; }
 
-    private Rect mainPanel() { return new Rect((width - PANEL_WIDTH) / 2, (height - PANEL_HEIGHT) / 2, PANEL_WIDTH, PANEL_HEIGHT); }
-    private Rect searchPanel() { return new Rect((width - SEARCH_PANEL_WIDTH) / 2, (height - SEARCH_PANEL_HEIGHT) / 2, SEARCH_PANEL_WIDTH, SEARCH_PANEL_HEIGHT); }
+    private Rect mainPanel() {
+        float slide = smoothStep(searchReveal);
+        int closedX = (width - PANEL_WIDTH) / 2;
+        int openX = (width - PANEL_WIDTH - PANEL_GAP - SEARCH_PANEL_WIDTH) / 2;
+        return new Rect(Math.round(Mth.lerp(slide, closedX, openX)),
+                (height - PANEL_HEIGHT) / 2, PANEL_WIDTH, PANEL_HEIGHT);
+    }
+
+    private Rect searchPanel() {
+        float slide = smoothStep(searchReveal);
+        int closedX = (width - SEARCH_PANEL_WIDTH) / 2;
+        int openMainX = (width - PANEL_WIDTH - PANEL_GAP - SEARCH_PANEL_WIDTH) / 2;
+        int openX = openMainX + PANEL_WIDTH + PANEL_GAP;
+        return new Rect(Math.round(Mth.lerp(slide, closedX, openX)),
+                (height - SEARCH_PANEL_HEIGHT) / 2, SEARCH_PANEL_WIDTH, SEARCH_PANEL_HEIGHT);
+    }
     private Rect headerRect(Rect panel) { return new Rect(panel.x, panel.y, panel.w, 19); }
     private Rect orderRect(Rect panel) { return new Rect(panel.x, panel.y + 22, panel.w, 23); }
     private Rect behaviorRect(Rect panel) { return new Rect(panel.x, panel.y + 48, panel.w, 32); }
@@ -699,9 +768,13 @@ public final class DinoWhistleScreen extends Screen {
         return result;
     }
 
-    private void updateParallax(int mouseX, int mouseY) {
-        float delta = Mth.clamp((renderNow - previousFrame) / 1_000_000_000.0F, 0.0F, 0.05F);
+    private float frameDelta() {
+        float delta = Mth.clamp((renderNow - previousFrame) / 1_000_000_000.0F, 0.001F, 0.05F);
         previousFrame = renderNow;
+        return delta;
+    }
+
+    private void updateParallax(int mouseX, int mouseY, float delta) {
         float targetX = Mth.clamp((mouseX - width * 0.5F) / Math.max(1.0F, width * 0.5F), -1.0F, 1.0F) * -0.7F;
         float targetY = Mth.clamp((mouseY - height * 0.5F) / Math.max(1.0F, height * 0.5F), -1.0F, 1.0F) * -0.45F;
         float blend = 1.0F - (float)Math.exp(-delta * 10.0F);
@@ -709,12 +782,19 @@ public final class DinoWhistleScreen extends Screen {
         parallaxY = Mth.lerp(blend, parallaxY, targetY);
     }
 
+    private void updateSearchMotion(float deltaTime) {
+        float target = searchOpen ? 1.0F : 0.0F;
+        float acceleration = (target - searchReveal) * 58.0F - searchVelocity * 14.0F;
+        searchVelocity += acceleration * deltaTime;
+        searchReveal = Mth.clamp(searchReveal + searchVelocity * deltaTime, 0.0F, 1.0F);
+    }
+
     private Motion motion() {
         long now = renderNow == 0L ? Util.getNanos() : renderNow;
         float progress = Mth.clamp((now - openedAt) / 380_000_000.0F, 0.0F, 1.0F);
         float settled = PrimevalBubbleUi.spring(progress, 6.4F, 11.6F);
         float fitted = Math.min(MAX_PANEL_SCALE,
-                Math.min((width - 12.0F) / Math.max(PANEL_WIDTH, SEARCH_PANEL_WIDTH),
+                Math.min((width - 12.0F) / (PANEL_WIDTH + PANEL_GAP + SEARCH_PANEL_WIDTH),
                         (height - 12.0F) / Math.max(PANEL_HEIGHT, SEARCH_PANEL_HEIGHT)));
         float scale = Math.max(0.62F, fitted) * Math.max(0.1F, 0.72F + 0.28F * settled);
         return new Motion(width * 0.5F, height * 0.5F, parallaxX,
@@ -741,6 +821,23 @@ public final class DinoWhistleScreen extends Screen {
         graphics.pose().popMatrix();
     }
 
+    private void drawInteractiveRegion(GuiGraphicsExtractor graphics, Rect rect, int key,
+                                       boolean hovered, Runnable draw) {
+        updateHover(key, hovered);
+        float amount = interactionMotion(key, hovered);
+        float wobbleX = Mth.sin(renderNow / 1_000_000_000.0F * 7.1F + key * 0.83F) * 0.45F * amount;
+        float wobbleY = Mth.sin(renderNow / 1_000_000_000.0F * 8.4F + key * 1.17F) * 0.26F * amount;
+        float press = key == pressedKey
+                ? Mth.clamp(1.0F - (renderNow - pressedAt) / 260_000_000.0F, 0.0F, 1.0F) : 0.0F;
+        float scale = 1.0F + amount * 0.026F - Mth.sin(press * Mth.PI) * 0.032F;
+        graphics.pose().pushMatrix();
+        graphics.pose().translate(rect.centerX() + wobbleX, rect.centerY() + wobbleY);
+        graphics.pose().scale(scale, scale);
+        graphics.pose().translate(-rect.centerX(), -rect.centerY());
+        draw.run();
+        graphics.pose().popMatrix();
+    }
+
     private void updateHover(int key, boolean hovered) {
         if (hovered) {
             if (hoverStarted[key] == 0L) hoverStarted[key] = renderNow;
@@ -752,6 +849,11 @@ public final class DinoWhistleScreen extends Screen {
         float seconds = (renderNow - hoverStarted[key]) / 1_000_000_000.0F;
         float motion = (1.0F - (float)Math.exp(-seconds * 18.0F)) * (float)Math.exp(-seconds * 2.8F);
         return seconds >= 1.35F ? 0.0F : motion;
+    }
+
+    private static float smoothStep(float value) {
+        float clamped = Mth.clamp(value, 0.0F, 1.0F);
+        return clamped * clamped * (3.0F - 2.0F * clamped);
     }
 
     private void bold(GuiGraphicsExtractor graphics, String value, float x, float y, int color, float scale) {
