@@ -29,9 +29,6 @@ import org.joml.Vector3f;
 
 public final class WhistleFollowerPickerScreen extends Screen {
     private static final int PANEL_WIDTH = 292;
-    private static final int PANEL = 0xF319171C;
-    private static final int PANEL_INNER = 0xFF242027;
-    private static final int CARD = 0xFF2D282E;
     private static final int TEXT = 0xFFD7D0CB;
     private static final int MUTED = 0xFF8D8584;
     private static WhistleFollowerPickerScreen active;
@@ -39,8 +36,11 @@ public final class WhistleFollowerPickerScreen extends Screen {
     private final long[] hoverStarted;
     private long openedAt;
     private long renderNow;
+    private long previousFrame;
     private long pressedAt;
     private int pressedIndex = -1;
+    private float parallaxX;
+    private float parallaxY;
 
     private WhistleFollowerPickerScreen(WhistleFollowerListPayload payload) {
         super(Component.literal("Choose a Companion"));
@@ -58,6 +58,7 @@ public final class WhistleFollowerPickerScreen extends Screen {
     @Override
     protected void init() {
         openedAt = Util.getNanos();
+        previousFrame = openedAt;
         PrimevalUiSounds.open(this);
     }
 
@@ -68,27 +69,28 @@ public final class WhistleFollowerPickerScreen extends Screen {
         int panelHeight = 49 + Math.max(1, payload.entries().size()) * 48;
         int x = (width - panelWidth) / 2;
         int y = (height - panelHeight) / 2;
-        Motion motion = motion(panelWidth, panelHeight);
-        float uiMouseX = x + panelWidth * 0.5F + (mouseX - (x + panelWidth * 0.5F)) / motion.scale;
-        float uiMouseY = y + panelHeight * 0.5F
-                + (mouseY - (y + panelHeight * 0.5F) - motion.offsetY) / motion.scale;
+        updateParallax(mouseX, mouseY);
+        Motion motion = motion(x, y, panelWidth, panelHeight);
+        float uiMouseX = motion.inverseX(mouseX);
+        float uiMouseY = motion.inverseY(mouseY);
         graphics.fill(0, 0, width, height, 0x72000000);
         graphics.pose().pushMatrix();
-        graphics.pose().translate(x + panelWidth / 2.0F, y + panelHeight / 2.0F + motion.offsetY);
+        graphics.pose().translate(motion.pivotX + motion.offsetX, motion.pivotY + motion.offsetY);
         graphics.pose().scale(motion.scale, motion.scale);
-        graphics.pose().translate(-(x + panelWidth / 2.0F), -(y + panelHeight / 2.0F));
+        graphics.pose().translate(-motion.pivotX, -motion.pivotY);
         graphics.fill(x + 6, y + 7, x + panelWidth + 6, y + panelHeight + 7, 0x82000000);
-        graphics.fill(x, y, x + panelWidth, y + panelHeight, PANEL);
-        graphics.fill(x + 3, y + 3, x + panelWidth - 3, y + panelHeight - 3, PANEL_INNER);
-        graphics.outline(x, y, panelWidth, panelHeight, 0xFF3B2A26);
-        graphics.outline(x + 3, y + 3, panelWidth - 6, panelHeight - 6, 0xFF6D4E3B);
-        bold(graphics, "CHOOSE A FOLLOWER", x + 12, y + 8, 0xFFE98A56, 0.94F);
+        PrimevalBubbleUi.drawDark(graphics, x, y, panelWidth, panelHeight);
+        PrimevalBubbleUi.drawDark(graphics, x + 8, y + 7, panelWidth - 16, 29);
+        bold(graphics, "CHOOSE A FOLLOWER", x + 17, y + 12, 0xFFE98A56, 0.94F);
         DinoWhistleSettings.FieldMode mode = DinoWhistleSettings.FieldMode.byId(payload.mode());
         text(graphics, DinoFieldWorkRules.specialtyName(mode).toUpperCase() + "  /  " + payload.range() + " BLOCK RANGE",
-                x + 12, y + 22, 0xFF9A918E, 0.76F);
+                x + 17, y + 25, 0xFF9A918E, 0.76F);
         if (payload.entries().isEmpty()) {
-            bold(graphics, "NO FOLLOWERS AVAILABLE", x + 22, y + 53, 0xFFC76459, 0.86F);
-            text(graphics, "Switch an active companion to Follow first.", x + 22, y + 67, MUTED, 0.76F);
+            Rect empty = entryRect(x, y, panelWidth, 0);
+            PrimevalBubbleUi.drawDarkControl(graphics, empty.x, empty.y, empty.w, empty.h,
+                    0xFFC76459, false, false);
+            bold(graphics, "NO FOLLOWERS AVAILABLE", empty.x + 10, empty.y + 7, 0xFFC76459, 0.86F);
+            text(graphics, "Switch an active companion to Follow first.", empty.x + 10, empty.y + 23, MUTED, 0.76F);
         } else {
             for (int index = 0; index < payload.entries().size(); index++) {
                 drawEntry(graphics, payload.entries().get(index), entryRect(x, y, panelWidth, index),
@@ -103,9 +105,8 @@ public final class WhistleFollowerPickerScreen extends Screen {
                            Rect rect, float mouseX, float mouseY, int index) {
         boolean hovered = rect.contains(mouseX, mouseY);
         int accent = entry.compatible() ? 0xFF62A269 : 0xFF8B5E58;
-        graphics.fill(rect.x, rect.y, rect.right(), rect.bottom(), hovered ? 0xFF3A3138 : CARD);
-        graphics.outline(rect.x, rect.y, rect.w, rect.h, hovered ? accent : 0xFF51454A);
-        graphics.fill(rect.x + 2, rect.y + 2, rect.x + 6, rect.bottom() - 2, accent);
+        PrimevalBubbleUi.drawDarkControl(graphics, rect.x, rect.y, rect.w, rect.h,
+                accent, entry.compatible(), hovered);
         graphics.item(spawnEgg(entry.species()), rect.x + 11, rect.y + 10);
         updateHover(index, hovered);
         float motion = interactionMotion(index, hovered);
@@ -127,7 +128,6 @@ public final class WhistleFollowerPickerScreen extends Screen {
                 entry.compatible() ? 0xFF80B87E : 0xFFC47A6A, 0.76F);
         graphics.pose().popMatrix();
         if (hovered) {
-            graphics.fill(rect.x + 2, rect.y + 2, rect.right() - 2, rect.bottom() - 2, 0x12FFFFFF);
             if (entry.compatible()) graphics.requestCursor(CursorTypes.POINTING_HAND);
         }
     }
@@ -139,10 +139,9 @@ public final class WhistleFollowerPickerScreen extends Screen {
         int panelHeight = 49 + Math.max(1, payload.entries().size()) * 48;
         int x = (width - panelWidth) / 2;
         int y = (height - panelHeight) / 2;
-        Motion motion = motion(panelWidth, panelHeight);
-        double uiMouseX = x + panelWidth * 0.5F + (event.x() - (x + panelWidth * 0.5F)) / motion.scale;
-        double uiMouseY = y + panelHeight * 0.5F
-                + (event.y() - (y + panelHeight * 0.5F) - motion.offsetY) / motion.scale;
+        Motion motion = motion(x, y, panelWidth, panelHeight);
+        double uiMouseX = motion.inverseX(event.x());
+        double uiMouseY = motion.inverseY(event.y());
         for (int index = 0; index < payload.entries().size(); index++) {
             WhistleFollowerListPayload.Entry entry = payload.entries().get(index);
             if (entryRect(x, y, panelWidth, index).contains(uiMouseX, uiMouseY)) {
@@ -254,22 +253,43 @@ public final class WhistleFollowerPickerScreen extends Screen {
         return amount;
     }
 
-    private static float spring(float progress, float damping, float frequency) {
-        if (progress >= 1.0F) return 1.0F;
-        double wave = Math.cos(frequency * progress) + damping / frequency * Math.sin(frequency * progress);
-        return 1.0F - (float)(Math.exp(-damping * progress) * wave);
+    private void updateParallax(int mouseX, int mouseY) {
+        float delta = Mth.clamp((renderNow - previousFrame) / 1_000_000_000.0F, 0.0F, 0.05F);
+        previousFrame = renderNow;
+        float targetX = Mth.clamp((mouseX - width * 0.5F) / Math.max(1.0F, width * 0.5F), -1.0F, 1.0F) * -3.0F;
+        float targetY = Mth.clamp((mouseY - height * 0.5F) / Math.max(1.0F, height * 0.5F), -1.0F, 1.0F) * -1.8F;
+        float blend = 1.0F - (float)Math.exp(-delta * 9.0F);
+        parallaxX = Mth.lerp(blend, parallaxX, targetX);
+        parallaxY = Mth.lerp(blend, parallaxY, targetY);
     }
 
-    private Motion motion(int panelWidth, int panelHeight) {
+    private Motion motion(int x, int y, int panelWidth, int panelHeight) {
         long now = renderNow == 0L ? Util.getNanos() : renderNow;
-        float progress = Mth.clamp((now - openedAt) / 290_000_000.0F, 0.0F, 1.0F);
-        float settled = spring(progress, 6.2F, 11.4F);
+        float elapsedTicks = (now - openedAt) / 50_000_000.0F;
+        float progress = Mth.clamp(elapsedTicks / 30.0F, 0.0F, 1.0F);
+        float settled = PrimevalBubbleUi.spring(progress, 7.2F, 10.5F);
+        float fade = smoothStep(Mth.clamp(elapsedTicks / 22.0F, 0.0F, 1.0F));
         float fit = Math.min(1.0F, Math.min((width - 12.0F) / panelWidth, (height - 12.0F) / panelHeight));
-        return new Motion(Math.max(0.1F, fit * (0.76F + settled * 0.24F)),
-                14.0F * fit * (1.0F - settled));
+        float scale = Math.max(0.1F, fit * (0.95F + settled * 0.05F));
+        float offsetX = (width * 0.60F + panelWidth * 0.32F) * (1.0F - settled) + parallaxX * fade;
+        float offsetY = 8.0F * (1.0F - settled) + parallaxY * fade;
+        return new Motion(x + panelWidth * 0.5F, y + panelHeight * 0.5F, offsetX, offsetY, scale);
     }
 
-    private record Motion(float scale, float offsetY) {}
+    private static float smoothStep(float value) {
+        float clamped = Mth.clamp(value, 0.0F, 1.0F);
+        return clamped * clamped * (3.0F - 2.0F * clamped);
+    }
+
+    private record Motion(float pivotX, float pivotY, float offsetX, float offsetY, float scale) {
+        float inverseX(double mouseX) {
+            return pivotX + ((float)mouseX - pivotX - offsetX) / scale;
+        }
+
+        float inverseY(double mouseY) {
+            return pivotY + ((float)mouseY - pivotY - offsetY) / scale;
+        }
+    }
 
     private record Rect(int x, int y, int w, int h) {
         int right() { return x + w; }

@@ -1,5 +1,6 @@
 package com.primevalworks.client.effect;
 
+import com.primevalworks.client.screen.PrimevalBubbleUi;
 import com.primevalworks.network.payload.RequestWhistleFollowersPayload;
 import com.primevalworks.world.item.DinoWhistleItem;
 import com.primevalworks.world.work.DinoWhistleSettings;
@@ -65,13 +66,18 @@ public final class DinoWhistleClient {
         GuiGraphicsExtractor graphics = event.getGuiGraphics();
         int width = 170;
         int height = areaFirst == null ? 30 : 42;
-        int x = graphics.guiWidth() - width - 9 + Math.round((1.0F - visibility) * 12.0F);
+        int x = graphics.guiWidth() - width - 9;
         int y = Math.max(8, graphics.guiHeight() / 2 - height / 2);
         int alpha = Mth.clamp(Math.round(visibility * 235.0F), 0, 255);
-        graphics.fill(x + 5, y + 5, x + width + 5, y + height + 5, alpha / 3 << 24);
-        graphics.fill(x, y, x + width, y + height, alpha << 24 | 0x19171C);
-        graphics.fill(x + 2, y + 2, x + width - 2, y + height - 2, alpha << 24 | 0x242027);
-        graphics.outline(x, y, width, height, alpha << 24 | 0x6D4E3B);
+        float eased = visibility * visibility * (3.0F - 2.0F * visibility);
+        float offsetX = (1.0F - eased) * (width + 18.0F);
+        float scale = 0.965F + 0.035F * PrimevalBubbleUi.spring(eased, 7.2F, 10.5F);
+        graphics.pose().pushMatrix();
+        graphics.pose().translate(x + width * 0.5F + offsetX, y + height * 0.5F);
+        graphics.pose().scale(scale, scale);
+        graphics.pose().translate(-(x + width * 0.5F), -(y + height * 0.5F));
+        graphics.fill(x + 5, y + 5, x + width + 5, y + height + 5, 0x54000000);
+        PrimevalBubbleUi.drawDark(graphics, x, y, width, height);
         graphics.fill(x + 3, y + 3, x + 6, y + height - 3, alpha << 24 | 0xD87949);
         drawFitText(graphics, Component.literal(settings.shortLabel()).withStyle(Style.EMPTY.withBold(true)),
                 x + 10, y + 6, width - 18, alpha << 24 | 0xD7D0CB, 0.76F);
@@ -89,6 +95,7 @@ public final class DinoWhistleClient {
             int fill = Math.round((width - 6) * Mth.clamp(progress, 0.0F, 1.0F));
             graphics.fill(x + 3, y + height - 3, x + 3 + fill, y + height - 1, alpha << 24 | 0xE2A23D);
         }
+        graphics.pose().popMatrix();
     }
 
     private static void drawText(GuiGraphicsExtractor graphics, Component value,

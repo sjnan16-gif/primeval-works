@@ -729,10 +729,10 @@ public final class CompanionScreen extends Screen {
         int source = DinoFieldWorkRules.sourceJobIndex(dodo.getSpecies());
         int rating = source < 0 ? 0 : dodo.getSpecialtyStars(source);
         int color = source < 0 ? 0xFF766F68 : SPECIALTY_COLORS[source];
-        graphics.fill(row.x(), row.y(), row.right(), row.bottom(), EDGE_DARK);
-        graphics.fill(row.x() + 1, row.y() + 1, row.right() - 1, row.bottom() - 1,
-                hovered ? 0xFF393238 : 0xFF242126);
-        graphics.fill(row.x() + 2, row.y() + 2, row.x() + 6, row.bottom() - 2, color);
+        drawBubble(graphics, row, 2);
+        graphics.fill(row.x() + 2, row.y() + 2, row.right() - 2, row.bottom() - 2,
+                hovered ? 0xB9393238 : 0xCA242126);
+        graphics.fill(row.x() + 3, row.y() + 3, row.x() + 6, row.bottom() - 3, color);
         if (source >= 0) {
             int iconHeight = 16;
             int iconWidth = Math.max(12, Math.round(SPECIALTY_ICON_WIDTHS[source] * (iconHeight / 8.0F)));
