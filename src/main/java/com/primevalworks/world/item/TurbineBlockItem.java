@@ -16,9 +16,9 @@ import java.util.function.Consumer;
 
 public final class TurbineBlockItem extends BlockItem implements GeoItem {
     public enum Variant {
-        WIND("wind_turbine", "wind_turbine", "Wind Turbine", 1.08F, -0.98F, 0.5F / 16.0F),
-        UPGRADED_WIND("wind_turbine", "wind_turbine_upgraded", "Upgraded Wind Turbine", 1.08F, -0.98F, 0.5F / 16.0F),
-        WATER("water_turbine", "water_turbine", "Water Turbine", 0.52F, -1.28F, 0.0F);
+        WIND("wind_turbine", "wind_turbine", "Wind Turbine", 1.08F, -0.45F, 0.5F / 16.0F),
+        UPGRADED_WIND("wind_turbine", "wind_turbine_upgraded", "Upgraded Wind Turbine", 1.08F, -0.45F, 0.5F / 16.0F),
+        WATER("water_turbine", "water_turbine", "Water Turbine", 1.17F, -0.72F, 0.0F);
 
         private final String model;
         private final String texture;
