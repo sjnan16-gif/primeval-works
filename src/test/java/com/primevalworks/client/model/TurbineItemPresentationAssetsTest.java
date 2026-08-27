@@ -33,8 +33,8 @@ final class TurbineItemPresentationAssetsTest {
 
         String item = Files.readString(Path.of(
                 "src/main/java/com/primevalworks/world/item/TurbineBlockItem.java"));
-        assertTrue(item.contains("0.52F, -1.24F")
-                        && item.contains("0.20F, -1.48F"),
+        assertTrue(item.contains("1.08F, -0.98F")
+                        && item.contains("0.52F, -1.28F"),
                 "A turbine lost its individually verified 16x16 GUI center");
         assertTrue(item.contains("Component getName(ItemStack stack)"),
                 "Turbine stacks no longer provide their explicit display names");
