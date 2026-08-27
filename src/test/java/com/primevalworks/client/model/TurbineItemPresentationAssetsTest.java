@@ -33,8 +33,8 @@ final class TurbineItemPresentationAssetsTest {
 
         String item = Files.readString(Path.of(
                 "src/main/java/com/primevalworks/world/item/TurbineBlockItem.java"));
-        assertTrue(item.contains("-0.66F, -0.99F")
-                        && item.contains("-0.33F, -1.10F"),
+        assertTrue(item.contains("0.13F, -1.57F")
+                        && item.contains("0.13F, -1.63F"),
                 "A turbine lost its individually verified 16x16 GUI center");
     }
 
