@@ -690,6 +690,11 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         return walkAnimationHoldTicks > 0 || walkAnimation.speed() > 0.025F;
     }
 
+    private float followerLocomotionAnimationSpeed(boolean running) {
+        if (getCommandMode() != DinosaurCommandMode.FOLLOW) return 1.0F;
+        return DinosaurFollowRules.locomotionAnimationSpeed(walkAnimation.speed(), running);
+    }
+
     public int getTurnAnimationDirection() {
         return turnAnimationHoldTicks > 0 ? turnAnimationDirection : 0;
     }
@@ -5687,20 +5692,24 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                     return playSpeciesAnimation(test, RAPTOR_RUN,
                             dinosaur.getRaptorAnimationSpeed(test.renderState().getPartialTick()));
                 }
-                return test.setAndContinue(dodo ? DODO_RUN
-                        : tyrannosaurus ? T_REX_RUN
-                        : stegosaurus ? STEGO_RUN
-                        : PARASAUR_RUN);
+                return playSpeciesAnimation(test,
+                        dodo ? DODO_RUN
+                                : tyrannosaurus ? T_REX_RUN
+                                : stegosaurus ? STEGO_RUN
+                                : PARASAUR_RUN,
+                        dinosaur.followerLocomotionAnimationSpeed(true));
             }
             if (velociraptor) {
                 return playSpeciesAnimation(test, RAPTOR_WALK,
                         dinosaur.getRaptorAnimationSpeed(test.renderState().getPartialTick()));
             }
-            return test.setAndContinue(dodo ? DODO_WALK
-                    : tyrannosaurus ? T_REX_WALK
-                    : stegosaurus ? STEGO_WALK
-                    : parasaurolophus ? PARASAUR_WALK
-                    : PLACEHOLDER_WALK);
+            return playSpeciesAnimation(test,
+                    dodo ? DODO_WALK
+                            : tyrannosaurus ? T_REX_WALK
+                            : stegosaurus ? STEGO_WALK
+                            : parasaurolophus ? PARASAUR_WALK
+                            : PLACEHOLDER_WALK,
+                    dinosaur.followerLocomotionAnimationSpeed(false));
         });
         movementController.setSoundKeyframeHandler(DinosaurAnimationEvents::handleFootstep);
         controllers.add(movementController);

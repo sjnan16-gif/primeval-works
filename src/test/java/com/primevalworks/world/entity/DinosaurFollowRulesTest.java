@@ -30,4 +30,17 @@ final class DinosaurFollowRulesTest {
         assertTrue(DinosaurFollowRules.headLeadScale(80.0F) < 1.0F);
         assertEquals(0.34F, DinosaurFollowRules.headLeadScale(180.0F));
     }
+
+    @Test
+    void followerGaitPlaybackTracksMovementAndStaysBounded() {
+        float slowWalk = DinosaurFollowRules.locomotionAnimationSpeed(0.05F, false);
+        float fastWalk = DinosaurFollowRules.locomotionAnimationSpeed(0.35F, false);
+        float slowRun = DinosaurFollowRules.locomotionAnimationSpeed(0.05F, true);
+        float fastRun = DinosaurFollowRules.locomotionAnimationSpeed(0.70F, true);
+
+        assertTrue(fastWalk > slowWalk);
+        assertTrue(fastRun > slowRun);
+        assertTrue(slowWalk >= 0.78F && fastWalk <= 1.55F);
+        assertTrue(slowRun >= 0.88F && fastRun <= 2.20F);
+    }
 }

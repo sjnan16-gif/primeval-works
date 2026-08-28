@@ -6,6 +6,14 @@ Every dinosaur is a real creature with its own quality, size, needs, strengths, 
 
 This is our entry for CurseForge ModJam 2026: Echoes of the Past.
 
+## **CONTENTS**
+
+[The Idea](#the-idea) | [Command Table](#the-command-table) | [Dino Whistle](#the-dino-whistle) | [Base Automation](#a-base-that-actually-runs)
+
+[Energy and Machines](#energy-and-machines) | [Mounts](#flying-and-swimming-mounts) | [Living Companions](#living-companions) | [Progression](#eggs-breeding-and-expeditions)
+
+[Multiplayer and Saves](#multiplayer-and-saves) | [Configuration](#configuration) | [Technical Target](#technical-target)
+
 ## **THE IDEA**
 
 The loop is simple to understand. Find an egg in the wild, hatch a companion, build a Command Table, and start giving your crew useful work. From there you can route materials, generate energy, improve machines, unlock more crew slots, and prepare stronger dinosaurs for dangerous expeditions.
@@ -116,17 +124,7 @@ Primeval Works targets Minecraft 26.1.2, NeoForge 26.1.2.95, Java 25, and GeckoL
 
 The project uses one shared dinosaur implementation with species profiles, bounded world searches, safe inventory transactions, synchronized render state, and a shared authored interface toolkit.
 
-Build the project with:
-
-```powershell
-.\gradlew.bat build
-```
-
-Launch the development client with the shared IntelliJ **Primeval Works Client** configuration or `run-client.bat`.
-
 Release changes are checked with unit and resource contracts, NeoForge GameTests, an integrated client load, and a dedicated server startup. Current coverage includes ownership transitions, recovery, expedition reload, work persistence, transport transactions, machine processing, powered defenses, eggs, mutations, mounts, follower movement, Quarry, Lumber, Harvest, Collect, and energy assignment.
-
-The exact verification workflow is in [TESTING.md](docs/TESTING.md). The persistence and networking design is in [BACKEND_ARCHITECTURE.md](docs/BACKEND_ARCHITECTURE.md).
 
 ## **LICENSE**
 
