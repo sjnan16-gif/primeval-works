@@ -3774,7 +3774,8 @@ public final class PrimevalGameTests {
                 RequestPassiveWhistleFollowersPayload.snapshot(player, slot);
         helper.assertTrue(snapshot != null
                         && DinoWhistleSettings.FieldMode.QUARRY.isAvailableIn(snapshot.availableModes())
-                        && !DinoWhistleSettings.FieldMode.LUMBER.isAvailableIn(snapshot.availableModes()),
+                        && !DinoWhistleSettings.FieldMode.LUMBER.isAvailableIn(snapshot.availableModes())
+                        && snapshot.maximumEligibleLevel() == dinosaur.getDinosaurLevel(),
                 "The Whistle advertised Lumber without a following Parasaurolophus");
 
         dinosaur.assignFieldWork(settings, helper.absolutePos(targetRelative), null);

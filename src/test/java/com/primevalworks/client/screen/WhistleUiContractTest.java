@@ -145,6 +145,10 @@ final class WhistleUiContractTest {
         assertTrue(client.contains("areaFirst"));
         assertTrue(client.contains("areaDimension"));
         assertTrue(client.contains("First corner saved"));
+        assertTrue(client.contains("acceptFollowerSnapshot"));
+        assertTrue(client.contains("maximumEligibleLevel"));
+        assertFalse(client.contains("getEntitiesOfClass(FieldDodoEntity.class, search"),
+                "Client entity fields are not authoritative enough to gate an Area quarry mark");
     }
 
     @Test

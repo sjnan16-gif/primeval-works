@@ -48,16 +48,18 @@ public record RequestPassiveWhistleFollowersPayload(int inventorySlot) implement
             }
         }
         List<PassiveWhistleFollowersPayload.Entry> entries = new ArrayList<>();
+        int maximumEligibleLevel = 0;
         for (FieldDodoEntity dinosaur : followers) {
             if (!DinoFieldWorkRules.supports(dinosaur.getSpecies(), settings.mode())) continue;
             int rating = DinoFieldWorkRules.rating(dinosaur, settings.mode());
             if (rating <= 0) continue;
+            maximumEligibleLevel = Math.max(maximumEligibleLevel, dinosaur.getDinosaurLevel());
             entries.add(new PassiveWhistleFollowersPayload.Entry(dinosaur.getId(), dinosaur.getUUID(),
                     dinosaur.getDisplayName().getString(), rating, true,
                     dinosaur.hasFieldWork() && dinosaur.getFieldWorkMode() == settings.mode()));
         }
         return new PassiveWhistleFollowersPayload(inventorySlot, settings.mode().ordinal(),
-                availableModes, List.copyOf(entries));
+                availableModes, maximumEligibleLevel, List.copyOf(entries));
     }
 
     @Override

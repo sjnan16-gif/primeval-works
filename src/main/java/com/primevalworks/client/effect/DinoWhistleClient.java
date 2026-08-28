@@ -3,13 +3,13 @@ package com.primevalworks.client.effect;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.primevalworks.client.screen.DinoWhistleScreen;
 import com.primevalworks.client.screen.WorksitePlannerScreen;
+import com.primevalworks.network.payload.PassiveWhistleFollowersPayload;
 import com.primevalworks.network.payload.RequestWhistleFollowersPayload;
 import com.primevalworks.registry.ModItems;
 import com.primevalworks.world.entity.FieldDodoEntity;
 import com.primevalworks.world.item.DinoWhistleItem;
 import com.primevalworks.world.work.DinoFieldWorkRules;
 import com.primevalworks.world.work.DinoWhistleSettings;
-import com.primevalworks.world.work.DinosaurCommandMode;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -38,6 +38,8 @@ public final class DinoWhistleClient {
     private static DinoWhistleSettings.FieldMode areaMode;
     private static ResourceKey<Level> areaDimension;
     private static long firstCornerMarkedAt;
+    private static Level quarrySnapshotLevel;
+    private static int maximumQuarryLevel = -1;
 
     private DinoWhistleClient() {}
 
@@ -85,9 +87,11 @@ public final class DinoWhistleClient {
                 return;
             }
             int requiredLevel = DinoFieldWorkRules.requiredLevel(areaFirst, selected);
-            if (bestAvailableQuarryLevel(minecraft) < requiredLevel) {
-                minecraft.player.sendOverlayMessage(Component.literal(
-                        "Level a Quarry dinosaur to " + requiredLevel + " before marking this area."));
+            int availableLevel = bestAvailableQuarryLevel(minecraft);
+            if (availableLevel >= 0 && availableLevel < requiredLevel) {
+                minecraft.player.sendOverlayMessage(Component.literal(availableLevel == 0
+                        ? "Set a Quarry dinosaur to Follow before marking an area."
+                        : "Level a Quarry dinosaur to " + requiredLevel + " before marking this area."));
                 return;
             }
             BlockPos first = areaFirst;
@@ -155,6 +159,13 @@ public final class DinoWhistleClient {
         firstCornerMarkedAt = 0L;
     }
 
+    public static void acceptFollowerSnapshot(PassiveWhistleFollowersPayload payload) {
+        if (payload.mode() != DinoWhistleSettings.FieldMode.QUARRY.ordinal()) return;
+        Minecraft minecraft = Minecraft.getInstance();
+        quarrySnapshotLevel = minecraft.level;
+        maximumQuarryLevel = payload.maximumEligibleLevel();
+    }
+
     public static void submitWorldGeometry(SubmitCustomGeometryEvent event) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player == null || minecraft.level == null) return;
@@ -174,8 +185,9 @@ public final class DinoWhistleClient {
                 if (minecraft.hitResult instanceof BlockHitResult hit) {
                     BlockPos second = hit.getBlockPos();
                     boolean absoluteValid = DinoFieldWorkRules.areaWithinLimits(areaFirst, second);
-                    boolean levelValid = absoluteValid
-                            && bestAvailableQuarryLevel(minecraft) >= DinoFieldWorkRules.requiredLevel(areaFirst, second);
+                    int availableLevel = bestAvailableQuarryLevel(minecraft);
+                    boolean levelValid = absoluteValid && (availableLevel < 0
+                            || availableLevel >= DinoFieldWorkRules.requiredLevel(areaFirst, second));
                     renderArea(event, areaFirst, second,
                             levelValid ? 0x706FE49A : 0x70E65A54, 2.5F, levelValid);
                 }
@@ -210,16 +222,7 @@ public final class DinoWhistleClient {
     }
 
     private static int bestAvailableQuarryLevel(Minecraft minecraft) {
-        if (minecraft.player == null || minecraft.level == null) return 0;
-        AABB search = minecraft.player.getBoundingBox().inflate(DinoWhistleSettings.MAX_RANGE + 18.0D);
-        return minecraft.level.getEntitiesOfClass(FieldDodoEntity.class, search,
-                        dinosaur -> dinosaur.isOwnedBy(minecraft.player.getUUID())
-                                && dinosaur.getCommandMode() == DinosaurCommandMode.FOLLOW
-                                && !dinosaur.isOnExpedition()
-                                && !dinosaur.isIncapacitated()
-                                && DinoFieldWorkRules.rating(
-                                        dinosaur, DinoWhistleSettings.FieldMode.QUARRY) > 0)
-                .stream().mapToInt(FieldDodoEntity::getDinosaurLevel).max().orElse(0);
+        return minecraft.level != null && minecraft.level == quarrySnapshotLevel ? maximumQuarryLevel : -1;
     }
 
     private static void renderArea(SubmitCustomGeometryEvent event, BlockPos first, BlockPos second,
