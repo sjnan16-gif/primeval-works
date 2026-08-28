@@ -34,6 +34,10 @@ import net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import org.joml.Vector3f;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
 public final class DinoWhistleClient {
     private static BlockPos areaFirst;
     private static DinoWhistleSettings.FieldMode areaMode;
@@ -42,6 +46,9 @@ public final class DinoWhistleClient {
     private static Level quarrySnapshotLevel;
     private static int maximumQuarryLevel = -1;
     private static boolean attackHeld;
+    private static Level activeOutlineLevel;
+    private static UUID activeOutlineOwner;
+    private static List<ActiveQuarryOutline> activeQuarryOutlines = List.of();
 
     private DinoWhistleClient() {}
 
@@ -112,6 +119,7 @@ public final class DinoWhistleClient {
     public static void releaseAttackLatch(ClientTickEvent.Post event) {
         Minecraft minecraft = Minecraft.getInstance();
         if (!minecraft.options.keyAttack.isDown()) attackHeld = false;
+        refreshActiveQuarryOutlines(minecraft);
     }
 
     public static void handleInventoryRightClick(ScreenEvent.MouseButtonPressed.Pre event) {
@@ -179,11 +187,11 @@ public final class DinoWhistleClient {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player == null || minecraft.level == null) return;
         ItemStack whistle = DinoWhistleItem.findHeld(minecraft.player);
-        if (whistle.isEmpty()) return;
-        DinoWhistleSettings settings = DinoWhistleSettings.read(whistle);
+        DinoWhistleSettings settings = whistle.isEmpty() ? null : DinoWhistleSettings.read(whistle);
 
         if (areaFirst != null) {
-            boolean currentSelection = areaMode == DinoWhistleSettings.FieldMode.QUARRY
+            boolean currentSelection = settings != null
+                    && areaMode == DinoWhistleSettings.FieldMode.QUARRY
                     && settings.mode() == DinoWhistleSettings.FieldMode.QUARRY
                     && settings.pattern() == DinoWhistleSettings.Pattern.AREA
                     && minecraft.level.dimension().equals(areaDimension);
@@ -198,28 +206,50 @@ public final class DinoWhistleClient {
                     boolean levelValid = absoluteValid && (availableLevel < 0
                             || availableLevel >= DinoFieldWorkRules.requiredLevel(areaFirst, second));
                     renderArea(event, areaFirst, second,
-                            levelValid ? 0x706FE49A : 0x70E65A54, 2.5F, levelValid, false);
+                            levelValid ? 0x706FE49A : 0x70E65A54,
+                            levelValid ? 0xE9C9FFD9 : 0xE9FF9B92,
+                            0, 2.5F, true, false);
                 }
             }
         }
 
+        if (activeOutlineLevel != minecraft.level
+                || !minecraft.player.getUUID().equals(activeOutlineOwner)) return;
+        for (ActiveQuarryOutline outline : activeQuarryOutlines) {
+            if (outline.pattern() == DinoWhistleSettings.Pattern.AREA && outline.second() != null) {
+                renderArea(event, outline.first(), outline.second(),
+                        0x466FE49A, 0x62C9FFD9, 0x3EC9FFD9, 1.8F, true, true);
+            } else {
+                renderBlock(event, outline.first(), 0x686FE49A, 2.1F);
+            }
+        }
+    }
+
+    private static void refreshActiveQuarryOutlines(Minecraft minecraft) {
+        if (minecraft.player == null || minecraft.level == null) {
+            activeOutlineLevel = null;
+            activeOutlineOwner = null;
+            activeQuarryOutlines = List.of();
+            return;
+        }
         AABB search = minecraft.player.getBoundingBox().inflate(DinoWhistleSettings.MAX_RANGE + 18.0D);
-        if (settings.mode() != DinoWhistleSettings.FieldMode.QUARRY) return;
+        List<ActiveQuarryOutline> outlines = new ArrayList<>();
         for (FieldDodoEntity dinosaur : minecraft.level.getEntitiesOfClass(
                 FieldDodoEntity.class,
                 search,
                 candidate -> candidate.isOwnedBy(minecraft.player.getUUID())
+                        && candidate.isAlive()
+                        && !candidate.isDefeatTransferActive()
                         && candidate.isFieldWorkActive()
                         && candidate.getFieldWorkMode() == DinoWhistleSettings.FieldMode.QUARRY)) {
             BlockPos first = dinosaur.getFieldWorkFirst().orElse(null);
             if (first == null) continue;
-            BlockPos second = dinosaur.getFieldWorkSecond().orElse(null);
-            if (dinosaur.getFieldWorkPattern() == DinoWhistleSettings.Pattern.AREA && second != null) {
-                renderArea(event, first, second, 0x586FE49A, 2.0F, true, true);
-            } else {
-                renderBlock(event, first, 0x786FE49A, 2.5F);
-            }
+            outlines.add(new ActiveQuarryOutline(first, dinosaur.getFieldWorkSecond().orElse(null),
+                    dinosaur.getFieldWorkPattern()));
         }
+        activeOutlineLevel = minecraft.level;
+        activeOutlineOwner = minecraft.player.getUUID();
+        activeQuarryOutlines = List.copyOf(outlines);
     }
 
     private static void renderBlock(SubmitCustomGeometryEvent event, BlockPos pos, int color, float width) {
@@ -235,7 +265,8 @@ public final class DinoWhistleClient {
     }
 
     private static void renderArea(SubmitCustomGeometryEvent event, BlockPos first, BlockPos second,
-                                   int color, float width, boolean movingStripes,
+                                   int color, int edgeStripeColor, int faceStripeColor,
+                                   float width, boolean movingStripes,
                                    boolean verticalFaceStripes) {
         double minX = Math.min(first.getX(), second.getX());
         double minY = Math.min(first.getY(), second.getY());
@@ -245,12 +276,15 @@ public final class DinoWhistleClient {
         double maxZ = Math.max(first.getZ(), second.getZ()) + 1.0D;
         VoxelShape shape = Shapes.create(new AABB(minX, minY, minZ, maxX, maxY, maxZ));
         submitShape(event, shape, color, width);
-        if (movingStripes) submitMovingStripes(event, shape, 0xE9C9FFD9, width + 0.8F);
+        if (movingStripes) submitMovingStripes(event, shape, edgeStripeColor, width + 0.8F);
         if (verticalFaceStripes) {
             submitVerticalFaceStripes(event, new AABB(minX, minY, minZ, maxX, maxY, maxZ),
-                    0x7AC9FFD9, width + 0.25F);
+                    faceStripeColor, width + 0.25F);
         }
     }
+
+    private record ActiveQuarryOutline(BlockPos first, BlockPos second,
+                                       DinoWhistleSettings.Pattern pattern) {}
 
     private static void submitShape(SubmitCustomGeometryEvent event, VoxelShape shape, int color, float width) {
         Vec3 camera = event.getLevelRenderState().cameraRenderState.pos;

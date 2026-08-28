@@ -2244,6 +2244,16 @@ public final class PrimevalGameTests {
                 Map.of(rememberedStation, 3),
                 0, 3, 12, 2, 0, 0, 1, 2, true, false
         );
+        helper.assertTrue(DinosaurOwnership.setCommandMode(
+                        player, dinosaur, DinosaurCommandMode.FOLLOW).success(),
+                "The recovery fixture could not enter Follow mode");
+        BlockPos fieldAnchor = dinosaur.blockPosition().immutable();
+        dinosaur.assignPassiveFieldWork(new DinoWhistleSettings(
+                DinoWhistleSettings.FieldMode.HARVEST,
+                DinoWhistleSettings.Pattern.AREA,
+                32));
+        helper.assertTrue(dinosaur.isFieldWorkActive(),
+                "The recovery fixture never received its saved field duty");
         dinosaur.awardWorkExperience(17);
         UUID dinosaurId = dinosaur.getUUID();
         dinosaur.hurtServer(helper.getLevel(), helper.getLevel().damageSources().generic(), Float.MAX_VALUE);
@@ -2264,6 +2274,12 @@ public final class PrimevalGameTests {
                             + stored.snapshot().getIntOr("PrimevalWorkJob", -1));
             helper.assertTrue(stored.snapshot().getBooleanOr("PrimevalWorkEnabled", false),
                     "Death recovery disabled a configured work route");
+            helper.assertTrue(stored.snapshot().getBooleanOr("PrimevalFieldWorkEnabled", false)
+                            && stored.snapshot().getIntOr("PrimevalFieldWorkMode", -1)
+                            == DinoWhistleSettings.FieldMode.HARVEST.ordinal()
+                            && stored.snapshot().getLongOr("PrimevalFieldWorkFirst", Long.MIN_VALUE)
+                            == fieldAnchor.asLong(),
+                    "Death recovery erased or corrupted the unfinished field duty");
             helper.assertTrue(stored.snapshot().getIntOr("PrimevalDinosaurExperience", -1) == 17,
                     "Death recovery erased level progress");
             helper.assertTrue(!stored.snapshot().getBooleanOr("PrimevalPendingOwnerRecovery", false)

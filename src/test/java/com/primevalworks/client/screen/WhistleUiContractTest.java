@@ -138,13 +138,23 @@ final class WhistleUiContractTest {
     }
 
     @Test
-    void assignedQuarryAreasKeepAnimatedDiagonalFaceStripes() throws Exception {
+    void quarryLimitsAndAssignedAreasKeepDistinctAnimatedOutlines() throws Exception {
         String client = Files.readString(CLIENT.resolve("effect/DinoWhistleClient.java"));
         assertTrue(client.contains("submitVerticalFaceStripes"));
         assertTrue(client.contains("emitVerticalFaceStripes"));
-        assertTrue(client.contains("0x7AC9FFD9"));
-        assertTrue(client.contains("2.0F, true, true"),
+        assertTrue(client.contains("levelValid ? 0xE9C9FFD9 : 0xE9FF9B92"),
+                "An over-limit Area preview lost its animated red stripe accent");
+        assertTrue(client.contains("activeQuarryOutlines")
+                        && client.contains("0x3EC9FFD9")
+                        && client.contains("1.8F, true, true"),
                 "The persisted assigned area lost its animated vertical-face treatment");
+        assertTrue(client.contains("!candidate.isDefeatTransferActive()"),
+                "A defeated follower can leave a stale active quarry outline");
+        String worldGeometry = client.substring(
+                client.indexOf("public static void submitWorldGeometry"),
+                client.indexOf("private static void refreshActiveQuarryOutlines"));
+        assertFalse(worldGeometry.contains("if (whistle.isEmpty()) return;"),
+                "Assigned quarry geometry disappears as soon as the Whistle is put away");
     }
 
     @Test
@@ -162,8 +172,8 @@ final class WhistleUiContractTest {
                 "Holding attack can issue a second mark before the picker opens");
         assertTrue(client.contains("acceptFollowerSnapshot"));
         assertTrue(client.contains("maximumEligibleLevel"));
-        assertFalse(client.contains("getEntitiesOfClass(FieldDodoEntity.class, search"),
-                "Client entity fields are not authoritative enough to gate an Area quarry mark");
+        assertTrue(client.contains("availableLevel = bestAvailableQuarryLevel"),
+                "Area capacity is no longer based on the authoritative Follow-crew snapshot");
     }
 
     @Test
