@@ -73,6 +73,7 @@ public record AssignWhistleFieldWorkPayload(UUID dinosaurId, BlockPos first, Blo
                 return;
             }
             dinosaur.assignFieldWork(settings, payload.first, payload.hasSecond ? payload.second : null);
+            RequestWhistleFollowersPayload.clearStagedCorner(player);
             player.sendOverlayMessage(net.minecraft.network.chat.Component.literal(
                     dinosaur.getDisplayName().getString() + " received the "
                             + DinoFieldWorkRules.specialtyName(settings.mode()) + " order."));

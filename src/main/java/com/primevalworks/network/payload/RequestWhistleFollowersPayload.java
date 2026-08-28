@@ -21,6 +21,10 @@ import java.util.List;
 
 public record RequestWhistleFollowersPayload(BlockPos first, BlockPos second, boolean hasSecond)
         implements CustomPacketPayload {
+    private static final String STAGED_CORNER = "PrimevalWhistleCorner";
+    private static final String STAGED_DIMENSION = "PrimevalWhistleCornerDimension";
+    private static final String STAGED_AT = "PrimevalWhistleCornerAt";
+    private static final long STAGED_CORNER_LIFETIME = 20L * 60L;
     public static final Type<RequestWhistleFollowersPayload> TYPE = new Type<>(
             Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "request_whistle_followers"));
     public static final StreamCodec<RegistryFriendlyByteBuf, RequestWhistleFollowersPayload> STREAM_CODEC = StreamCodec.of(
@@ -41,6 +45,13 @@ public record RequestWhistleFollowersPayload(BlockPos first, BlockPos second, bo
             ItemStack whistle = DinoWhistleItem.findHeld(player);
             if (whistle.isEmpty()) return;
             DinoWhistleSettings settings = DinoWhistleSettings.read(whistle);
+            if (isAreaQuarry(settings) && !payload.hasSecond) {
+                if (!stageFirstCorner(player, payload.first, settings)) {
+                    player.sendOverlayMessage(net.minecraft.network.chat.Component.literal(
+                            "Move closer and mark a safe quarry corner."));
+                }
+                return;
+            }
             if (!validSelection(player, payload, settings)) {
                 player.sendOverlayMessage(net.minecraft.network.chat.Component.literal(
                         settings.pattern() == DinoWhistleSettings.Pattern.AREA
@@ -51,6 +62,7 @@ public record RequestWhistleFollowersPayload(BlockPos first, BlockPos second, bo
             List<WhistleFollowerListPayload.Entry> entries = new ArrayList<>();
             for (FieldDodoEntity dinosaur : DinosaurOwnership.loadedFollowers(player)) {
                 if (entries.size() >= DinosaurOwnership.followerLimit(player)) break;
+                if (!DinoFieldWorkRules.supports(dinosaur.getSpecies(), settings.mode())) continue;
                 int rating = DinoFieldWorkRules.rating(dinosaur, settings.mode());
                 boolean valid = rating > 0
                         && DinoFieldWorkRules.validTarget(player.level(), payload.first, settings.mode(), rating)
@@ -72,15 +84,49 @@ public record RequestWhistleFollowersPayload(BlockPos first, BlockPos second, bo
                                   DinoWhistleSettings settings) {
         double packetReach = 10.0D;
         if (!settings.mode().requiresMark()) return false;
-        if (player.position().distanceToSqr(payload.first.getCenter()) > packetReach * packetReach
-                || payload.hasSecond && player.position().distanceToSqr(payload.second.getCenter()) > packetReach * packetReach) {
-            return false;
+        if (isAreaQuarry(settings)) {
+            return payload.hasSecond
+                    && player.position().distanceToSqr(payload.second.getCenter()) <= packetReach * packetReach
+                    && stagedCornerMatches(player, payload.first)
+                    && DinoFieldWorkRules.areaWithinLimits(payload.first, payload.second);
         }
-        if (settings.mode() == DinoWhistleSettings.FieldMode.QUARRY
-                && settings.pattern() == DinoWhistleSettings.Pattern.AREA) {
-            return payload.hasSecond && DinoFieldWorkRules.areaWithinLimits(payload.first, payload.second);
-        }
-        return !payload.hasSecond;
+        return !payload.hasSecond
+                && player.position().distanceToSqr(payload.first.getCenter()) <= packetReach * packetReach;
+    }
+
+    public static void clearStagedCorner(ServerPlayer player) {
+        var data = player.getPersistentData();
+        data.remove(STAGED_CORNER);
+        data.remove(STAGED_DIMENSION);
+        data.remove(STAGED_AT);
+    }
+
+    private static boolean stageFirstCorner(ServerPlayer player, BlockPos corner,
+                                            DinoWhistleSettings settings) {
+        double packetReach = 10.0D;
+        if (player.position().distanceToSqr(corner.getCenter()) > packetReach * packetReach
+                || !DinoFieldWorkRules.validTarget(player.level(), corner, settings.mode(), 4)) return false;
+        var data = player.getPersistentData();
+        data.putLong(STAGED_CORNER, corner.asLong());
+        data.putString(STAGED_DIMENSION, player.level().dimension().identifier().toString());
+        data.putLong(STAGED_AT, player.level().getGameTime());
+        return true;
+    }
+
+    private static boolean stagedCornerMatches(ServerPlayer player, BlockPos corner) {
+        var data = player.getPersistentData();
+        long age = player.level().getGameTime() - data.getLongOr(STAGED_AT, Long.MIN_VALUE);
+        boolean valid = age >= 0L && age <= STAGED_CORNER_LIFETIME
+                && data.getLongOr(STAGED_CORNER, Long.MIN_VALUE) == corner.asLong()
+                && data.getStringOr(STAGED_DIMENSION, "")
+                .equals(player.level().dimension().identifier().toString());
+        if (!valid) clearStagedCorner(player);
+        return valid;
+    }
+
+    private static boolean isAreaQuarry(DinoWhistleSettings settings) {
+        return settings.mode() == DinoWhistleSettings.FieldMode.QUARRY
+                && settings.pattern() == DinoWhistleSettings.Pattern.AREA;
     }
 
     @Override

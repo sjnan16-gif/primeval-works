@@ -18,25 +18,25 @@ final class DinoFieldWorkRulesTest {
 
     @Test
     void areaOrdersRejectHugeVolumesAndLongThinSelections() {
-        assertTrue(DinoFieldWorkLimits.areaWithinLimits(0, 0, 0, 7, 7, 7));
-        assertFalse(DinoFieldWorkLimits.areaWithinLimits(0, 0, 0, 8, 8, 8));
-        assertFalse(DinoFieldWorkLimits.areaWithinLimits(0, 0, 0, 16, 0, 0));
+        assertTrue(DinoFieldWorkLimits.areaWithinLimits(0, 0, 0, 19, 19, 19));
+        assertFalse(DinoFieldWorkLimits.areaWithinLimits(0, 0, 0, 20, 20, 20));
+        assertFalse(DinoFieldWorkLimits.areaWithinLimits(0, 0, 0, 32, 0, 0));
     }
 
     @Test
     void markedQuarryCapacityGrowsWithDinosaurLevel() {
-        assertTrue(DinoFieldWorkLimits.areaWithinLimits(0, 0, 0, 3, 3, 3, 1));
-        assertFalse(DinoFieldWorkLimits.areaWithinLimits(0, 0, 0, 4, 4, 2, 1));
-        assertTrue(DinoFieldWorkLimits.areaWithinLimits(0, 0, 0, 7, 7, 7, 100));
-        assertEquals(1, DinoFieldWorkLimits.requiredLevel(0, 0, 0, 3, 3, 3));
-        assertEquals(100, DinoFieldWorkLimits.requiredLevel(0, 0, 0, 7, 7, 7));
+        assertTrue(DinoFieldWorkLimits.areaWithinLimits(0, 0, 0, 7, 7, 7, 1));
+        assertFalse(DinoFieldWorkLimits.areaWithinLimits(0, 0, 0, 8, 8, 6, 1));
+        assertTrue(DinoFieldWorkLimits.areaWithinLimits(0, 0, 0, 31, 15, 15, 100));
+        assertEquals(1, DinoFieldWorkLimits.requiredLevel(0, 0, 0, 7, 7, 7));
+        assertEquals(100, DinoFieldWorkLimits.requiredLevel(0, 0, 0, 31, 15, 15));
     }
 
     @Test
     void connectedAndAreaCapsStayBounded() {
-        assertEquals(64, DinoFieldWorkLimits.MAX_CONNECTED_BLOCKS);
-        assertEquals(512, DinoFieldWorkLimits.MAX_AREA_BLOCKS);
-        assertEquals(16, DinoFieldWorkLimits.MAX_AREA_SPAN);
+        assertEquals(256, DinoFieldWorkLimits.MAX_CONNECTED_BLOCKS);
+        assertEquals(8192, DinoFieldWorkLimits.MAX_AREA_BLOCKS);
+        assertEquals(32, DinoFieldWorkLimits.MAX_AREA_SPAN);
     }
 
     @Test
@@ -73,6 +73,18 @@ final class DinoFieldWorkRulesTest {
         assertFalse(DinoFieldSpecialtyProfile.TRICERATOPS.eligible());
         assertFalse(DinoFieldSpecialtyProfile.STEGOSAURUS.eligible());
         assertFalse(DinoFieldSpecialtyProfile.PTERANODON.eligible());
+    }
+
+    @Test
+    void speciesNeverAppearUnderAnotherDinosaursFieldSpecialty() {
+        assertEquals(DinoFieldSpecialtyProfile.Role.LUMBER,
+                DinoFieldSpecialtyProfile.PARASAUROLOPHUS.role());
+        assertFalse(DinoFieldSpecialtyProfile.PARASAUROLOPHUS.role()
+                == DinoFieldSpecialtyProfile.Role.QUARRY);
+        assertEquals(DinoFieldSpecialtyProfile.Role.QUARRY,
+                DinoFieldSpecialtyProfile.SPINOSAURUS.role());
+        assertFalse(DinoFieldSpecialtyProfile.SPINOSAURUS.role()
+                == DinoFieldSpecialtyProfile.Role.LUMBER);
     }
 
     @Test

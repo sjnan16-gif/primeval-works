@@ -3,9 +3,11 @@ package com.primevalworks.world.work;
 import com.primevalworks.world.entity.DinosaurProgression;
 
 public final class DinoFieldWorkLimits {
-    public static final int MAX_CONNECTED_BLOCKS = 64;
-    public static final int MAX_AREA_BLOCKS = 512;
-    public static final int MAX_AREA_SPAN = 16;
+    public static final int MAX_CONNECTED_BLOCKS = 256;
+    public static final int MAX_AREA_BLOCKS = 8192;
+    public static final int MAX_AREA_SPAN = 32;
+    private static final int MIN_AREA_BLOCKS = 512;
+    private static final int MIN_AREA_SPAN = 12;
 
     private DinoFieldWorkLimits() {}
 
@@ -30,13 +32,13 @@ public final class DinoFieldWorkLimits {
 
     public static int maximumAreaBlocks(int dinosaurLevel) {
         int level = Math.max(1, Math.min(DinosaurProgression.MAX_LEVEL, dinosaurLevel));
-        return 64 + Math.round((MAX_AREA_BLOCKS - 64) * (level - 1)
+        return MIN_AREA_BLOCKS + Math.round((MAX_AREA_BLOCKS - MIN_AREA_BLOCKS) * (level - 1)
                 / (float)(DinosaurProgression.MAX_LEVEL - 1));
     }
 
     public static int maximumAreaSpan(int dinosaurLevel) {
         int level = Math.max(1, Math.min(DinosaurProgression.MAX_LEVEL, dinosaurLevel));
-        return 6 + Math.round((MAX_AREA_SPAN - 6) * (level - 1)
+        return MIN_AREA_SPAN + Math.round((MAX_AREA_SPAN - MIN_AREA_SPAN) * (level - 1)
                 / (float)(DinosaurProgression.MAX_LEVEL - 1));
     }
 

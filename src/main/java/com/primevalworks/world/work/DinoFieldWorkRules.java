@@ -34,10 +34,14 @@ public final class DinoFieldWorkRules {
         return DinoFieldSpecialtyProfile.valueOf(species.name()).sourceJobIndex();
     }
 
+    public static boolean supports(DinosaurSpecies species, DinoWhistleSettings.FieldMode mode) {
+        return mode != null && specialty(species) == mode;
+    }
+
     public static int rating(FieldDodoEntity dinosaur, DinoWhistleSettings.FieldMode mode) {
         DinosaurSpecies species = dinosaur.getSpecies();
         int source = sourceJobIndex(species);
-        return source >= 0 && specialty(species) == mode ? dinosaur.getSpecialtyStars(source) : 0;
+        return source >= 0 && supports(species, mode) ? dinosaur.getSpecialtyStars(source) : 0;
     }
 
     public static String specialtyName(DinoWhistleSettings.FieldMode mode) {

@@ -30,6 +30,11 @@ final class WhistleUiContractTest {
         assertTrue(config.contains("PrimevalUiCrop.paperInset"));
         assertTrue(config.contains("PrimevalUiCrop.paperSlot"));
         assertTrue(config.contains("PrimevalUiCrop.paperPanel"));
+        assertTrue(config.contains("drawInsetBubble(graphics, title)"));
+        assertTrue(config.contains("drawInsetBubble(graphics, labelBubble)"));
+        assertTrue(config.contains("drawInsetBubble(graphics, behaviorLabel)"));
+        assertTrue(config.contains("drawInsetBubble(graphics, rangeLabel)"));
+        assertTrue(config.contains("drawInsetBubble(graphics, followerLabel)"));
         assertUsesBubble(CLIENT.resolve("screen/WhistleFollowerPickerScreen.java"));
     }
 

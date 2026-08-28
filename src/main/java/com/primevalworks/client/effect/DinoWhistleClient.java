@@ -73,6 +73,8 @@ public final class DinoWhistleClient {
                 areaMode = settings.mode();
                 areaDimension = minecraft.level.dimension();
                 firstCornerMarkedAt = Util.getNanos();
+                ClientPacketDistributor.sendToServer(
+                        new RequestWhistleFollowersPayload(selected, selected, false));
                 minecraft.player.sendOverlayMessage(Component.literal("First corner saved. Mark the opposite corner."));
                 return;
             }
