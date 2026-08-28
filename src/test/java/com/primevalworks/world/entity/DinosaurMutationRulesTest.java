@@ -17,17 +17,19 @@ final class DinosaurMutationRulesTest {
     @Test
     void premiumIncubationUsesTheAuthoredRareRates() {
         assertEquals(DinosaurMutationRules.HUGE,
-                DinosaurMutationRules.roll(true, 0.249F, 0.04F));
+                DinosaurMutationRules.roll(true, 0.059F, 0.01F));
         assertEquals(DinosaurMutationRules.ALBINO,
-                DinosaurMutationRules.roll(true, 0.25F, 0.039F));
+                DinosaurMutationRules.roll(true, 0.06F, 0.009F));
+        assertEquals(0,
+                DinosaurMutationRules.roll(true, 0.06F, 0.01F));
     }
 
     @Test
     void premiumIncubationIsStrictlyBetterThanWildHatching() {
         assertEquals(0.05F, DinosaurMutationRules.hugeChance(false));
         assertEquals(0.005F, DinosaurMutationRules.albinoChance(false));
-        assertEquals(0.25F, DinosaurMutationRules.hugeChance(true));
-        assertEquals(0.04F, DinosaurMutationRules.albinoChance(true));
+        assertEquals(0.06F, DinosaurMutationRules.hugeChance(true));
+        assertEquals(0.01F, DinosaurMutationRules.albinoChance(true));
     }
 
     @Test

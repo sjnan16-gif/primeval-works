@@ -177,9 +177,9 @@ public final class PrimevalConfig {
                     "Chance for a normally hatched dinosaur to be Huge.");
             wildAlbinoChance = decimal(builder, "wildAlbinoChance", 0.005D, 0.0D, 1.0D,
                     "Chance for a normally hatched dinosaur to be Albino.");
-            incubatedHugeChance = decimal(builder, "incubatedHugeChance", 0.25D, 0.0D, 1.0D,
+            incubatedHugeChance = decimal(builder, "incubatedHugeChance", 0.06D, 0.0D, 1.0D,
                     "Huge chance for an egg completed in the Premium Egg Incubator.");
-            incubatedAlbinoChance = decimal(builder, "incubatedAlbinoChance", 0.04D, 0.0D, 1.0D,
+            incubatedAlbinoChance = decimal(builder, "incubatedAlbinoChance", 0.01D, 0.0D, 1.0D,
                     "Albino chance for an egg completed in the Premium Egg Incubator.");
             bredHugeChance = decimal(builder, "bredHugeChance", 0.09D, 0.0D, 1.0D,
                     "Huge chance for a bred egg when neither parent is Huge.");

@@ -110,6 +110,11 @@ final class AuthoredProgressionAssetsTest {
         assertTrue(swordDefinition.contains("minecraft:display_context"));
         assertTrue(swordDefinition.contains("primevalworks:item/primordial_sword_3d"));
         assertTrue(swordDefinition.contains("geckolib:geckolib"));
+        String swordPresentation = Files.readString(ASSETS.resolve("models/item/primordial_sword_3d.json"));
+        assertTrue(swordPresentation.contains("minecraft:item/handheld"));
+        assertTrue(swordPresentation.contains("firstperson_righthand"));
+        assertTrue(swordPresentation.contains("firstperson_lefthand"));
+        assertTrue(swordPresentation.contains("thirdperson_righthand"));
     }
 
     private static void assertLocalItemModel(String name) throws Exception {

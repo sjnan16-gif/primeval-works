@@ -34,6 +34,7 @@ import com.primevalworks.world.entity.FieldDodoEntity;
 import com.primevalworks.world.egg.DinosaurEggGenome;
 import com.primevalworks.world.egg.DinosaurEggSize;
 import com.primevalworks.world.egg.DinosaurHatching;
+import com.primevalworks.world.egg.PremiumIncubationRules;
 import com.primevalworks.world.ownership.DinosaurOwnership;
 import com.primevalworks.world.inventory.FoodBoxMenu;
 import com.primevalworks.world.work.BaseInventoryIndex;
@@ -318,7 +319,8 @@ public final class PrimevalGameTests {
         );
         event.registerTest(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "incubator_improves_hatchling"),
-                new FunctionGameTestInstance(INCUBATOR_IMPROVES_HATCHLING.getKey(), isolatedTestData(event, "incubator"))
+                new FunctionGameTestInstance(INCUBATOR_IMPROVES_HATCHLING.getKey(),
+                        isolatedTestData(event, "incubator", 4_000))
         );
         event.registerTest(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "wild_egg_hatches"),
@@ -3359,6 +3361,9 @@ public final class PrimevalGameTests {
                 "Premium incubation rolled quality " + incubator.getGeneticQuality() + " instead of 62+");
         helper.assertTrue(Integer.bitCount(incubator.getMutationMask()) <= 2,
                 "Premium incubation rolled more than two mutations");
+        helper.assertTrue(incubator.getRequiredTicks() >= PremiumIncubationRules.SMALL_BASE_TICKS,
+                "The Premium Egg Incubator restored its placeholder-fast timer: "
+                        + incubator.getRequiredTicks() + " ticks");
         helper.assertTrue(smallEggSpecies(incubator.getSelectedSpecies()),
                 "A small incubated egg selected the wrong size class: " + incubator.getSelectedSpecies());
         DinosaurEggGenome lockedGenome = DinosaurEggGenome.read(incubator.getEgg())

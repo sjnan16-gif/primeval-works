@@ -66,7 +66,7 @@ public final class PrimevalTuning {
         static Server defaults() {
             return new Server(
                     1.0D, 1.0D, 2.3D, 50, 1.0D, 1.0D,
-                    0.05D, 0.005D, 0.25D, 0.04D, 0.09D, 0.012D, 0.65D, 0.88D,
+                    0.05D, 0.005D, 0.06D, 0.01D, 0.09D, 0.012D, 0.65D, 0.88D,
                     1.18D, 1.20D, 1.40D, 0.80D,
                     1.0D, 1.0D, 1.0D, 8, 1.0D, 1.5D,
                     1.0D, 1.0D, 1.0D,

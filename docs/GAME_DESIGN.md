@@ -124,7 +124,7 @@ A dinosaur can have neither, either, or both of the two birth mutations:
 - **Huge** — +18% model and collision scale, +20% work, damage, movement, and maximum health.
 - **Albino** — a shading-preserving white body and red eyes, +40% work, damage, movement, and mount speed, but -20% maximum health.
 
-Wild eggs independently roll 5% Huge and 0.5% Albino. The Premium Egg Incubator raises those independent chances to 25% and 4% while also improving genetic quality. Bred eggs have 9% and 1.2% baseline chances for traits absent from both parents. A trait has a 65% inheritance chance when one parent has it and 88% when both do.
+Wild eggs independently roll 5% Huge and 0.5% Albino. The Premium Egg Incubator raises those independent chances to 6% and 1% while improving genetic quality; both together are roughly a one-in-1,667 result at default settings. Bred eggs have 9% and 1.2% baseline chances for traits absent from both parents. A trait has a 65% inheritance chance when one parent has it and 88% when both do.
 
 Breeding requires two owned dinosaurs of the same species, two Nesting Treats, sufficient hunger and mood, and a ten-minute parent cooldown. The resulting egg averages its parents' quality and adds a small improvement. All mutation rolls and inheritance boundaries are server-owned and covered by automated tests.
 

@@ -11,9 +11,9 @@ import net.minecraft.world.level.block.Block;
 import java.util.Optional;
 
 public enum DinosaurEggSize {
-    SMALL(400, EggFragmentRules.SMALL, DinosaurEggPoolRules.Pool.SMALL),
-    BIG(800, EggFragmentRules.BIG, DinosaurEggPoolRules.Pool.BIG),
-    LARGE(1200, EggFragmentRules.LARGE, DinosaurEggPoolRules.Pool.LARGE);
+    SMALL(PremiumIncubationRules.SMALL_BASE_TICKS, EggFragmentRules.SMALL, DinosaurEggPoolRules.Pool.SMALL),
+    BIG(PremiumIncubationRules.BIG_BASE_TICKS, EggFragmentRules.BIG, DinosaurEggPoolRules.Pool.BIG),
+    LARGE(PremiumIncubationRules.LARGE_BASE_TICKS, EggFragmentRules.LARGE, DinosaurEggPoolRules.Pool.LARGE);
 
     private final int baseIncubationTicks;
     private final EggFragmentRules fragmentRules;

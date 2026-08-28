@@ -12,7 +12,7 @@ Wild generation places three physical egg sizes:
 
 Right-clicking a wild egg hatches a random species from its size class and gives ownership to that player. The hatchling joins an open Command Table slot, enters the depot if the active crew is full, or waits safely in ownership data if the player has not built a Command Table yet. Silk Touch collects the physical size egg instead.
 
-The Premium Egg Incubator holds one egg without opening a menu. It needs 2 E/S from the base network. Right-click with an egg to start; sneak-right-click with an empty hand to remove it. Small, big, and large eggs start at 20, 40, and 60 seconds, with a modest increase for better genetics and mutations. The incubator locks its selected species and genetics into the egg item, so removing and reinserting it cannot reroll the result.
+The Premium Egg Incubator holds one egg without opening a menu. It needs 2 E/S from the base network. Right-click with an egg to start; sneak-right-click with an empty hand to remove it. Small, big, and large eggs start at 2, 4, and 6 minutes, with a modest increase for better genetics and mutations. The incubator locks its selected species and genetics into the egg item, so removing and reinserting it cannot reroll the result.
 
 Nesting Treats provide controlled breeding:
 

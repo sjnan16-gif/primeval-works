@@ -9,8 +9,8 @@ public final class DinosaurMutationRules {
 
     public static final float WILD_HUGE_CHANCE = 0.05F;
     public static final float WILD_ALBINO_CHANCE = 0.005F;
-    public static final float INCUBATED_HUGE_CHANCE = 0.25F;
-    public static final float INCUBATED_ALBINO_CHANCE = 0.04F;
+    public static final float INCUBATED_HUGE_CHANCE = 0.06F;
+    public static final float INCUBATED_ALBINO_CHANCE = 0.01F;
     public static final float BRED_HUGE_CHANCE = 0.09F;
     public static final float BRED_ALBINO_CHANCE = 0.012F;
     public static final float ONE_PARENT_INHERITANCE_CHANCE = 0.65F;

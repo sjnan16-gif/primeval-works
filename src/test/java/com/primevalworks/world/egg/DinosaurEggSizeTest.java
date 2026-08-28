@@ -9,6 +9,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class DinosaurEggSizeTest {
     @Test
+    void premiumIncubationUsesMeaningfulSizeBasedTimers() {
+        assertEquals(2_400, PremiumIncubationRules.SMALL_BASE_TICKS);
+        assertEquals(4_800, PremiumIncubationRules.BIG_BASE_TICKS);
+        assertEquals(7_200, PremiumIncubationRules.LARGE_BASE_TICKS);
+    }
+
+    @Test
     void everyEggDropsOneToThreeFragmentsAndLargerEggsAverageMore() {
         double small = averageFragments(EggFragmentRules.SMALL, 14_000L);
         double big = averageFragments(EggFragmentRules.BIG, 14_000L);
