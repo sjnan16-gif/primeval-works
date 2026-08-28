@@ -55,6 +55,17 @@ public record AssignWhistleFieldWorkPayload(UUID dinosaurId, BlockPos first, Blo
                     || dinosaur.isOnExpedition() || dinosaur.isIncapacitated()
                     || !RequestWhistleFollowersPayload.validSelection(player, selection, settings)) return;
             int rating = DinoFieldWorkRules.rating(dinosaur, settings.mode());
+            if (settings.mode() == DinoWhistleSettings.FieldMode.QUARRY
+                    && settings.pattern() == DinoWhistleSettings.Pattern.AREA
+                    && !DinoFieldWorkRules.areaWithinLimits(
+                            payload.first, payload.second, dinosaur.getDinosaurLevel())) {
+                int required = DinoFieldWorkRules.requiredLevel(payload.first, payload.second);
+                player.sendOverlayMessage(net.minecraft.network.chat.Component.literal(
+                        required > com.primevalworks.world.entity.DinosaurProgression.MAX_LEVEL
+                                ? "That quarry is beyond the maximum field boundary."
+                                : "Level this dinosaur to " + required + " to clear that quarry."));
+                return;
+            }
             if (rating <= 0
                     || !DinoFieldWorkRules.validTarget(player.level(), payload.first, settings.mode(), rating)) {
                 player.sendOverlayMessage(net.minecraft.network.chat.Component.literal(

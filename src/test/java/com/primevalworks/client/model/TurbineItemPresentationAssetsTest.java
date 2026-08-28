@@ -19,8 +19,8 @@ final class TurbineItemPresentationAssetsTest {
 
         String renderer = Files.readString(Path.of(
                 "src/main/java/com/primevalworks/client/render/item/TurbineItemRenderer.java"));
-        assertTrue(renderer.contains("RenderTypes.entityCutoutCull(texture)"),
-                "Turbine item planes can blend their front and rear textures");
+        assertTrue(renderer.contains("RenderTypes.entityCutout(texture)"),
+                "Turbine item panel backs can disappear from the inventory preview");
         assertTrue(renderer.contains("case GUI -> 0.48F")
                         && renderer.contains("FIRST_PERSON_RIGHT_HAND -> 0.33F")
                         && renderer.contains("THIRD_PERSON_RIGHT_HAND -> 0.45F"),
@@ -34,7 +34,7 @@ final class TurbineItemPresentationAssetsTest {
         String item = Files.readString(Path.of(
                 "src/main/java/com/primevalworks/world/item/TurbineBlockItem.java"));
         assertTrue(item.contains("1.28F, -0.18F")
-                        && item.contains("1.55F, -1.10F"),
+                        && item.contains("2.52F, 0.28F"),
                 "A turbine lost its individually verified 16x16 GUI center");
         assertTrue(item.contains("WATER(\"water_turbine\", \"water_turbine\", \"Water Turbine\", 0.64F"),
                 "The larger authored water rotor no longer fits the item slot and held views");
@@ -49,6 +49,16 @@ final class TurbineItemPresentationAssetsTest {
             assertFalse(base.contains("\"elements\""),
                     name + " still renders an old hand-built placeholder instead of the authored model");
         }
+    }
+
+    @Test
+    void waterTurbineRecipeUsesItsAuthoredStructuralMaterials() throws Exception {
+        String recipe = Files.readString(Path.of(
+                "src/main/resources/data/primevalworks/recipe/water_turbine.json"));
+        assertTrue(recipe.contains("primevalworks:hardwood"));
+        assertTrue(recipe.contains("primevalworks:big_dino_bone"));
+        assertTrue(recipe.contains("\"HBH\"") && recipe.contains("\"IBI\""),
+                "The Water Turbine recipe no longer requires the two large support bones");
     }
 
     private static void assertTurbineItem(String item, String authoredModel) throws Exception {

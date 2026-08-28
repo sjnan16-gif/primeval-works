@@ -166,6 +166,30 @@ public final class BaseEnergyRules {
         }
     }
 
+    /** Returns the one loaded base that owns this position, using the same nearest-table rule as machines. */
+    public static CommandTableBlockEntity nearestLoadedTable(net.minecraft.world.level.Level level, BlockPos pos) {
+        Set<BlockPos> loadedTables;
+        synchronized (LOADED_TABLES) {
+            loadedTables = Set.copyOf(LOADED_TABLES.getOrDefault(level, Set.of()));
+        }
+        CommandTableBlockEntity nearest = null;
+        double nearestDistance = Double.MAX_VALUE;
+        long nearestKey = Long.MAX_VALUE;
+        for (BlockPos tablePos : loadedTables) {
+            CommandTableBlockEntity table = CommandTableBlock.tableEntity(level, tablePos);
+            if (table == null) continue;
+            double distance = tablePos.distSqr(pos);
+            if (distance > (double)table.baseRadius() * table.baseRadius()) continue;
+            long key = tablePos.asLong();
+            if (distance < nearestDistance || distance == nearestDistance && key < nearestKey) {
+                nearest = table;
+                nearestDistance = distance;
+                nearestKey = key;
+            }
+        }
+        return nearest;
+    }
+
     /** Uses the small persisted consumer index instead of scanning thousands of world blocks on every mob spawn. */
     public static boolean hasPoweredBlockNearby(net.minecraft.world.level.Level level, BlockPos center,
                                                 Block wanted, int radius) {

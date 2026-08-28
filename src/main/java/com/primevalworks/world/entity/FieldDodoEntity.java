@@ -408,6 +408,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     private final List<BlockPos> fieldWorkTargets = new ArrayList<>();
     private int fieldWorkCursor;
     private int fieldWorkRescanCooldown;
+    private boolean lumberFastFelling;
     private @Nullable UUID fieldCollectionTargetId;
     private BlockPos workActionPos;
     private Vec3 workLockedPosition;
@@ -1569,6 +1570,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         fieldWorkTargets.clear();
         fieldWorkCursor = 0;
         fieldWorkRescanCooldown = 0;
+        lumberFastFelling = false;
         fieldCollectionTargetId = null;
         entityData.set(FIELD_WORK_MODE, fieldWorkMode.ordinal());
         entityData.set(FIELD_WORK_PATTERN, fieldWorkPattern.ordinal());
@@ -1584,11 +1586,23 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         assignFieldWork(settings, blockPosition(), null);
     }
 
+    public void updatePassiveFieldSettings(DinoWhistleSettings settings) {
+        if (level().isClientSide() || !fieldWorkEnabled || commandMode != DinosaurCommandMode.FOLLOW
+                || !settings.mode().isPassive() || fieldWorkMode != settings.mode()) return;
+        fieldWorkRange = settings.range();
+        fieldWorkItemFilter = fieldWorkMode == DinoWhistleSettings.FieldMode.COLLECT
+                ? settings.itemFilter() : "";
+        fieldCollectionTargetId = null;
+        fieldWorkRescanCooldown = 0;
+        DinosaurOwnership.syncRecord(this);
+    }
+
     public void clearFieldWork() {
         fieldWorkEnabled = false;
         fieldWorkTargets.clear();
         fieldWorkCursor = 0;
         fieldWorkRescanCooldown = 0;
+        lumberFastFelling = false;
         fieldCollectionTargetId = null;
         fieldWorkFirst = null;
         fieldWorkSecond = null;
@@ -1873,6 +1887,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         if (!fieldWorkItemFilter.isBlank()) output.putString("PrimevalFieldWorkItem", fieldWorkItemFilter);
         if (fieldWorkFirst != null) output.putLong("PrimevalFieldWorkFirst", fieldWorkFirst.asLong());
         if (fieldWorkSecond != null) output.putLong("PrimevalFieldWorkSecond", fieldWorkSecond.asLong());
+        output.putBoolean("PrimevalLumberFastFelling", lumberFastFelling);
         if (commandTablePos != null) {
             output.putLong("PrimevalCommandTable", commandTablePos.asLong());
         }
@@ -1978,11 +1993,15 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         fieldWorkItemFilter = input.getStringOr("PrimevalFieldWorkItem", "");
         fieldWorkFirst = input.getLong("PrimevalFieldWorkFirst").map(BlockPos::of).orElse(null);
         fieldWorkSecond = input.getLong("PrimevalFieldWorkSecond").map(BlockPos::of).orElse(null);
+        lumberFastFelling = fieldWorkEnabled
+                && fieldWorkMode == DinoWhistleSettings.FieldMode.LUMBER
+                && input.getBooleanOr("PrimevalLumberFastFelling", false);
         if (fieldWorkEnabled && DinoFieldWorkRules.specialty(getSpecies()) != fieldWorkMode) {
             fieldWorkEnabled = false;
             fieldWorkFirst = null;
             fieldWorkSecond = null;
             fieldWorkItemFilter = "";
+            lumberFastFelling = false;
         }
         entityData.set(FIELD_WORK_MODE, fieldWorkEnabled ? fieldWorkMode.ordinal() : -1);
         entityData.set(FIELD_WORK_PATTERN, fieldWorkPattern.ordinal());
@@ -2412,8 +2431,9 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         } else if (raptorRunAnimationHoldTicks > 0) {
             raptorRunAnimationHoldTicks--;
         }
-        entityData.set(RAPTOR_RUNNING, mayRun && raptorRunAnimationHoldTicks > 0);
         raptorMomentum = RaptorMomentumRules.nextMomentum(raptorMomentum, advancing);
+        entityData.set(RAPTOR_RUNNING, mayRun && raptorRunAnimationHoldTicks > 0
+                && raptorMomentum > 0.06F);
     }
 
     private boolean isRaptorTransportPursuitActive() {
@@ -2793,13 +2813,17 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                 return;
             }
         }
+        if (fieldWorkMode == DinoWhistleSettings.FieldMode.LUMBER && lumberFastFelling) {
+            fellLumberBatch(serverLevel, owner, rating);
+            return;
+        }
         BlockPos target = fieldWorkTargets.get(fieldWorkCursor);
         if (!DinoFieldWorkRules.validTarget(level(), target, fieldWorkMode, rating)) {
             fieldWorkCursor++;
             cancelWorkAction();
             return;
         }
-        if (!closeTo(target)) {
+        if (!closeToFieldTarget(target)) {
             moveTo(target);
             return;
         }
@@ -2811,6 +2835,14 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             awardWorkExperience(DinosaurProgression.workExperience(fieldSupportJobIndex()));
         }
         fieldWorkCursor++;
+        if (fieldWorkMode == DinoWhistleSettings.FieldMode.LUMBER
+                && fieldWorkCursor < fieldWorkTargets.size()) {
+            lumberFastFelling = true;
+            fieldWorkFirst = fieldWorkTargets.get(fieldWorkCursor).immutable();
+            entityData.set(FIELD_WORK_FIRST, Optional.of(fieldWorkFirst));
+            workerCooldown = 0;
+            return;
+        }
         if (!fieldWorkContinuous && fieldWorkCursor >= fieldWorkTargets.size()) {
             clearFieldWork();
         } else {
@@ -2834,7 +2866,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             return;
         }
         if (fieldWorkPattern == DinoWhistleSettings.Pattern.AREA) {
-            if (!DinoFieldWorkRules.areaWithinLimits(fieldWorkFirst, fieldWorkSecond)) return;
+            if (!DinoFieldWorkRules.areaWithinLimits(fieldWorkFirst, fieldWorkSecond, dinosaurLevel)) return;
             BlockPos min = new BlockPos(Math.min(fieldWorkFirst.getX(), fieldWorkSecond.getX()),
                     Math.min(fieldWorkFirst.getY(), fieldWorkSecond.getY()),
                     Math.min(fieldWorkFirst.getZ(), fieldWorkSecond.getZ()));
@@ -2878,7 +2910,36 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                 for (Direction direction : Direction.values()) queue.addLast(candidate.relative(direction));
             }
         }
-        fieldWorkTargets.sort(Comparator.comparingDouble(pos -> distanceToSqr(pos.getCenter())));
+        if (fieldWorkMode == DinoWhistleSettings.FieldMode.LUMBER) {
+            fieldWorkTargets.sort(Comparator.comparingInt((BlockPos pos) -> pos.getY())
+                    .thenComparingDouble(pos -> distanceToSqr(pos.getCenter())));
+        } else {
+            fieldWorkTargets.sort(Comparator.comparingDouble(pos -> distanceToSqr(pos.getCenter())));
+        }
+    }
+
+    private void fellLumberBatch(ServerLevel serverLevel, ServerPlayer owner, int rating) {
+        navigation.stop();
+        setSpeed(0.0F);
+        setDeltaMovement(Vec3.ZERO);
+        int broken = 0;
+        while (fieldWorkCursor < fieldWorkTargets.size() && broken < 4) {
+            BlockPos target = fieldWorkTargets.get(fieldWorkCursor++);
+            if (!DinoFieldWorkRules.validTarget(
+                    serverLevel, target, DinoWhistleSettings.FieldMode.LUMBER, rating)) continue;
+            getLookControl().setLookAt(target.getCenter());
+            if (breakFieldBlock(serverLevel, owner, target, rating)) broken++;
+        }
+        if (broken > 0) {
+            requestCappedHungerDrain();
+            awardWorkExperience(DinosaurProgression.workExperience(fieldSupportJobIndex()));
+        }
+        if (fieldWorkCursor >= fieldWorkTargets.size()) {
+            clearFieldWork();
+            return;
+        }
+        fieldWorkFirst = fieldWorkTargets.get(fieldWorkCursor).immutable();
+        entityData.set(FIELD_WORK_FIRST, Optional.of(fieldWorkFirst));
     }
 
     private void rebuildNearbyHarvestTargets(int rating) {
@@ -4133,6 +4194,13 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         return getBoundingBox().inflate(reach, verticalReach, reach).intersects(new AABB(pos));
     }
 
+    private boolean closeToFieldTarget(BlockPos pos) {
+        double horizontalReach = getSpecies().fieldWorkReach() * getScale();
+        double verticalReach = Math.max(3.25D, horizontalReach * 0.82D);
+        return getBoundingBox().inflate(horizontalReach, verticalReach, horizontalReach)
+                .intersects(new AABB(pos));
+    }
+
     private double workInteractionDistance() {
         // The minimum includes the collision gap around a full block. Smaller
         // companions otherwise stop against a chest just outside interaction
@@ -4150,7 +4218,14 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             away = away.normalize();
         }
         double collisionClearance = getBbWidth() * 0.5D + 0.60D;
-        return center.add(away.scale(Math.max(0.82D, collisionClearance)));
+        Vec3 approach = center.add(away.scale(Math.max(0.82D, collisionClearance)));
+        if (commandMode == DinosaurCommandMode.FOLLOW && fieldWorkEnabled) {
+            double verticalReach = Math.max(3.25D, getSpecies().fieldWorkReach() * getScale() * 0.82D);
+            if (Math.abs(center.y - getY()) <= verticalReach) {
+                approach = new Vec3(approach.x, getY(), approach.z);
+            }
+        }
+        return approach;
     }
 
     private void moveTo(BlockPos pos) {
@@ -5453,11 +5528,12 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             }
             waterlineGraceTicks = 12;
             double currentDepth = getFluidHeight(FluidTags.WATER);
-            double targetDepth = Mth.clamp(getBbHeight() * 0.43D, 1.35D, 2.35D);
-            double targetVertical = Mth.clamp((currentDepth - targetDepth) * 0.035D, -0.042D, 0.042D);
-            double vertical = Mth.lerp(0.20D, movement.y, targetVertical);
-            vertical = Mth.clamp(vertical, -0.05D, 0.05D);
-            setDeltaMovement(movement.x * 0.82D, vertical, movement.z * 0.82D);
+            double targetDepth = Mth.clamp(getBbHeight() * 0.62D, 2.45D, 3.30D);
+            double targetVertical = Mth.clamp((currentDepth - targetDepth) * 0.050D, -0.085D, 0.070D);
+            double vertical = Mth.lerp(0.14D, movement.y, targetVertical);
+            vertical = Mth.clamp(vertical, -0.09D, 0.075D);
+            setDeltaMovement(movement.x * 0.90D, vertical, movement.z * 0.90D);
+            setXRot(Mth.approachDegrees(getXRot(), 0.0F, 2.4F));
             entityData.set(SPINO_SWIMMING, true);
             entityData.set(SPINO_SWIM_SPEED, (float)getDeltaMovement().length());
         }
@@ -5485,7 +5561,8 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         if (commandMode == DinosaurCommandMode.STAY) {
             return stayPosition != null && distanceToSqr(stayPosition.getCenter()) > 1.0D;
         }
-        return commandTablePos != null && (workEnabled
+        return commandTablePos != null && (getWorkAction() != 0
+                || !navigation.isDone()
                 || distanceToSqr(commandTablePos.getCenter()) > baseRadius() * baseRadius());
     }
 
@@ -5524,6 +5601,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             boolean parasaurolophus = species.equals("parasaurolophus");
             boolean velociraptor = species.equals("velociraptor");
             boolean spinosaurus = species.equals("spinosaurus");
+            if (velociraptor) test.controller().setTransitionTicks(10);
             if (pteranodon) {
                 test.controller().setTransitionTicks(9);
                 if (dinosaur.isDinosaurSleeping()) {

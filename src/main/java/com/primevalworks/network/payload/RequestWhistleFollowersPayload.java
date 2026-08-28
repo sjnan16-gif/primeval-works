@@ -53,9 +53,14 @@ public record RequestWhistleFollowersPayload(BlockPos first, BlockPos second, bo
                 if (entries.size() >= DinosaurOwnership.followerLimit(player)) break;
                 int rating = DinoFieldWorkRules.rating(dinosaur, settings.mode());
                 boolean valid = rating > 0
-                        && DinoFieldWorkRules.validTarget(player.level(), payload.first, settings.mode(), rating);
+                        && DinoFieldWorkRules.validTarget(player.level(), payload.first, settings.mode(), rating)
+                        && (settings.mode() != DinoWhistleSettings.FieldMode.QUARRY
+                        || settings.pattern() != DinoWhistleSettings.Pattern.AREA
+                        || DinoFieldWorkRules.areaWithinLimits(
+                                payload.first, payload.second, dinosaur.getDinosaurLevel()));
                 entries.add(new WhistleFollowerListPayload.Entry(dinosaur.getId(), dinosaur.getUUID(),
-                        dinosaur.getDisplayName().getString(), dinosaur.getSpecies().registryName(), rating, valid));
+                        dinosaur.getDisplayName().getString(), dinosaur.getSpecies().registryName(),
+                        dinosaur.getDinosaurLevel(), rating, valid));
             }
             PacketDistributor.sendToPlayer(player, new WhistleFollowerListPayload(payload.first,
                     payload.second, payload.hasSecond, settings.mode().ordinal(), settings.pattern().ordinal(),

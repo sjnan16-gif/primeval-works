@@ -165,6 +165,13 @@ public final class DinosaurOwnership {
         activateForTable(player, player.level(), tablePos, false, true);
     }
 
+    public static void prepareActiveRestore(ServerPlayer player) {
+        Set<UUID> active = Set.copyOf(activeIds(player));
+        for (OwnedDinosaur record : records(player)) {
+            if (active.contains(record.id())) findOrLoad(player.level().getServer(), record);
+        }
+    }
+
     public static void restoreActiveForTable(ServerPlayer player, CommandTableBlock.ClaimedTable table) {
         activateForTable(player, table.level(), table.pos(), false, true);
     }

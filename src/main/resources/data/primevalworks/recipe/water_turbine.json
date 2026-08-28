@@ -1,7 +1,13 @@
 {
   "type": "minecraft:crafting_shaped",
   "category": "redstone",
-  "key": {"C": "minecraft:copper_ingot", "I": "minecraft:iron_ingot", "R": "minecraft:redstone"},
-  "pattern": ["CIC", "IRI", "CIC"],
+  "key": {
+    "B": "primevalworks:big_dino_bone",
+    "C": "minecraft:copper_ingot",
+    "H": "primevalworks:hardwood",
+    "I": "minecraft:iron_ingot",
+    "R": "minecraft:redstone"
+  },
+  "pattern": ["HBH", "CRC", "IBI"],
   "result": {"id": "primevalworks:water_turbine"}
 }

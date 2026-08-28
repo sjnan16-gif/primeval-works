@@ -22,9 +22,9 @@ public final class SpinosaurusHeadBlock extends BaseEntityBlock {
     public static final MapCodec<SpinosaurusHeadBlock> CODEC = simpleCodec(SpinosaurusHeadBlock::new);
     public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     private static final VoxelShape EAST_WEST_SHAPE = Block.box(
-            0.4D, 0.0D, 1.6D, 15.2D, 8.4D, 14.4D);
+            -11.0D, 0.0D, -8.0D, 27.0D, 21.0D, 24.0D);
     private static final VoxelShape NORTH_SOUTH_SHAPE = Block.box(
-            1.6D, 0.0D, 0.4D, 14.4D, 8.4D, 15.2D);
+            -8.0D, 0.0D, -11.0D, 24.0D, 21.0D, 27.0D);
 
     public SpinosaurusHeadBlock(Properties properties) {
         super(properties);

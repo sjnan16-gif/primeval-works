@@ -18,7 +18,7 @@ final class BlockPreviewAssetsTest {
     private static final Pattern MODEL_REFERENCE = Pattern.compile("\\\"(?:model|base)\\\"\\s*:\\s*\\\"([^\\\"]+)\\\"");
     private static final Pattern PARENT_REFERENCE = Pattern.compile("\\\"parent\\\"\\s*:\\s*\\\"([^\\\"]+)\\\"");
     private static final Set<String> FITTED_PRESENTATION_TEMPLATES = Set.of(
-            "template_compact_block.json", "template_dinosaur_egg.json");
+            "template_compact_block.json", "template_dinosaur_egg.json", "spinosaurus_head.json");
     private static final List<String> BLOCK_ITEMS = List.of(
             "command_table", "food_box", "wind_turbine", "upgraded_wind_turbine", "water_turbine",
             "laser_observer", "ancient_barrel",
@@ -79,6 +79,10 @@ final class BlockPreviewAssetsTest {
 
         assertParent("laser_turret_item", "primevalworks:item/template_compact_block");
         assertParent("spinosaurus_head", "primevalworks:item/template_compact_block");
+        String trophy = Files.readString(Path.of(
+                "src/main/resources/assets/primevalworks/models/block/spinosaurus_head.json"));
+        assertTrue(trophy.contains("\"gui\":") && trophy.contains("\"scale\": [0.48, 0.48, 0.48]"),
+                "The full-size Spinosaurus trophy no longer has a fitted inventory presentation");
         for (String egg : List.of("small_dinosaur_egg", "big_dinosaur_egg", "large_dinosaur_egg")) {
             assertParent(egg, "primevalworks:item/template_dinosaur_egg");
         }
@@ -87,7 +91,8 @@ final class BlockPreviewAssetsTest {
     private static void assertParent(String blockModel, String expectedParent) throws Exception {
         String json = Files.readString(Path.of(
                 "src/main/resources/assets/primevalworks/models/block/" + blockModel + ".json"));
-        assertTrue(json.contains("\"parent\": \"" + expectedParent + "\""),
+        Matcher matcher = PARENT_REFERENCE.matcher(json);
+        assertTrue(matcher.find() && matcher.group(1).equals(expectedParent),
                 blockModel + " stopped using its reviewed item-only presentation");
     }
 

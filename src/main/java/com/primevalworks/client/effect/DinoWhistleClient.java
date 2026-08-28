@@ -9,6 +9,7 @@ import com.primevalworks.world.entity.FieldDodoEntity;
 import com.primevalworks.world.item.DinoWhistleItem;
 import com.primevalworks.world.work.DinoFieldWorkRules;
 import com.primevalworks.world.work.DinoWhistleSettings;
+import com.primevalworks.world.work.DinosaurCommandMode;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -78,7 +79,13 @@ public final class DinoWhistleClient {
             if (Util.getNanos() - firstCornerMarkedAt < 180_000_000L) return;
             if (!DinoFieldWorkRules.areaWithinLimits(areaFirst, selected)) {
                 minecraft.player.sendOverlayMessage(Component.literal(
-                        "That area is too large. Mark a closer opposite corner."));
+                        "That quarry is beyond the maximum field boundary."));
+                return;
+            }
+            int requiredLevel = DinoFieldWorkRules.requiredLevel(areaFirst, selected);
+            if (bestAvailableQuarryLevel(minecraft) < requiredLevel) {
+                minecraft.player.sendOverlayMessage(Component.literal(
+                        "Level a Quarry dinosaur to " + requiredLevel + " before marking this area."));
                 return;
             }
             BlockPos first = areaFirst;
@@ -160,9 +167,13 @@ public final class DinoWhistleClient {
                 clearAreaSelection();
             } else {
                 renderBlock(event, areaFirst, 0xE96FE49A, 4.0F);
-                if (minecraft.hitResult instanceof BlockHitResult hit
-                        && DinoFieldWorkRules.areaWithinLimits(areaFirst, hit.getBlockPos())) {
-                    renderArea(event, areaFirst, hit.getBlockPos(), 0x706FE49A, 2.5F);
+                if (minecraft.hitResult instanceof BlockHitResult hit) {
+                    BlockPos second = hit.getBlockPos();
+                    boolean absoluteValid = DinoFieldWorkRules.areaWithinLimits(areaFirst, second);
+                    boolean levelValid = absoluteValid
+                            && bestAvailableQuarryLevel(minecraft) >= DinoFieldWorkRules.requiredLevel(areaFirst, second);
+                    renderArea(event, areaFirst, second,
+                            levelValid ? 0x706FE49A : 0x70E65A54, 2.5F, levelValid);
                 }
             }
         }
@@ -178,7 +189,7 @@ public final class DinoWhistleClient {
             if (first == null) continue;
             BlockPos second = dinosaur.getFieldWorkSecond().orElse(null);
             if (dinosaur.getFieldWorkPattern() == DinoWhistleSettings.Pattern.AREA && second != null) {
-                renderArea(event, first, second, 0x486FE49A, 2.0F);
+                renderArea(event, first, second, 0x586FE49A, 2.0F, true);
             } else {
                 renderBlock(event, first, 0x786FE49A, 2.5F);
             }
@@ -193,15 +204,30 @@ public final class DinoWhistleClient {
         submitShape(event, shape.move(pos.getX(), pos.getY(), pos.getZ()), color, width);
     }
 
+    private static int bestAvailableQuarryLevel(Minecraft minecraft) {
+        if (minecraft.player == null || minecraft.level == null) return 0;
+        AABB search = minecraft.player.getBoundingBox().inflate(DinoWhistleSettings.MAX_RANGE + 18.0D);
+        return minecraft.level.getEntitiesOfClass(FieldDodoEntity.class, search,
+                        dinosaur -> dinosaur.isOwnedBy(minecraft.player.getUUID())
+                                && dinosaur.getCommandMode() == DinosaurCommandMode.FOLLOW
+                                && !dinosaur.isOnExpedition()
+                                && !dinosaur.isIncapacitated()
+                                && DinoFieldWorkRules.rating(
+                                        dinosaur, DinoWhistleSettings.FieldMode.QUARRY) > 0)
+                .stream().mapToInt(FieldDodoEntity::getDinosaurLevel).max().orElse(0);
+    }
+
     private static void renderArea(SubmitCustomGeometryEvent event, BlockPos first, BlockPos second,
-                                   int color, float width) {
+                                   int color, float width, boolean movingStripes) {
         double minX = Math.min(first.getX(), second.getX());
         double minY = Math.min(first.getY(), second.getY());
         double minZ = Math.min(first.getZ(), second.getZ());
         double maxX = Math.max(first.getX(), second.getX()) + 1.0D;
         double maxY = Math.max(first.getY(), second.getY()) + 1.0D;
         double maxZ = Math.max(first.getZ(), second.getZ()) + 1.0D;
-        submitShape(event, Shapes.create(new AABB(minX, minY, minZ, maxX, maxY, maxZ)), color, width);
+        VoxelShape shape = Shapes.create(new AABB(minX, minY, minZ, maxX, maxY, maxZ));
+        submitShape(event, shape, color, width);
+        if (movingStripes) submitMovingStripes(event, shape, 0xE9C9FFD9, width + 0.8F);
     }
 
     private static void submitShape(SubmitCustomGeometryEvent event, VoxelShape shape, int color, float width) {
@@ -218,6 +244,42 @@ public final class DinoWhistleClient {
                     vertices.addVertex(matrix, (float)(x2 - camera.x), (float)(y2 - camera.y),
                                     (float)(z2 - camera.z))
                             .setColor(color).setNormal(matrix, normal).setLineWidth(width);
+                }));
+    }
+
+    private static void submitMovingStripes(SubmitCustomGeometryEvent event, VoxelShape shape,
+                                            int color, float width) {
+        Vec3 camera = event.getLevelRenderState().cameraRenderState.pos;
+        SubmitNodeCollector submits = event.getSubmitNodeCollector();
+        PoseStack pose = event.getPoseStack();
+        double period = 0.48D;
+        double stripeLength = 0.19D;
+        double phase = ((Util.getNanos() / 1_000_000_000.0D) * 0.82D) % period;
+        submits.submitCustomGeometry(pose, WorksitePlannerScreen.XRAY_HIGHLIGHT_TYPE,
+                (matrix, vertices) -> shape.forAllEdges((x1, y1, z1, x2, y2, z2) -> {
+                    double dx = x2 - x1;
+                    double dy = y2 - y1;
+                    double dz = z2 - z1;
+                    double length = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                    if (length < 1.0E-5D) return;
+                    Vector3f normal = new Vector3f((float)dx, (float)dy, (float)dz).normalize();
+                    for (double start = phase - period; start < length; start += period) {
+                        double from = Math.max(0.0D, start);
+                        double to = Math.min(length, start + stripeLength);
+                        if (to <= from) continue;
+                        double fromRatio = from / length;
+                        double toRatio = to / length;
+                        vertices.addVertex(matrix,
+                                        (float)(x1 + dx * fromRatio - camera.x),
+                                        (float)(y1 + dy * fromRatio - camera.y),
+                                        (float)(z1 + dz * fromRatio - camera.z))
+                                .setColor(color).setNormal(matrix, normal).setLineWidth(width);
+                        vertices.addVertex(matrix,
+                                        (float)(x1 + dx * toRatio - camera.x),
+                                        (float)(y1 + dy * toRatio - camera.y),
+                                        (float)(z1 + dz * toRatio - camera.z))
+                                .setColor(color).setNormal(matrix, normal).setLineWidth(width);
+                    }
                 }));
     }
 }

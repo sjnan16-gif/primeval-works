@@ -46,7 +46,7 @@ final class WhistleUiContractTest {
     void whistleConfigIsCompactAndKeepsTheEstablishedMotionLanguage() throws Exception {
         String config = Files.readString(CLIENT.resolve("screen/DinoWhistleScreen.java"));
         assertTrue(config.contains("PANEL_WIDTH = 196"));
-        assertTrue(config.contains("PANEL_HEIGHT = 142"));
+        assertTrue(config.contains("PANEL_HEIGHT = 145"));
         assertTrue(config.contains("MAX_PANEL_SCALE = 1.08F"));
         assertTrue(config.contains("PrimevalBubbleUi.spring"));
         assertTrue(config.contains("PrimevalUiCrop.paperTrack"));
@@ -61,6 +61,9 @@ final class WhistleUiContractTest {
         assertTrue(config.contains("refreshCatalogueItems"));
         assertTrue(config.contains("searchScrollRow"));
         assertTrue(config.contains("updateSearchMotion(deltaTime)"));
+        assertTrue(config.contains("smoothStep(searchReveal)")
+                && config.contains("float stagger")
+                && config.contains("float itemReveal"));
         assertTrue(config.contains("mainPanel()") && config.contains("searchPanel()"));
         assertTrue(config.contains("hoverTooltip"));
         assertTrue(config.contains("fitText(graphics, header"));

@@ -154,6 +154,20 @@ public enum DinosaurSpecies {
         };
     }
 
+    public float fieldWorkReach() {
+        return switch (this) {
+            case SPINOSAURUS -> 7.0F;
+            case BRACHIOSAURUS -> 7.5F;
+            case TYRANNOSAURUS -> 6.2F;
+            case STEGOSAURUS -> 4.8F;
+            case PARASAUROLOPHUS -> 4.3F;
+            case TRICERATOPS, ANKYLOSAURUS -> 4.0F;
+            case PTERANODON -> 3.8F;
+            case VELOCIRAPTOR -> 3.4F;
+            default -> 2.8F;
+        };
+    }
+
     public String passiveTitle() {
         return switch (this) {
             case TYRANNOSAURUS -> "APEX FURNACE";

@@ -34,6 +34,7 @@ public record WhistleFollowerListPayload(BlockPos first, BlockPos second, boolea
             buffer.writeUUID(entry.uuid);
             buffer.writeUtf(entry.name, 96);
             buffer.writeUtf(entry.species, 48);
+            buffer.writeVarInt(entry.level);
             buffer.writeVarInt(entry.rating);
             buffer.writeBoolean(entry.compatible);
         }
@@ -50,7 +51,7 @@ public record WhistleFollowerListPayload(BlockPos first, BlockPos second, boolea
         List<Entry> entries = new ArrayList<>(count);
         for (int index = 0; index < count; index++) {
             entries.add(new Entry(buffer.readVarInt(), buffer.readUUID(), buffer.readUtf(96),
-                    buffer.readUtf(48), buffer.readVarInt(), buffer.readBoolean()));
+                    buffer.readUtf(48), buffer.readVarInt(), buffer.readVarInt(), buffer.readBoolean()));
         }
         return new WhistleFollowerListPayload(first, second, hasSecond, mode, pattern,
                 range, List.copyOf(entries));
@@ -63,5 +64,6 @@ public record WhistleFollowerListPayload(BlockPos first, BlockPos second, boolea
     @Override
     public Type<? extends CustomPacketPayload> type() { return TYPE; }
 
-    public record Entry(int entityId, UUID uuid, String name, String species, int rating, boolean compatible) {}
+    public record Entry(int entityId, UUID uuid, String name, String species,
+                        int level, int rating, boolean compatible) {}
 }

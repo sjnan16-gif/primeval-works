@@ -3,6 +3,7 @@ package com.primevalworks.network.payload;
 import com.primevalworks.PrimevalWorks;
 import com.primevalworks.world.item.DinoWhistleItem;
 import com.primevalworks.world.work.DinoWhistleSettings;
+import com.primevalworks.world.ownership.DinosaurOwnership;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -35,9 +36,14 @@ public record ConfigureDinoWhistlePayload(int inventorySlot, int mode, int patte
             Identifier filterId = payload.itemFilter == null ? null : Identifier.tryParse(payload.itemFilter);
             String filter = mode == DinoWhistleSettings.FieldMode.COLLECT && filterId != null
                     && BuiltInRegistries.ITEM.get(filterId).isPresent() ? filterId.toString() : "";
-            new DinoWhistleSettings(mode,
+            DinoWhistleSettings updated = new DinoWhistleSettings(mode,
                     DinoWhistleSettings.Pattern.byId(payload.pattern), payload.range,
-                    filter).write(whistle);
+                    filter);
+            updated.write(whistle);
+            if (updated.mode().isPassive()) {
+                DinosaurOwnership.loadedFollowers(player).forEach(
+                        dinosaur -> dinosaur.updatePassiveFieldSettings(updated));
+            }
             player.getInventory().setChanged();
             player.containerMenu.broadcastChanges();
         });

@@ -24,6 +24,15 @@ final class DinoFieldWorkRulesTest {
     }
 
     @Test
+    void markedQuarryCapacityGrowsWithDinosaurLevel() {
+        assertTrue(DinoFieldWorkLimits.areaWithinLimits(0, 0, 0, 3, 3, 3, 1));
+        assertFalse(DinoFieldWorkLimits.areaWithinLimits(0, 0, 0, 4, 4, 2, 1));
+        assertTrue(DinoFieldWorkLimits.areaWithinLimits(0, 0, 0, 7, 7, 7, 100));
+        assertEquals(1, DinoFieldWorkLimits.requiredLevel(0, 0, 0, 3, 3, 3));
+        assertEquals(100, DinoFieldWorkLimits.requiredLevel(0, 0, 0, 7, 7, 7));
+    }
+
+    @Test
     void connectedAndAreaCapsStayBounded() {
         assertEquals(64, DinoFieldWorkLimits.MAX_CONNECTED_BLOCKS);
         assertEquals(512, DinoFieldWorkLimits.MAX_AREA_BLOCKS);

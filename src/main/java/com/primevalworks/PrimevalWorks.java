@@ -27,15 +27,21 @@ import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.MobSpawnEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import org.slf4j.Logger;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
 @Mod(PrimevalWorks.MOD_ID)
 public final class PrimevalWorks {
     public static final String MOD_ID = "primevalworks";
     public static final Logger LOGGER = LogUtils.getLogger();
+    private static final Map<UUID, Integer> PENDING_LOGIN_RESTORES = new HashMap<>();
 
     public PrimevalWorks(IEventBus modBus, ModContainer container) {
         container.registerConfig(ModConfig.Type.CLIENT, PrimevalConfig.CLIENT_SPEC, "primevalworks-client.toml");
@@ -61,15 +67,17 @@ public final class PrimevalWorks {
         });
         NeoForge.EVENT_BUS.addListener(PlayerEvent.PlayerLoggedInEvent.class, event -> {
             if (event.getEntity() instanceof ServerPlayer player) {
-                CommandTableBlock.getClaimedTable(player).ifPresent(table ->
-                        DinosaurOwnership.restoreActiveForTable(player, table));
+                DinosaurOwnership.prepareActiveRestore(player);
+                PENDING_LOGIN_RESTORES.put(player.getUUID(), 20);
             }
         });
         NeoForge.EVENT_BUS.addListener(PlayerEvent.PlayerLoggedOutEvent.class, event -> {
             if (event.getEntity() instanceof ServerPlayer player) {
+                PENDING_LOGIN_RESTORES.remove(player.getUUID());
                 DinosaurOwnership.syncLoaded(player);
             }
         });
+        NeoForge.EVENT_BUS.addListener(ServerTickEvent.Post.class, PrimevalWorks::restoreLoginCompanions);
         NeoForge.EVENT_BUS.addListener(LivingIncomingDamageEvent.class, event -> {
             if (!(event.getEntity() instanceof FieldDodoEntity dinosaur)
                     || !dinosaur.shouldRecoverFromLethalDamage(event.getSource())) {
@@ -95,5 +103,23 @@ public final class PrimevalWorks {
         });
         NeoForge.EVENT_BUS.addListener(net.neoforged.neoforge.event.entity.player.ItemTooltipEvent.class,
                 PrimevalItemTooltips::add);
+    }
+
+    private static void restoreLoginCompanions(ServerTickEvent.Post event) {
+        if (PENDING_LOGIN_RESTORES.isEmpty()) return;
+        var iterator = PENDING_LOGIN_RESTORES.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<UUID, Integer> entry = iterator.next();
+            int remaining = entry.getValue() - 1;
+            if (remaining > 0) {
+                entry.setValue(remaining);
+                continue;
+            }
+            iterator.remove();
+            ServerPlayer player = event.getServer().getPlayerList().getPlayer(entry.getKey());
+            if (player == null || player.isRemoved()) continue;
+            CommandTableBlock.getClaimedTable(player).ifPresent(table ->
+                    DinosaurOwnership.restoreActiveForTable(player, table));
+        }
     }
 }

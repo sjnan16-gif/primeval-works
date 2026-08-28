@@ -10,8 +10,10 @@ import com.geckolib.util.GeckoLibUtil;
 import com.primevalworks.registry.ModBlockEntities;
 import com.primevalworks.registry.ModBlocks;
 import com.primevalworks.config.PrimevalTuning;
+import com.primevalworks.world.base.BaseEnergyRules;
 import com.primevalworks.world.block.TurbineBlock;
 import com.primevalworks.world.work.WaterTurbineCouplingRules;
+import com.primevalworks.world.work.WorkSpecialtyRules;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -33,10 +35,12 @@ import java.util.List;
 public final class TurbineBlockEntity extends BlockEntity implements GeoBlockEntity {
     public static final float BASIC_WIND_OUTPUT_MULTIPLIER = 0.6F;
     public static final float UPGRADED_WIND_OUTPUT_MULTIPLIER = 1.0F;
+    public static final float PASSIVE_WATER_OUTPUT_FACTOR = 0.20F;
     private static final RawAnimation SPIN = RawAnimation.begin().thenLoop("spin");
     private final AnimatableInstanceCache animationCache = GeckoLibUtil.createInstanceCache(this);
     private int generationPulseCount;
     private boolean workerActive;
+    private boolean passiveActive;
     private long directWorkerActiveUntilGameTime = Long.MIN_VALUE;
     private long coupledWorkerActiveUntilGameTime = Long.MIN_VALUE;
 
@@ -161,15 +165,39 @@ public final class TurbineBlockEntity extends BlockEntity implements GeoBlockEnt
         return workerActive;
     }
 
+    public boolean isPassiveActive() {
+        return passiveActive;
+    }
+
+    public float passiveWaterEnergyPerSecond() {
+        if (!getBlockState().is(ModBlocks.WATER_TURBINE.get())) return 0.0F;
+        return WorkSpecialtyRules.energyPerSecond(4, 1)
+                * generationMultiplier() * PASSIVE_WATER_OUTPUT_FACTOR;
+    }
+
     public static void serverTick(Level level, BlockPos pos, BlockState state, TurbineBlockEntity turbine) {
         boolean heartbeat = level.getGameTime() <= turbine.directWorkerActiveUntilGameTime
                 || level.getGameTime() <= turbine.coupledWorkerActiveUntilGameTime;
-        turbine.setWorkerActive(heartbeat && turbine.hasValidEnvironment());
+        boolean valid = turbine.hasValidEnvironment();
+        boolean passive = false;
+        if (valid && state.is(ModBlocks.WATER_TURBINE.get()) && level instanceof ServerLevel serverLevel) {
+            CommandTableBlockEntity table = BaseEnergyRules.nearestLoadedTable(serverLevel, pos);
+            if (table != null) {
+                table.receiveGeneratedEnergy(turbine.passiveWaterEnergyPerSecond() / 20.0F);
+                passive = true;
+            }
+        }
+        turbine.setGenerationState(heartbeat && valid, passive);
     }
 
     private void setWorkerActive(boolean active) {
-        if (workerActive == active) return;
-        workerActive = active;
+        setGenerationState(active, passiveActive);
+    }
+
+    private void setGenerationState(boolean worked, boolean passive) {
+        if (workerActive == worked && passiveActive == passive) return;
+        workerActive = worked;
+        passiveActive = passive;
         if (level != null && !level.isClientSide()) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 2);
         }
@@ -190,8 +218,11 @@ public final class TurbineBlockEntity extends BlockEntity implements GeoBlockEnt
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
         controllers.add(new AnimationController<TurbineBlockEntity>("Rotor", 8,
-                state -> workerActive && hasValidEnvironment()
-                        ? state.setAndContinue(SPIN) : PlayState.STOP));
+                state -> {
+                    if ((!workerActive && !passiveActive) || !hasValidEnvironment()) return PlayState.STOP;
+                    state.setControllerSpeed(workerActive ? 1.0F : PASSIVE_WATER_OUTPUT_FACTOR);
+                    return state.setAndContinue(SPIN);
+                }));
     }
 
     @Override
@@ -203,6 +234,7 @@ public final class TurbineBlockEntity extends BlockEntity implements GeoBlockEnt
     protected void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
         workerActive = input.getBooleanOr("WorkerActive", false);
+        passiveActive = input.getBooleanOr("PassiveActive", false);
         directWorkerActiveUntilGameTime = Long.MIN_VALUE;
         coupledWorkerActiveUntilGameTime = Long.MIN_VALUE;
     }
@@ -211,6 +243,7 @@ public final class TurbineBlockEntity extends BlockEntity implements GeoBlockEnt
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         CompoundTag tag = saveWithoutMetadata(registries);
         tag.putBoolean("WorkerActive", workerActive);
+        tag.putBoolean("PassiveActive", passiveActive);
         return tag;
     }
 

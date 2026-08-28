@@ -137,14 +137,26 @@ public final class WhistleFollowerPickerScreen extends Screen {
     private void drawHoverLabel(GuiGraphicsExtractor graphics, WhistleFollowerListPayload.Entry entry, int y) {
         String name = entry.name().toUpperCase();
         String detail = entry.compatible()
-                ? entry.rating() + " STAR  /  CLICK TO ASSIGN"
-                : "THIS COMPANION CANNOT DO THIS ORDER";
+                ? "LEVEL " + entry.level() + "  /  " + entry.rating() + " STAR  /  CLICK TO ASSIGN"
+                : quarryLevelMessage(entry);
         int width = Mth.clamp(Math.max(font.width(name), font.width(detail)) + 18, 76, 164);
         int x = (this.width - width) / 2;
         PrimevalBubbleUi.draw(graphics, x, y, width, 25);
         fitText(graphics, name, x + 7, y + 5, width - 14,
                 entry.compatible() ? INK : 0xFF9C5149, 0.68F, true);
         fitText(graphics, detail, x + 7, y + 15, width - 14, MUTED_INK, 0.55F, true);
+    }
+
+    private String quarryLevelMessage(WhistleFollowerListPayload.Entry entry) {
+        DinoWhistleSettings.FieldMode mode = DinoWhistleSettings.FieldMode.byId(payload.mode());
+        DinoWhistleSettings.Pattern pattern = DinoWhistleSettings.Pattern.byId(payload.pattern());
+        if (mode == DinoWhistleSettings.FieldMode.QUARRY
+                && pattern == DinoWhistleSettings.Pattern.AREA
+                && payload.hasSecond()) {
+            int required = DinoFieldWorkRules.requiredLevel(payload.first(), payload.second());
+            if (required > entry.level()) return "LEVEL " + required + " REQUIRED FOR THIS QUARRY";
+        }
+        return "THIS COMPANION CANNOT DO THIS ORDER";
     }
 
     @Override

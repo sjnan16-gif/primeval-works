@@ -33,7 +33,7 @@ import java.util.Locale;
 
 public final class DinoWhistleScreen extends Screen {
     private static final int PANEL_WIDTH = 196;
-    private static final int PANEL_HEIGHT = 142;
+    private static final int PANEL_HEIGHT = 145;
     private static final int PANEL_GAP = 8;
     private static final int SEARCH_PANEL_WIDTH = 198;
     private static final int SEARCH_PANEL_HEIGHT = 128;
@@ -267,8 +267,8 @@ public final class DinoWhistleScreen extends Screen {
         }
         FieldDodoEntity dinosaur = entity(entry.entityId());
         if (dinosaur != null) {
-            DinosaurPreviewUi.draw(graphics, dinosaur, slot.x + 1, slot.y + 3,
-                    slot.w - 4, slot.h - 5, 42.0F, -25.0F);
+            DinosaurPreviewUi.draw(graphics, dinosaur, slot.x + 1, slot.y + 1,
+                    slot.w - 2, slot.h - 2, 0.0F, -8.0F);
         }
         if (!entry.compatible()) {
             graphics.fill(slot.x + 2, slot.y + 2, slot.right() - 2, slot.bottom() - 2, 0x92211C20);
@@ -322,33 +322,33 @@ public final class DinoWhistleScreen extends Screen {
     }
 
     private void drawSearchPicker(GuiGraphicsExtractor graphics, Rect panel, float mouseX, float mouseY) {
-        float settled = PrimevalBubbleUi.spring(Mth.clamp(searchReveal, 0.0F, 1.0F), 6.4F, 10.8F);
-        float scale = 0.88F + 0.12F * settled;
-        float offsetY = 12.0F * (1.0F - settled);
-        int alpha = Math.round(255.0F * Mth.clamp(searchReveal * 1.25F, 0.0F, 1.0F));
-        graphics.pose().pushMatrix();
-        graphics.pose().translate(panel.centerX(), panel.bottom() + offsetY);
-        graphics.pose().scale(scale, scale);
-        graphics.pose().translate(-panel.centerX(), -panel.bottom());
+        float reveal = smoothStep(searchReveal);
+        int alpha = Math.round(255.0F * reveal);
 
         Rect target = searchTarget(panel);
         Rect search = searchRect(panel);
         boolean targetHovered = target.contains(mouseX, mouseY);
         drawSearchInventorySlot(graphics, target, targetHovered, 0, alpha);
         ItemStack selected = filterStack();
-        if (selected.isEmpty()) centeredText(graphics, "+", target, modeColor(), 1.0F);
+        float targetReveal = smoothStep(Mth.clamp(searchReveal * 1.45F, 0.0F, 1.0F));
+        graphics.pose().pushMatrix();
+        graphics.pose().translate(target.centerX(), target.centerY());
+        graphics.pose().scale(Math.max(0.04F, targetReveal), Math.max(0.04F, targetReveal));
+        graphics.pose().translate(-target.centerX(), -target.centerY());
+        if (selected.isEmpty()) centeredText(graphics, "+", target, withAlpha(modeColor(), alpha), 1.0F);
         else graphics.item(selected, target.x + 2, target.y + 2);
+        graphics.pose().popMatrix();
         if (targetHovered) {
             graphics.requestCursor(CursorTypes.POINTING_HAND);
             hoverTooltip = tooltip(selected.isEmpty() ? "Any item" : selected.getHoverName().getString(),
                     modeColor(), selected.isEmpty() ? "No filter is active." : "The current collection filter.",
                     selected.isEmpty() ? "Drag an inventory item into this slot." : "Click to clear it.");
         }
-        int revealedWidth = Math.max(4, Math.round(search.w * searchReveal));
+        int revealedWidth = Math.max(4, Math.round(search.w * reveal));
         drawBubble(graphics, new Rect(search.x, search.y, revealedWidth, search.h));
         if (searchBox != null && searchBox.getValue().isBlank() && searchReveal > 0.82F) {
             fitText(graphics, "SEARCH ITEM TYPES", search.x + 6, search.y + 5,
-                    search.w - 12, MUTED, 0.66F, true);
+                    search.w - 12, withAlpha(MUTED, alpha), 0.66F, true);
         }
 
         Rect results = searchResults(panel);
@@ -358,7 +358,7 @@ public final class DinoWhistleScreen extends Screen {
         searchScrollRow = Mth.clamp(searchScrollRow, 0, maximumRow);
         String header = items.isEmpty() ? "NO MATCHES" : items.size() + " ITEM TYPES  /  DRAG A FILTER";
         fitText(graphics, header, results.x + 8, results.y + 6,
-                results.w - 16, modeColor(), 0.70F, true);
+                results.w - 16, withAlpha(modeColor(), alpha), 0.70F, true);
         PrimevalUiCrop.paperHorizontalRule(graphics, results.x + 7, results.y + 17,
                 results.w - 14, 2, alpha);
 
@@ -370,8 +370,16 @@ public final class DinoWhistleScreen extends Screen {
             boolean hovered = slot.contains(mouseX, mouseY);
             drawSearchInventorySlot(graphics, slot, hovered && !stack.isEmpty(), index, alpha);
             if (!stack.isEmpty()) {
+                float stagger = Math.min(0.26F, index * 0.006F);
+                float itemReveal = smoothStep(Mth.clamp(
+                        (searchReveal - stagger) / Math.max(0.01F, 1.0F - stagger), 0.0F, 1.0F));
+                graphics.pose().pushMatrix();
+                graphics.pose().translate(slot.centerX(), slot.centerY());
+                graphics.pose().scale(Math.max(0.03F, itemReveal), Math.max(0.03F, itemReveal));
+                graphics.pose().translate(-slot.centerX(), -slot.centerY());
                 graphics.item(stack, slot.x + 2, slot.y + 2);
                 graphics.itemDecorations(font, stack, slot.x + 2, slot.y + 2);
+                graphics.pose().popMatrix();
             }
             if (hovered && !stack.isEmpty()) {
                 graphics.requestCursor(CursorTypes.POINTING_HAND);
@@ -382,11 +390,10 @@ public final class DinoWhistleScreen extends Screen {
             }
         }
         if (maximumRow > 0) {
-            String page = (searchScrollRow + 1) + " / " + (maximumRow + 1) + "  •  SCROLL";
+            String page = (searchScrollRow + 1) + " / " + (maximumRow + 1) + "  /  SCROLL";
             rightText(graphics, page, results.right() - 8, results.bottom() - 10,
-                    results.w - 16, MUTED, 0.58F);
+                    results.w - 16, withAlpha(MUTED, alpha), 0.58F);
         }
-        graphics.pose().popMatrix();
     }
 
     @Override
@@ -571,16 +578,17 @@ public final class DinoWhistleScreen extends Screen {
     private void updateSearchBox(Motion motion) {
         if (searchBox == null) return;
         Rect logical = searchRect(searchPanel());
+        float reveal = smoothStep(searchReveal);
         float left = motion.screenX(logical.x + 5);
         float top = motion.screenY(logical.y + 2);
-        float right = motion.screenX(logical.right() - 5);
+        float right = motion.screenX(logical.x + 5 + (logical.w - 10) * reveal);
         float bottom = motion.screenY(logical.bottom() - 2);
         searchBox.setX(Math.round(left));
         searchBox.setY(Math.round(top));
         searchBox.setWidth(Math.max(20, Math.round(right - left)));
         searchBox.setHeight(Math.max(9, Math.round(bottom - top)));
-        searchBox.setAlpha(Mth.clamp(searchReveal, 0.0F, 1.0F));
-        searchBox.setVisible(searchOpen && searchReveal > 0.82F);
+        searchBox.setAlpha(reveal);
+        searchBox.setVisible(searchReveal > 0.08F);
     }
 
     private void refreshCatalogueItems() {
@@ -685,9 +693,9 @@ public final class DinoWhistleScreen extends Screen {
     private Rect headerRect(Rect panel) { return new Rect(panel.x, panel.y, panel.w, 19); }
     private Rect dutyRect(Rect header) { return new Rect(header.right() - 75, header.y + 3, 72, header.h - 6); }
     private Rect orderRect(Rect panel) { return new Rect(panel.x, panel.y + 22, panel.w, 23); }
-    private Rect behaviorRect(Rect panel) { return new Rect(panel.x, panel.y + 48, panel.w, 32); }
-    private Rect rangeRect(Rect panel) { return new Rect(panel.x, panel.y + 83, panel.w, 25); }
-    private Rect followerRect(Rect panel) { return new Rect(panel.x, panel.y + 111, panel.w, 31); }
+    private Rect behaviorRect(Rect panel) { return new Rect(panel.x, panel.y + 48, panel.w, 35); }
+    private Rect rangeRect(Rect panel) { return new Rect(panel.x, panel.y + 86, panel.w, 25); }
+    private Rect followerRect(Rect panel) { return new Rect(panel.x, panel.y + 114, panel.w, 31); }
     private Rect followerSlot(Rect row, int index) { return new Rect(row.x + 53 + index * 24, row.y + 6, 18, 18); }
     private Rect filterSlot(Rect row) { return new Rect(row.right() - 24, row.y + 6, 18, 18); }
     private Rect searchTarget(Rect panel) { return new Rect(panel.x, panel.y, 20, 20); }

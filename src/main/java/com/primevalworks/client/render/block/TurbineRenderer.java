@@ -31,7 +31,7 @@ public final class TurbineRenderer<R extends BlockEntityRenderState & GeoRenderS
 
     @Override
     public RenderType getRenderType(R renderState, Identifier texture) {
-        return RenderTypes.entityCutoutCull(texture);
+        return RenderTypes.entityCutout(texture);
     }
 
     @Override

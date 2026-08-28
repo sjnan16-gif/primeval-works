@@ -88,4 +88,14 @@ public final class DinoFieldWorkRules {
                                            int secondX, int secondY, int secondZ) {
         return DinoFieldWorkLimits.areaWithinLimits(firstX, firstY, firstZ, secondX, secondY, secondZ);
     }
+
+    public static boolean areaWithinLimits(BlockPos first, BlockPos second, int dinosaurLevel) {
+        return DinoFieldWorkLimits.areaWithinLimits(first.getX(), first.getY(), first.getZ(),
+                second.getX(), second.getY(), second.getZ(), dinosaurLevel);
+    }
+
+    public static int requiredLevel(BlockPos first, BlockPos second) {
+        return DinoFieldWorkLimits.requiredLevel(first.getX(), first.getY(), first.getZ(),
+                second.getX(), second.getY(), second.getZ());
+    }
 }

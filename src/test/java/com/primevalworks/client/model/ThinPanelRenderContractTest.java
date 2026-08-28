@@ -21,11 +21,12 @@ final class ThinPanelRenderContractTest {
     }
 
     @Test
-    void animatedBlocksUseCutoutBackFaceCulling() throws Exception {
-        for (String rendererName : new String[] {"TurbineRenderer.java", "LaserTurretRenderer.java"}) {
-            String renderer = Files.readString(SOURCE.resolve("block/" + rendererName));
-            assertTrue(renderer.contains("RenderTypes.entityCutoutCull(texture)"),
-                    rendererName + " can blend coincident front/back panel textures");
-        }
+    void animatedBlocksChooseTheCutoutModeTheirGeometryNeeds() throws Exception {
+        String turbine = Files.readString(SOURCE.resolve("block/TurbineRenderer.java"));
+        assertTrue(turbine.contains("RenderTypes.entityCutout(texture)"),
+                "Turbine panel backs can disappear at oblique viewing angles");
+        String turret = Files.readString(SOURCE.resolve("block/LaserTurretRenderer.java"));
+        assertTrue(turret.contains("RenderTypes.entityCutoutCull(texture)"),
+                "Solid turret geometry lost its normal back-face culling");
     }
 }

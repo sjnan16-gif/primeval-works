@@ -1823,7 +1823,13 @@ public final class PrimevalGameTests {
                 .count();
         helper.assertTrue(activeNeighbors == 2,
                 "Coupling powered more than two neighboring Water Turbines");
-        helper.succeed();
+        helper.runAfterDelay(2, () -> {
+            helper.assertTrue(table.storedEnergy() > 0.0F,
+                    "A submerged Water Turbine did not generate its passive twenty-percent output");
+            helper.assertTrue(leader.isPassiveActive(),
+                    "The passive Water Turbine rotor did not enter its low-speed animation state");
+            helper.succeed();
+        });
     }
 
     private static void placeSubmergedWaterTurbine(GameTestHelper helper, BlockPos masterRelative) {
