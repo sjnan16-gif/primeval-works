@@ -34,6 +34,7 @@ import com.primevalworks.network.payload.AssignWhistleFieldWorkPayload;
 import com.primevalworks.network.payload.RequestPassiveWhistleFollowersPayload;
 import com.primevalworks.network.payload.PassiveWhistleFollowersPayload;
 import com.primevalworks.network.payload.AssignPassiveWhistleWorkPayload;
+import com.primevalworks.network.payload.StopWhistleFieldWorkPayload;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 
@@ -215,6 +216,11 @@ public final class ModNetworking {
                 AssignPassiveWhistleWorkPayload.TYPE,
                 AssignPassiveWhistleWorkPayload.STREAM_CODEC,
                 AssignPassiveWhistleWorkPayload::handle
+        );
+        event.registrar("1").playToServer(
+                StopWhistleFieldWorkPayload.TYPE,
+                StopWhistleFieldWorkPayload.STREAM_CODEC,
+                StopWhistleFieldWorkPayload::handle
         );
     }
 }

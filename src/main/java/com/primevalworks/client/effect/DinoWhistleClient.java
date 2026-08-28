@@ -74,7 +74,7 @@ public final class DinoWhistleClient {
                 areaDimension = minecraft.level.dimension();
                 firstCornerMarkedAt = Util.getNanos();
                 ClientPacketDistributor.sendToServer(
-                        new RequestWhistleFollowersPayload(selected, selected, false));
+                        new RequestWhistleFollowersPayload(selected, selected, false, settings));
                 minecraft.player.sendOverlayMessage(Component.literal("First corner saved. Mark the opposite corner."));
                 return;
             }
@@ -92,11 +92,13 @@ public final class DinoWhistleClient {
             }
             BlockPos first = areaFirst;
             clearAreaSelection();
-            ClientPacketDistributor.sendToServer(new RequestWhistleFollowersPayload(first, selected, true));
+            ClientPacketDistributor.sendToServer(
+                    new RequestWhistleFollowersPayload(first, selected, true, settings));
             return;
         }
         clearAreaSelection();
-        ClientPacketDistributor.sendToServer(new RequestWhistleFollowersPayload(selected, selected, false));
+        ClientPacketDistributor.sendToServer(
+                new RequestWhistleFollowersPayload(selected, selected, false, settings));
     }
 
     public static void handleInventoryRightClick(ScreenEvent.MouseButtonPressed.Pre event) {

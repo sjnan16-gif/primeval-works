@@ -6,8 +6,10 @@ import com.primevalworks.network.payload.AssignPassiveWhistleWorkPayload;
 import com.primevalworks.network.payload.ConfigureDinoWhistlePayload;
 import com.primevalworks.network.payload.PassiveWhistleFollowersPayload;
 import com.primevalworks.network.payload.RequestPassiveWhistleFollowersPayload;
+import com.primevalworks.network.payload.StopWhistleFieldWorkPayload;
 import com.primevalworks.registry.ModItems;
 import com.primevalworks.world.entity.FieldDodoEntity;
+import com.primevalworks.world.item.DinoWhistleItem;
 import com.primevalworks.world.work.DinoWhistleSettings;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -58,6 +60,7 @@ public final class DinoWhistleScreen extends Screen {
     private long previousFrame;
     private long pressedAt;
     private int pressedKey = -1;
+    private int availableModes = -1;
     private float parallaxX;
     private float parallaxY;
     private float searchReveal;
@@ -82,6 +85,17 @@ public final class DinoWhistleScreen extends Screen {
     public static void acceptFollowers(PassiveWhistleFollowersPayload payload) {
         DinoWhistleScreen screen = active;
         if (screen == null || screen.inventorySlot != payload.inventorySlot()) return;
+        screen.availableModes = payload.availableModes();
+        if (screen.availableModes != 0 && !screen.settings.mode().isAvailableIn(screen.availableModes)) {
+            DinoWhistleSettings.FieldMode replacement = screen.settings.mode().nextAvailable(screen.availableModes);
+            screen.settings = screen.copy(replacement, replacement.normalizePattern(screen.settings.pattern()),
+                    screen.settings.range(), screen.settings.itemFilter());
+            screen.followers.clear();
+            screen.send();
+            screen.requestFollowers();
+            return;
+        }
+        if (payload.mode() != screen.settings.mode().ordinal()) return;
         screen.followers.clear();
         screen.followers.addAll(payload.entries());
     }
@@ -155,10 +169,15 @@ public final class DinoWhistleScreen extends Screen {
         boolean orderHovered = order.contains(mouseX, mouseY);
         drawInteractiveRegion(graphics, order, 0, orderHovered, () -> {
             drawCycleRow(graphics, order, orderHovered, modeColor(),
-                    "ORDER", settings.mode().title().toUpperCase(Locale.ROOT));
+                    "ORDER", availableModes == 0
+                            ? "NO SPECIALIST" : settings.mode().title().toUpperCase(Locale.ROOT));
             if (orderHovered) {
-                hoverTooltip = tooltip(settings.mode().title(), modeColor(),
-                        settings.mode().description(), "Click to choose the next field order.");
+                hoverTooltip = availableModes == 0
+                        ? tooltip("No field specialist", 0xFF9C5149,
+                        "None of your current followers has a Whistle specialty.",
+                        "Set a compatible active companion to Follow first.")
+                        : tooltip(settings.mode().title(), modeColor(), settings.mode().description(),
+                        "Click to choose the next available field order.");
             }
         });
 
@@ -210,13 +229,33 @@ public final class DinoWhistleScreen extends Screen {
         drawInsetBubble(graphics, followerLabel);
         if (!settings.mode().isPassive()) {
             centeredText(graphics, "ASSIGN", followerLabel, MUTED, 0.66F);
-            Rect instruction = new Rect(row.x + 52, row.y + 4, row.w - 56, row.h - 8);
+            int assigned = assignedCount();
+            Rect stop = markedStopRect(row);
+            Rect instruction = new Rect(row.x + 52, row.y + 4,
+                    assigned > 0 ? stop.x - row.x - 55 : row.w - 56, row.h - 8);
             drawInsetBubble(graphics, instruction);
             drawWrappedText(graphics, settings.mode().markHint(settings.pattern()).toUpperCase(Locale.ROOT),
                     instruction.x + 5, instruction.y + 5, instruction.w - 10, modeColor(), 0.66F, 2);
+            if (assigned > 0) {
+                boolean stopHovered = stop.contains(mouseX, mouseY);
+                drawInsetBubble(graphics, stop);
+                if (stopHovered) {
+                    graphics.fill(stop.x + 1, stop.y + 1, stop.right() - 1, stop.bottom() - 1, 0x24FFFFFF);
+                    graphics.requestCursor(CursorTypes.POINTING_HAND);
+                    hoverTooltip = tooltip("Stop " + settings.mode().title(), 0xFFC74F43,
+                            "Cancels " + assigned + " active " + settings.mode().title().toLowerCase()
+                                    + (assigned == 1 ? " order." : " orders."),
+                            "The selected dinosaurs return to normal Follow behavior.");
+                }
+                centeredText(graphics, assigned == 1 ? "STOP" : "STOP " + assigned,
+                        stop, stopHovered ? LABEL : INK, 0.64F);
+            }
             if (row.contains(mouseX, mouseY)) {
-                hoverTooltip = tooltip("Assign in the world", modeColor(),
-                        settings.mode().targetDescription(settings.pattern()), settings.mode().markHint(settings.pattern()));
+                if (assigned == 0 || !stop.contains(mouseX, mouseY)) {
+                    hoverTooltip = tooltip("Assign in the world", modeColor(),
+                            settings.mode().targetDescription(settings.pattern()),
+                            settings.mode().markHint(settings.pattern()));
+                }
             }
             return;
         }
@@ -480,8 +519,15 @@ public final class DinoWhistleScreen extends Screen {
         double localX = mouseX;
         Rect panel = mainPanel();
         if (orderRect(panel).contains(localX, mouseY)) {
-            DinoWhistleSettings.FieldMode[] values = DinoWhistleSettings.FieldMode.values();
-            DinoWhistleSettings.FieldMode mode = values[(settings.mode().ordinal() + 1) % values.length];
+            if (availableModes == 0) {
+                PrimevalUiSounds.click(0.72F);
+                return true;
+            }
+            DinoWhistleSettings.FieldMode mode = settings.mode().nextAvailable(availableModes);
+            if (mode == settings.mode()) {
+                PrimevalUiSounds.click(0.82F);
+                return true;
+            }
             settings = copy(mode, mode.normalizePattern(settings.pattern()), settings.range(), settings.itemFilter());
             changed(0.96F, 0);
             requestFollowers();
@@ -499,6 +545,13 @@ public final class DinoWhistleScreen extends Screen {
             draggingRange = true;
             pressed(2);
             updateRange(localX);
+            return true;
+        }
+        if (!settings.mode().isPassive() && assignedCount() > 0
+                && markedStopRect(followerRect(panel)).contains(localX, mouseY)) {
+            ClientPacketDistributor.sendToServer(
+                    new StopWhistleFieldWorkPayload(inventorySlot, settings.mode().ordinal()));
+            PrimevalUiSounds.click(0.92F);
             return true;
         }
         if (settings.mode().isPassive()) {
@@ -698,15 +751,21 @@ public final class DinoWhistleScreen extends Screen {
     }
 
     private void send() {
+        if (minecraft != null && minecraft.player != null) {
+            ItemStack local = DinoWhistleItem.findInventoryWhistle(minecraft.player, inventorySlot);
+            if (!local.isEmpty()) {
+                ItemStack updated = local.copy();
+                settings.write(updated);
+                minecraft.player.getInventory().setItem(inventorySlot, updated);
+            }
+        }
         ClientPacketDistributor.sendToServer(new ConfigureDinoWhistlePayload(inventorySlot,
                 settings.mode().ordinal(), settings.pattern().ordinal(), settings.range(), settings.itemFilter()));
     }
 
     private void requestFollowers() {
         followers.clear();
-        if (settings.mode().isPassive()) {
-            ClientPacketDistributor.sendToServer(new RequestPassiveWhistleFollowersPayload(inventorySlot));
-        }
+        ClientPacketDistributor.sendToServer(new RequestPassiveWhistleFollowersPayload(inventorySlot));
     }
 
     @Override
@@ -743,6 +802,7 @@ public final class DinoWhistleScreen extends Screen {
     private Rect rangeRect(Rect panel) { return new Rect(panel.x, panel.y + 86, panel.w, 25); }
     private Rect followerRect(Rect panel) { return new Rect(panel.x, panel.y + 114, panel.w, 31); }
     private Rect followerSlot(Rect row, int index) { return new Rect(row.x + 53 + index * 24, row.y + 6, 18, 18); }
+    private Rect markedStopRect(Rect row) { return new Rect(row.right() - 48, row.y + 4, 44, row.h - 8); }
     private Rect filterSlot(Rect row) { return new Rect(row.right() - 24, row.y + 6, 18, 18); }
     private Rect searchTarget(Rect panel) { return new Rect(panel.x, panel.y, 20, 20); }
     private Rect searchRect(Rect panel) { return new Rect(panel.x + 23, panel.y + 1, panel.w - 23, 18); }
@@ -752,6 +812,10 @@ public final class DinoWhistleScreen extends Screen {
     }
 
     private int modeColor() { return MODE_COLORS[settings.mode().ordinal()]; }
+
+    private int assignedCount() {
+        return (int)followers.stream().filter(PassiveWhistleFollowersPayload.Entry::assigned).count();
+    }
 
     private void drawBubble(GuiGraphicsExtractor graphics, Rect rect) {
         graphics.fill(rect.x + 3, rect.y + 4, rect.right() + 3, rect.bottom() + 4, 0x52000000);

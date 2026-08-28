@@ -88,8 +88,11 @@ final class WhistleUiContractTest {
         assertTrue(config.contains("orderRect"));
         assertTrue(config.contains("behaviorRect"));
         assertTrue(config.contains("rangeRect"));
-        assertTrue(config.contains("% values.length"));
+        assertTrue(config.contains("availableModes"));
         assertTrue(config.contains("settings.mode().targetTitle(settings.pattern())"));
+        assertTrue(config.contains("nextAvailable(availableModes)"));
+        assertTrue(config.contains("StopWhistleFieldWorkPayload"));
+        assertTrue(config.contains("markedStopRect"));
         assertTrue(config.contains("filterSlot"));
         assertTrue(config.contains("centeredText(graphics, \"+\""));
         assertTrue(config.contains("filteredCatalogue"));

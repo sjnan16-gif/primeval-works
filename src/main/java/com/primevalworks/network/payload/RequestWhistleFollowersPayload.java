@@ -20,7 +20,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public record RequestWhistleFollowersPayload(BlockPos first, BlockPos second, boolean hasSecond)
+public record RequestWhistleFollowersPayload(BlockPos first, BlockPos second, boolean hasSecond,
+                                             int mode, int pattern, int range)
         implements CustomPacketPayload {
     private static final String STAGED_CORNER = "PrimevalWhistleCorner";
     private static final String STAGED_DIMENSION = "PrimevalWhistleCornerDimension";
@@ -42,19 +43,28 @@ public record RequestWhistleFollowersPayload(BlockPos first, BlockPos second, bo
                 buffer.writeLong(payload.first.asLong());
                 buffer.writeBoolean(payload.hasSecond);
                 if (payload.hasSecond) buffer.writeLong(payload.second.asLong());
+                buffer.writeVarInt(payload.mode);
+                buffer.writeVarInt(payload.pattern);
+                buffer.writeVarInt(payload.range);
             }, buffer -> {
                 BlockPos first = BlockPos.of(buffer.readLong());
                 boolean hasSecond = buffer.readBoolean();
                 return new RequestWhistleFollowersPayload(first,
-                        hasSecond ? BlockPos.of(buffer.readLong()) : first, hasSecond);
+                        hasSecond ? BlockPos.of(buffer.readLong()) : first, hasSecond,
+                        buffer.readVarInt(), buffer.readVarInt(), buffer.readVarInt());
             });
+
+    public RequestWhistleFollowersPayload(BlockPos first, BlockPos second, boolean hasSecond,
+                                           DinoWhistleSettings settings) {
+        this(first, second, hasSecond, settings.mode().ordinal(), settings.pattern().ordinal(), settings.range());
+    }
 
     public static void handle(RequestWhistleFollowersPayload payload, IPayloadContext context) {
         if (!(context.player() instanceof ServerPlayer player)) return;
         context.enqueueWork(() -> {
             ItemStack whistle = DinoWhistleItem.findHeld(player);
             if (whistle.isEmpty()) return;
-            DinoWhistleSettings settings = DinoWhistleSettings.read(whistle);
+            DinoWhistleSettings settings = payload.settings();
             if (isAreaQuarry(settings) && !payload.hasSecond) {
                 clearPendingSelection(player);
                 if (!stageFirstCorner(player, payload.first, settings)) {
@@ -144,8 +154,8 @@ public record RequestWhistleFollowersPayload(BlockPos first, BlockPos second, bo
     }
 
     public static boolean rememberValidatedSelection(ServerPlayer player,
-                                                     RequestWhistleFollowersPayload payload,
-                                                     DinoWhistleSettings settings) {
+                                                     RequestWhistleFollowersPayload payload) {
+        DinoWhistleSettings settings = payload.settings();
         if (!validSelection(player, payload, settings)) return false;
         rememberPendingSelection(player, payload, settings);
         return true;
@@ -203,6 +213,11 @@ public record RequestWhistleFollowersPayload(BlockPos first, BlockPos second, bo
     private static boolean isAreaQuarry(DinoWhistleSettings settings) {
         return settings.mode() == DinoWhistleSettings.FieldMode.QUARRY
                 && settings.pattern() == DinoWhistleSettings.Pattern.AREA;
+    }
+
+    public DinoWhistleSettings settings() {
+        return new DinoWhistleSettings(DinoWhistleSettings.FieldMode.byId(mode),
+                DinoWhistleSettings.Pattern.byId(pattern), range);
     }
 
     public record PendingSelection(BlockPos first, BlockPos second, boolean hasSecond,

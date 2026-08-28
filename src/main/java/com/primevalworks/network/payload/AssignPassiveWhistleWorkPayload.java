@@ -57,16 +57,9 @@ public record AssignPassiveWhistleWorkPayload(int inventorySlot, UUID dinosaurId
                     assigned
                             ? dinosaur.getDisplayName().getString() + " is now " + duty
                             : dinosaur.getDisplayName().getString() + " stopped field duty."));
-            PacketDistributor.sendToPlayer(player, new PassiveWhistleFollowersPayload(payload.inventorySlot,
-                    DinosaurOwnership.loadedFollowers(player).stream()
-                            .limit(DinosaurOwnership.followerLimit(player))
-                            .filter(follower -> DinoFieldWorkRules.rating(follower, settings.mode()) > 0)
-                            .map(follower -> {
-                                int rating = DinoFieldWorkRules.rating(follower, settings.mode());
-                                return new PassiveWhistleFollowersPayload.Entry(follower.getId(), follower.getUUID(),
-                                        follower.getDisplayName().getString(), rating, true,
-                                        follower.hasFieldWork() && follower.getFieldWorkMode() == settings.mode());
-                            }).toList()));
+            PassiveWhistleFollowersPayload snapshot =
+                    RequestPassiveWhistleFollowersPayload.snapshot(player, payload.inventorySlot);
+            if (snapshot != null) PacketDistributor.sendToPlayer(player, snapshot);
         });
     }
 

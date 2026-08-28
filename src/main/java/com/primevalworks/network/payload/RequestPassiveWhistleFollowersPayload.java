@@ -28,23 +28,36 @@ public record RequestPassiveWhistleFollowersPayload(int inventorySlot) implement
     public static void handle(RequestPassiveWhistleFollowersPayload payload, IPayloadContext context) {
         if (!(context.player() instanceof ServerPlayer player)) return;
         context.enqueueWork(() -> {
-            ItemStack whistle = DinoWhistleItem.findInventoryWhistle(player, payload.inventorySlot);
-            if (whistle.isEmpty()) return;
-            DinoWhistleSettings settings = DinoWhistleSettings.read(whistle);
-            if (!settings.mode().isPassive()) return;
-            List<PassiveWhistleFollowersPayload.Entry> entries = new ArrayList<>();
-            for (FieldDodoEntity dinosaur : DinosaurOwnership.loadedFollowers(player)) {
-                if (entries.size() >= DinosaurOwnership.followerLimit(player)) break;
-                if (!DinoFieldWorkRules.supports(dinosaur.getSpecies(), settings.mode())) continue;
-                int rating = DinoFieldWorkRules.rating(dinosaur, settings.mode());
-                if (rating <= 0) continue;
-                entries.add(new PassiveWhistleFollowersPayload.Entry(dinosaur.getId(), dinosaur.getUUID(),
-                        dinosaur.getDisplayName().getString(), rating, true,
-                        dinosaur.hasFieldWork() && dinosaur.getFieldWorkMode() == settings.mode()));
-            }
-            PacketDistributor.sendToPlayer(player,
-                    new PassiveWhistleFollowersPayload(payload.inventorySlot, List.copyOf(entries)));
+            PassiveWhistleFollowersPayload snapshot = snapshot(player, payload.inventorySlot);
+            if (snapshot != null) PacketDistributor.sendToPlayer(player, snapshot);
         });
+    }
+
+    public static PassiveWhistleFollowersPayload snapshot(ServerPlayer player, int inventorySlot) {
+        ItemStack whistle = DinoWhistleItem.findInventoryWhistle(player, inventorySlot);
+        if (whistle.isEmpty()) return null;
+        DinoWhistleSettings settings = DinoWhistleSettings.read(whistle);
+        List<FieldDodoEntity> followers = DinosaurOwnership.loadedFollowers(player).stream()
+                .limit(DinosaurOwnership.followerLimit(player))
+                .toList();
+        int availableModes = 0;
+        for (FieldDodoEntity dinosaur : followers) {
+            DinoWhistleSettings.FieldMode specialty = DinoFieldWorkRules.specialty(dinosaur.getSpecies());
+            if (specialty != null && DinoFieldWorkRules.rating(dinosaur, specialty) > 0) {
+                availableModes |= specialty.availabilityBit();
+            }
+        }
+        List<PassiveWhistleFollowersPayload.Entry> entries = new ArrayList<>();
+        for (FieldDodoEntity dinosaur : followers) {
+            if (!DinoFieldWorkRules.supports(dinosaur.getSpecies(), settings.mode())) continue;
+            int rating = DinoFieldWorkRules.rating(dinosaur, settings.mode());
+            if (rating <= 0) continue;
+            entries.add(new PassiveWhistleFollowersPayload.Entry(dinosaur.getId(), dinosaur.getUUID(),
+                    dinosaur.getDisplayName().getString(), rating, true,
+                    dinosaur.hasFieldWork() && dinosaur.getFieldWorkMode() == settings.mode()));
+        }
+        return new PassiveWhistleFollowersPayload(inventorySlot, settings.mode().ordinal(),
+                availableModes, List.copyOf(entries));
     }
 
     @Override

@@ -78,6 +78,23 @@ public record DinoWhistleSettings(FieldMode mode, Pattern pattern, int range, St
             return !requiresMark();
         }
 
+        public int availabilityBit() {
+            return 1 << ordinal();
+        }
+
+        public boolean isAvailableIn(int mask) {
+            return (mask & availabilityBit()) != 0;
+        }
+
+        public FieldMode nextAvailable(int mask) {
+            FieldMode[] modes = values();
+            for (int offset = 1; offset <= modes.length; offset++) {
+                FieldMode candidate = modes[(ordinal() + offset) % modes.length];
+                if (candidate.isAvailableIn(mask)) return candidate;
+            }
+            return this;
+        }
+
         public Pattern normalizePattern(Pattern requested) {
             if (this == QUARRY) return requested == Pattern.AREA ? Pattern.AREA : Pattern.CONNECTED;
             return this == LUMBER ? Pattern.CONNECTED : Pattern.AREA;

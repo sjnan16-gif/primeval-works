@@ -8,6 +8,9 @@ import com.primevalworks.registry.ModItems;
 import com.primevalworks.network.payload.ConfigureDinoWhistlePayload;
 import com.primevalworks.network.payload.AssignWhistleFieldWorkPayload;
 import com.primevalworks.network.payload.RequestWhistleFollowersPayload;
+import com.primevalworks.network.payload.RequestPassiveWhistleFollowersPayload;
+import com.primevalworks.network.payload.PassiveWhistleFollowersPayload;
+import com.primevalworks.network.payload.StopWhistleFieldWorkPayload;
 import com.primevalworks.world.block.entity.TurbineBlockEntity;
 import com.primevalworks.world.block.entity.PremiumEggIncubatorBlockEntity;
 import com.primevalworks.world.block.entity.CommandTableBlockEntity;
@@ -233,6 +236,9 @@ public final class PrimevalGameTests {
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> FIELD_ORDER_SUSPENDS_ACROSS_COMMAND_CYCLE =
             TEST_FUNCTIONS.register("field_order_suspends_across_command_cycle",
                     () -> PrimevalGameTests::fieldOrderSuspendsAcrossCommandCycle);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> WHISTLE_AVAILABILITY_AND_STOP =
+            TEST_FUNCTIONS.register("whistle_availability_and_stop",
+                    () -> PrimevalGameTests::whistleAvailabilityAndStop);
 
     private PrimevalGameTests() {
     }
@@ -524,6 +530,11 @@ public final class PrimevalGameTests {
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "field_order_suspends_across_command_cycle"),
                 new FunctionGameTestInstance(FIELD_ORDER_SUSPENDS_ACROSS_COMMAND_CYCLE.getKey(),
                         isolatedTestData(event, "field_order_command_cycle"))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "whistle_availability_and_stop"),
+                new FunctionGameTestInstance(WHISTLE_AVAILABILITY_AND_STOP.getKey(),
+                        isolatedTestData(event, "whistle_availability_stop"))
         );
     }
 
@@ -3700,15 +3711,25 @@ public final class PrimevalGameTests {
                 "The marked-order test companion could not become an active follower");
         dinosaur.setInvulnerable(true);
         ItemStack whistle = new ItemStack(ModItems.DINO_WHISTLE.get());
-        DinoWhistleSettings settings = new DinoWhistleSettings(
+        DinoWhistleSettings savedSettings = new DinoWhistleSettings(
+                DinoWhistleSettings.FieldMode.QUARRY,
+                DinoWhistleSettings.Pattern.AREA,
+                48);
+        savedSettings.write(whistle);
+        player.setItemInHand(InteractionHand.MAIN_HAND, whistle);
+        DinoWhistleSettings markedSettings = new DinoWhistleSettings(
                 DinoWhistleSettings.FieldMode.QUARRY,
                 DinoWhistleSettings.Pattern.CONNECTED,
                 48);
-        settings.write(whistle);
-        player.setItemInHand(InteractionHand.MAIN_HAND, whistle);
-        RequestWhistleFollowersPayload request = new RequestWhistleFollowersPayload(target, target, false);
-        helper.assertTrue(RequestWhistleFollowersPayload.rememberValidatedSelection(player, request, settings),
-                "The server rejected a valid marked quarry selection");
+        RequestWhistleFollowersPayload request =
+                new RequestWhistleFollowersPayload(target, target, false, markedSettings);
+        helper.assertTrue(RequestWhistleFollowersPayload.rememberValidatedSelection(player, request),
+                "The server rejected a valid Connected quarry selection after Area was previously saved");
+        helper.assertTrue(RequestWhistleFollowersPayload.pendingSelection(player,
+                        new AssignWhistleFieldWorkPayload(dinosaur.getUUID(), target, target, false))
+                        .map(selection -> selection.settings().pattern() == DinoWhistleSettings.Pattern.CONNECTED)
+                        .orElse(false),
+                "The marked-order handoff replaced Connected with the stale Area setting");
         helper.assertTrue(AssignWhistleFieldWorkPayload.apply(player,
                         new AssignWhistleFieldWorkPayload(dinosaur.getUUID(), target, target, false)),
                 "Choosing a compatible follower did not commit the pending quarry order");
@@ -3719,6 +3740,52 @@ public final class PrimevalGameTests {
                 .thenExecute(() -> helper.assertTrue(!dinosaur.hasFieldWork(),
                         "The completed network-assigned quarry remained active"))
                 .thenSucceed();
+    }
+
+    private static void whistleAvailabilityAndStop(GameTestHelper helper) {
+        BlockPos tableRelative = new BlockPos(1, 1, 1);
+        BlockPos dinosaurRelative = new BlockPos(3, 1, 3);
+        BlockPos targetRelative = new BlockPos(5, 1, 3);
+        forceTicking(helper, tableRelative, dinosaurRelative, targetRelative);
+        for (int x = 0; x <= 7; x++) {
+            for (int z = 0; z <= 6; z++) helper.setBlock(new BlockPos(x, 0, z), Blocks.DIRT);
+        }
+        helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
+        helper.setBlock(targetRelative, Blocks.IRON_ORE);
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
+        player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
+        BlockPos table = helper.absolutePos(tableRelative);
+        CommandTableBlock.claimExisting(player, table);
+        FieldDodoEntity dinosaur = helper.spawn(ModEntities.SPINOSAURUS.get(), dinosaurRelative);
+        helper.assertTrue(DinosaurOwnership.addToActiveIfRoom(player, dinosaur, table)
+                        && DinosaurOwnership.setCommandMode(player, dinosaur, DinosaurCommandMode.FOLLOW).success(),
+                "The Whistle availability test could not create its Quarry follower");
+        dinosaur.setInvulnerable(true);
+        DinoWhistleSettings settings = new DinoWhistleSettings(
+                DinoWhistleSettings.FieldMode.QUARRY,
+                DinoWhistleSettings.Pattern.CONNECTED,
+                48);
+        ItemStack whistle = new ItemStack(ModItems.DINO_WHISTLE.get());
+        settings.write(whistle);
+        player.setItemInHand(InteractionHand.MAIN_HAND, whistle);
+        int slot = player.getInventory().getSelectedSlot();
+        PassiveWhistleFollowersPayload snapshot =
+                RequestPassiveWhistleFollowersPayload.snapshot(player, slot);
+        helper.assertTrue(snapshot != null
+                        && DinoWhistleSettings.FieldMode.QUARRY.isAvailableIn(snapshot.availableModes())
+                        && !DinoWhistleSettings.FieldMode.LUMBER.isAvailableIn(snapshot.availableModes()),
+                "The Whistle advertised Lumber without a following Parasaurolophus");
+
+        dinosaur.assignFieldWork(settings, helper.absolutePos(targetRelative), null);
+        helper.assertTrue(dinosaur.hasFieldWork(), "The stop test never started its connected quarry order");
+        int stopped = StopWhistleFieldWorkPayload.apply(player,
+                new StopWhistleFieldWorkPayload(slot, DinoWhistleSettings.FieldMode.QUARRY.ordinal()));
+        helper.assertTrue(stopped == 1 && !dinosaur.hasFieldWork()
+                        && helper.getBlockState(targetRelative).is(Blocks.IRON_ORE),
+                "The marked-duty Stop action did not cancel the server order before another block broke");
+        player.discard();
+        helper.succeed();
     }
 
     private static void fieldOrderSuspendsAcrossCommandCycle(GameTestHelper helper) {

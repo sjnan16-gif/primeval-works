@@ -125,6 +125,17 @@ final class DinoFieldWorkRulesTest {
     }
 
     @Test
+    void whistleCyclesOnlyThroughAvailableFollowerSpecialties() {
+        int quarryAndHarvest = DinoWhistleSettings.FieldMode.QUARRY.availabilityBit()
+                | DinoWhistleSettings.FieldMode.HARVEST.availabilityBit();
+        assertEquals(DinoWhistleSettings.FieldMode.HARVEST,
+                DinoWhistleSettings.FieldMode.QUARRY.nextAvailable(quarryAndHarvest));
+        assertEquals(DinoWhistleSettings.FieldMode.QUARRY,
+                DinoWhistleSettings.FieldMode.HARVEST.nextAvailable(quarryAndHarvest));
+        assertFalse(DinoWhistleSettings.FieldMode.LUMBER.isAvailableIn(quarryAndHarvest));
+    }
+
+    @Test
     void modesNormalizeToOnlyTheSupportedPlayerBehaviors() {
         assertEquals(DinoWhistleSettings.Pattern.CONNECTED,
                 DinoWhistleSettings.FieldMode.QUARRY.normalizePattern(DinoWhistleSettings.Pattern.SINGLE));

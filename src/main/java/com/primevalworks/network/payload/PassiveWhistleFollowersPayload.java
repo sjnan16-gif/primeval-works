@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public record PassiveWhistleFollowersPayload(int inventorySlot, List<Entry> entries)
+public record PassiveWhistleFollowersPayload(int inventorySlot, int mode, int availableModes, List<Entry> entries)
         implements CustomPacketPayload {
     public static final Type<PassiveWhistleFollowersPayload> TYPE = new Type<>(
             Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "passive_whistle_followers"));
@@ -21,6 +21,8 @@ public record PassiveWhistleFollowersPayload(int inventorySlot, List<Entry> entr
 
     private static void encode(RegistryFriendlyByteBuf buffer, PassiveWhistleFollowersPayload payload) {
         buffer.writeVarInt(payload.inventorySlot);
+        buffer.writeVarInt(payload.mode);
+        buffer.writeVarInt(payload.availableModes);
         buffer.writeVarInt(Math.min(3, payload.entries.size()));
         for (Entry entry : payload.entries.stream().limit(3).toList()) {
             buffer.writeVarInt(entry.entityId);
@@ -34,13 +36,15 @@ public record PassiveWhistleFollowersPayload(int inventorySlot, List<Entry> entr
 
     private static PassiveWhistleFollowersPayload decode(RegistryFriendlyByteBuf buffer) {
         int inventorySlot = buffer.readVarInt();
+        int mode = buffer.readVarInt();
+        int availableModes = buffer.readVarInt();
         int count = Math.min(3, buffer.readVarInt());
         List<Entry> entries = new ArrayList<>(count);
         for (int index = 0; index < count; index++) {
             entries.add(new Entry(buffer.readVarInt(), buffer.readUUID(), buffer.readUtf(96),
                     buffer.readVarInt(), buffer.readBoolean(), buffer.readBoolean()));
         }
-        return new PassiveWhistleFollowersPayload(inventorySlot, List.copyOf(entries));
+        return new PassiveWhistleFollowersPayload(inventorySlot, mode, availableModes, List.copyOf(entries));
     }
 
     public static void handle(PassiveWhistleFollowersPayload payload, IPayloadContext context) {
