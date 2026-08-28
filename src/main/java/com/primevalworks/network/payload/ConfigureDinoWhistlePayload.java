@@ -42,8 +42,7 @@ public record ConfigureDinoWhistlePayload(int inventorySlot, int mode, int patte
                 && BuiltInRegistries.ITEM.get(filterId).isPresent() ? filterId.toString() : "";
         DinoWhistleSettings updated = new DinoWhistleSettings(mode,
                 DinoWhistleSettings.Pattern.byId(payload.pattern), payload.range, filter);
-        RequestWhistleFollowersPayload.clearStagedCorner(player);
-        RequestWhistleFollowersPayload.clearPendingSelection(player);
+        if (updated.equals(DinoWhistleSettings.read(whistle))) return true;
 
         // Replacing the slot guarantees component sync in both inventory and container views.
         ItemStack updatedWhistle = whistle.copy();

@@ -84,6 +84,7 @@ public final class PrimevalWorksClient {
         NeoForge.EVENT_BUS.addListener(PrimevalWorksClient::openCompanionScreen);
         NeoForge.EVENT_BUS.addListener(PrimevalWorksClient::mountedDinosaurAttack);
         NeoForge.EVENT_BUS.addListener(DinoWhistleClient::handleAttack);
+        NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, DinoWhistleClient::releaseAttackLatch);
         NeoForge.EVENT_BUS.addListener(DinoWhistleClient::handleHeldRightClick);
         NeoForge.EVENT_BUS.addListener(net.neoforged.neoforge.client.event.ScreenEvent.MouseButtonPressed.Pre.class,
                 DinoWhistleClient::handleInventoryRightClick);

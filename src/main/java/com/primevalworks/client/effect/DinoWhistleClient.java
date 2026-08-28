@@ -28,6 +28,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.neoforged.neoforge.client.event.InputEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
@@ -40,6 +41,7 @@ public final class DinoWhistleClient {
     private static long firstCornerMarkedAt;
     private static Level quarrySnapshotLevel;
     private static int maximumQuarryLevel = -1;
+    private static boolean attackHeld;
 
     private DinoWhistleClient() {}
 
@@ -51,6 +53,8 @@ public final class DinoWhistleClient {
         if (whistle.isEmpty()) return;
         event.setCanceled(true);
         event.setSwingHand(false);
+        if (attackHeld) return;
+        attackHeld = true;
         DinoWhistleSettings settings = DinoWhistleSettings.read(whistle);
         if (!settings.mode().requiresMark()) {
             clearAreaSelection();
@@ -103,6 +107,11 @@ public final class DinoWhistleClient {
         clearAreaSelection();
         ClientPacketDistributor.sendToServer(
                 new RequestWhistleFollowersPayload(selected, selected, false, settings));
+    }
+
+    public static void releaseAttackLatch(ClientTickEvent.Post event) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (!minecraft.options.keyAttack.isDown()) attackHeld = false;
     }
 
     public static void handleInventoryRightClick(ScreenEvent.MouseButtonPressed.Pre event) {

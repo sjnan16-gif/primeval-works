@@ -49,6 +49,7 @@ public final class WhistleFollowerPickerScreen extends Screen {
     private long renderNow;
     private long pressedAt;
     private int pressedIndex = -1;
+    private boolean assignmentSent;
 
     private WhistleFollowerPickerScreen(WhistleFollowerListPayload payload) {
         super(Component.literal("Choose a Companion"));
@@ -162,6 +163,7 @@ public final class WhistleFollowerPickerScreen extends Screen {
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         if (event.button() != 0) return super.mouseClicked(event, doubleClick);
+        if (assignmentSent) return true;
         int count = payload.entries().size();
         int rowWidth = count * SLOT_SIZE + Math.max(0, count - 1) * SLOT_GAP;
         int startX = (width - rowWidth) / 2;
@@ -176,6 +178,7 @@ public final class WhistleFollowerPickerScreen extends Screen {
             }
             pressedIndex = index;
             pressedAt = Util.getNanos();
+            assignmentSent = true;
             ClientPacketDistributor.sendToServer(new AssignWhistleFieldWorkPayload(
                     entry.uuid(), payload.selectionToken()));
             PrimevalUiSounds.click(1.08F);

@@ -31,6 +31,9 @@ public record AssignWhistleFieldWorkPayload(UUID dinosaurId, long selectionToken
     }
 
     public static boolean apply(ServerPlayer player, AssignWhistleFieldWorkPayload payload) {
+        var replay = RequestWhistleFollowersPayload.consumedSelectionResult(
+                player, payload.selectionToken, payload.dinosaurId);
+        if (replay.isPresent()) return replay.get();
         RequestWhistleFollowersPayload.PendingSelection pending =
                 RequestWhistleFollowersPayload.pendingSelection(player, payload.selectionToken).orElse(null);
         if (pending == null) {
@@ -39,6 +42,7 @@ public record AssignWhistleFieldWorkPayload(UUID dinosaurId, long selectionToken
             return false;
         }
         DinoWhistleSettings settings = pending.settings();
+        boolean accepted = false;
         try {
             FieldDodoEntity dinosaur = DinosaurOwnership.findLoaded(player.level().getServer(), payload.dinosaurId);
             boolean availableFollower = DinosaurOwnership.loadedFollowers(player).stream()
@@ -81,10 +85,12 @@ public record AssignWhistleFieldWorkPayload(UUID dinosaurId, long selectionToken
             player.sendOverlayMessage(net.minecraft.network.chat.Component.literal(
                     dinosaur.getDisplayName().getString() + " received the "
                             + DinoFieldWorkRules.specialtyName(settings.mode()) + " order."));
-            return dinosaur.hasFieldWork() && dinosaur.getFieldWorkMode() == settings.mode();
+            accepted = dinosaur.hasFieldWork() && dinosaur.getFieldWorkMode() == settings.mode();
+            return accepted;
         } finally {
             RequestWhistleFollowersPayload.clearStagedCorner(player);
-            RequestWhistleFollowersPayload.clearPendingSelection(player);
+            RequestWhistleFollowersPayload.consumePendingSelection(
+                    player, payload.selectionToken, payload.dinosaurId, accepted);
         }
     }
 

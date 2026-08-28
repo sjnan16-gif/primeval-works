@@ -19,6 +19,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 public record RequestWhistleFollowersPayload(BlockPos first, BlockPos second, boolean hasSecond,
                                              int mode, int pattern, int range)
@@ -36,6 +37,11 @@ public record RequestWhistleFollowersPayload(BlockPos first, BlockPos second, bo
     private static final String PENDING_DIMENSION = "PrimevalWhistlePendingDimension";
     private static final String PENDING_AT = "PrimevalWhistlePendingAt";
     private static final String PENDING_TOKEN = "PrimevalWhistlePendingToken";
+    private static final String CONSUMED_TOKEN = "PrimevalWhistleConsumedToken";
+    private static final String CONSUMED_AT = "PrimevalWhistleConsumedAt";
+    private static final String CONSUMED_DIMENSION = "PrimevalWhistleConsumedDimension";
+    private static final String CONSUMED_SUCCESS = "PrimevalWhistleConsumedSuccess";
+    private static final String CONSUMED_DINOSAUR = "PrimevalWhistleConsumedDinosaur";
     private static final long PENDING_SELECTION_LIFETIME = 20L * 30L;
     public static final Type<RequestWhistleFollowersPayload> TYPE = new Type<>(
             Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "request_whistle_followers"));
@@ -156,6 +162,24 @@ public record RequestWhistleFollowersPayload(BlockPos first, BlockPos second, bo
                         data.getIntOr(PENDING_RANGE, DinoWhistleSettings.DEFAULT.range()))));
     }
 
+    public static Optional<Boolean> consumedSelectionResult(ServerPlayer player, long selectionToken,
+                                                            UUID dinosaurId) {
+        var data = player.getPersistentData();
+        if (selectionToken == 0L || data.getLongOr(CONSUMED_TOKEN, 0L) != selectionToken
+                || !data.getStringOr(CONSUMED_DINOSAUR, "").equals(dinosaurId.toString())) {
+            return Optional.empty();
+        }
+        long age = player.level().getGameTime() - data.getLongOr(CONSUMED_AT, Long.MIN_VALUE);
+        boolean current = age >= 0L && age <= PENDING_SELECTION_LIFETIME
+                && data.getStringOr(CONSUMED_DIMENSION, "")
+                .equals(player.level().dimension().identifier().toString());
+        if (!current) {
+            clearConsumedSelection(player);
+            return Optional.empty();
+        }
+        return Optional.of(data.getBooleanOr(CONSUMED_SUCCESS, false));
+    }
+
     public static long rememberValidatedSelection(ServerPlayer player,
                                                   RequestWhistleFollowersPayload payload) {
         DinoWhistleSettings settings = payload.settings();
@@ -176,12 +200,41 @@ public record RequestWhistleFollowersPayload(BlockPos first, BlockPos second, bo
         data.remove(PENDING_TOKEN);
     }
 
+    public static void consumePendingSelection(ServerPlayer player, long selectionToken,
+                                               UUID dinosaurId, boolean success) {
+        var data = player.getPersistentData();
+        if (selectionToken == 0L || data.getLongOr(PENDING_TOKEN, 0L) != selectionToken) return;
+        clearPendingSelection(player);
+        data.putLong(CONSUMED_TOKEN, selectionToken);
+        data.putLong(CONSUMED_AT, player.level().getGameTime());
+        data.putString(CONSUMED_DIMENSION, player.level().dimension().identifier().toString());
+        data.putString(CONSUMED_DINOSAUR, dinosaurId.toString());
+        data.putBoolean(CONSUMED_SUCCESS, success);
+    }
+
+    private static void clearConsumedSelection(ServerPlayer player) {
+        var data = player.getPersistentData();
+        data.remove(CONSUMED_TOKEN);
+        data.remove(CONSUMED_AT);
+        data.remove(CONSUMED_DIMENSION);
+        data.remove(CONSUMED_DINOSAUR);
+        data.remove(CONSUMED_SUCCESS);
+    }
+
     private static long rememberPendingSelection(ServerPlayer player,
                                                 RequestWhistleFollowersPayload payload,
                                                 DinoWhistleSettings settings) {
+        var data = player.getPersistentData();
+        long currentToken = data.getLongOr(PENDING_TOKEN, 0L);
+        PendingSelection requested = new PendingSelection(
+                payload.first, payload.second, payload.hasSecond, settings);
+        if (currentToken != 0L && pendingSelection(player, currentToken)
+                .filter(requested::equals).isPresent()) {
+            data.putLong(PENDING_AT, player.level().getGameTime());
+            return currentToken;
+        }
         long selectionToken;
         do selectionToken = player.getRandom().nextLong(); while (selectionToken == 0L);
-        var data = player.getPersistentData();
         data.putLong(PENDING_FIRST, payload.first.asLong());
         data.putLong(PENDING_SECOND, payload.second.asLong());
         data.putBoolean(PENDING_HAS_SECOND, payload.hasSecond);

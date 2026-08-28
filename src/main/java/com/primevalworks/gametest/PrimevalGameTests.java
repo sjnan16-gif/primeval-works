@@ -805,6 +805,7 @@ public final class PrimevalGameTests {
         forceTicking(helper, dinosaurRelative, ownerRelative, cropRelative);
         for (int x = 0; x <= 18; x++) for (int z = 0; z <= 6; z++) {
             helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+            for (int y = 1; y <= 3; y++) helper.setBlock(new BlockPos(x, y, z), Blocks.AIR);
         }
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
         player.setUUID(UUID.randomUUID());
@@ -826,7 +827,8 @@ public final class PrimevalGameTests {
 
         helper.startSequence()
                 .thenWaitUntil(() -> helper.assertTrue(
-                        helper.getBlockState(cropRelative).getValue(CropBlock.AGE) == 0,
+                        helper.getBlockState(cropRelative).is(Blocks.WHEAT)
+                                && helper.getBlockState(cropRelative).getValue(CropBlock.AGE) == 0,
                         "The passive worker followed its owner instead of tending the saved field anchor"))
                 .thenExecute(() -> helper.assertTrue(dodo.hasFieldWork()
                                 && dodo.getFieldWorkMode() == DinoWhistleSettings.FieldMode.HARVEST
@@ -3600,7 +3602,10 @@ public final class PrimevalGameTests {
         BlockPos cropRelative = new BlockPos(5, 1, 3);
         forceTicking(helper, tableRelative, dinosaurRelative, cropRelative);
         for (int x = 0; x <= 7; x++) {
-            for (int z = 0; z <= 6; z++) helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+            for (int z = 0; z <= 6; z++) {
+                helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+                for (int y = 1; y <= 3; y++) helper.setBlock(new BlockPos(x, y, z), Blocks.AIR);
+            }
         }
         helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
         helper.setBlock(cropRelative.below(), Blocks.FARMLAND);
@@ -3627,7 +3632,8 @@ public final class PrimevalGameTests {
 
         helper.startSequence()
                 .thenWaitUntil(() -> helper.assertTrue(
-                        helper.getBlockState(cropRelative).getValue(CropBlock.AGE) == 0,
+                        helper.getBlockState(cropRelative).is(Blocks.WHEAT)
+                                && helper.getBlockState(cropRelative).getValue(CropBlock.AGE) == 0,
                         "The passive harvest order never harvested and replanted the mature crop"))
                 .thenExecute(() -> helper.assertTrue(dinosaur.hasFieldWork()
                                 && dinosaur.isFieldWorkContinuous(),
@@ -3726,6 +3732,16 @@ public final class PrimevalGameTests {
         long selectionToken = RequestWhistleFollowersPayload.rememberValidatedSelection(player, request);
         helper.assertTrue(selectionToken != 0L,
                 "The server rejected a valid Connected quarry selection after Area was previously saved");
+        long repeatedToken = RequestWhistleFollowersPayload.rememberValidatedSelection(player, request);
+        helper.assertTrue(repeatedToken == selectionToken,
+                "A repeated physical mark invalidated the picker that was already opening");
+        helper.assertTrue(ConfigureDinoWhistlePayload.apply(player,
+                        new ConfigureDinoWhistlePayload(player.getInventory().getSelectedSlot(),
+                                markedSettings.mode().ordinal(), markedSettings.pattern().ordinal(),
+                                markedSettings.range(), markedSettings.itemFilter())),
+                "A delayed Whistle settings snapshot could not be applied");
+        helper.assertTrue(RequestWhistleFollowersPayload.pendingSelection(player, selectionToken).isPresent(),
+                "A delayed Whistle settings snapshot erased an open marked-order picker");
         helper.assertTrue(RequestWhistleFollowersPayload.pendingSelection(player, selectionToken + 1L).isEmpty(),
                 "A forged marked-order token opened the current pending selection");
         helper.assertTrue(RequestWhistleFollowersPayload.pendingSelection(player, selectionToken)
@@ -3737,6 +3753,9 @@ public final class PrimevalGameTests {
                 "Choosing a compatible follower did not commit the pending quarry order");
         helper.assertTrue(RequestWhistleFollowersPayload.pendingSelection(player, selectionToken).isEmpty(),
                 "A committed marked-order token could be replayed");
+        helper.assertTrue(AssignWhistleFieldWorkPayload.apply(player,
+                        new AssignWhistleFieldWorkPayload(dinosaur.getUUID(), selectionToken)),
+                "A duplicate picker click reported a valid committed mark as expired");
 
         helper.startSequence()
                 .thenWaitUntil(() -> helper.assertTrue(helper.getBlockState(targetRelative).isAir(),

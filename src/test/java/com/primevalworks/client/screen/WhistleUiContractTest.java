@@ -131,6 +131,8 @@ final class WhistleUiContractTest {
         assertTrue(picker.contains("extractPreview"));
         assertTrue(picker.contains("slotReveal"));
         assertTrue(picker.contains("payload.selectionToken()"));
+        assertTrue(picker.contains("assignmentSent"),
+                "A double-click can submit the same picker transaction twice");
         assertFalse(picker.contains("graphics.fill(0, 0, width, height"));
         assertFalse(picker.contains("PANEL_WIDTH"));
     }
@@ -156,6 +158,8 @@ final class WhistleUiContractTest {
         assertTrue(client.contains("areaFirst"));
         assertTrue(client.contains("areaDimension"));
         assertTrue(client.contains("First corner saved"));
+        assertTrue(client.contains("attackHeld") && client.contains("releaseAttackLatch"),
+                "Holding attack can issue a second mark before the picker opens");
         assertTrue(client.contains("acceptFollowerSnapshot"));
         assertTrue(client.contains("maximumEligibleLevel"));
         assertFalse(client.contains("getEntitiesOfClass(FieldDodoEntity.class, search"),
