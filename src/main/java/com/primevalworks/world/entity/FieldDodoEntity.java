@@ -1497,6 +1497,10 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         return enabled && DinoFieldWorkRules.supports(getSpecies(), getFieldWorkMode());
     }
 
+    public boolean isFieldWorkActive() {
+        return hasFieldWork() && getCommandMode() == DinosaurCommandMode.FOLLOW;
+    }
+
     public DinoWhistleSettings.FieldMode getFieldWorkMode() {
         int value = level().isClientSide() ? Math.max(0, entityData.get(FIELD_WORK_MODE)) : fieldWorkMode.ordinal();
         return DinoWhistleSettings.FieldMode.byId(value);
@@ -1538,6 +1542,11 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         stayPosition = mode == DinosaurCommandMode.STAY ? blockPosition().immutable() : null;
         cancelWorkAction();
         navigation.stop();
+        navigationTarget = null;
+        stalledNavigationTicks = 0;
+        recoveryWaypointTicks = 0;
+        fieldWorkRescanCooldown = 0;
+        workerCooldown = 0;
         setTarget(null);
         DinosaurOwnership.syncRecord(this);
     }
@@ -1585,6 +1594,9 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         entityData.set(FIELD_WORK_SECOND, Optional.ofNullable(fieldWorkSecond));
         cancelWorkAction();
         navigation.stop();
+        navigationTarget = null;
+        stalledNavigationTicks = 0;
+        recoveryWaypointTicks = 0;
         DinosaurOwnership.syncRecord(this);
     }
 
@@ -1631,6 +1643,10 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         entityData.set(FIELD_WORK_FIRST, Optional.empty());
         entityData.set(FIELD_WORK_SECOND, Optional.empty());
         cancelWorkAction();
+        navigation.stop();
+        navigationTarget = null;
+        stalledNavigationTicks = 0;
+        recoveryWaypointTicks = 0;
         if (!level().isClientSide()) DinosaurOwnership.syncRecord(this);
     }
 

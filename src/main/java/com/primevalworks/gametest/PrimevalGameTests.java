@@ -6,6 +6,8 @@ import com.primevalworks.registry.ModBlockEntities;
 import com.primevalworks.registry.ModEntities;
 import com.primevalworks.registry.ModItems;
 import com.primevalworks.network.payload.ConfigureDinoWhistlePayload;
+import com.primevalworks.network.payload.AssignWhistleFieldWorkPayload;
+import com.primevalworks.network.payload.RequestWhistleFollowersPayload;
 import com.primevalworks.world.block.entity.TurbineBlockEntity;
 import com.primevalworks.world.block.entity.PremiumEggIncubatorBlockEntity;
 import com.primevalworks.world.block.entity.CommandTableBlockEntity;
@@ -225,6 +227,12 @@ public final class PrimevalGameTests {
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> FOLLOWER_PASSIVELY_COLLECTS_ITEMS =
             TEST_FUNCTIONS.register("follower_passively_collects_items",
                     () -> PrimevalGameTests::followerPassivelyCollectsItems);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> MARKED_QUARRY_PACKET_LIFECYCLE =
+            TEST_FUNCTIONS.register("marked_quarry_packet_lifecycle",
+                    () -> PrimevalGameTests::markedQuarryPacketLifecycle);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> FIELD_ORDER_SUSPENDS_ACROSS_COMMAND_CYCLE =
+            TEST_FUNCTIONS.register("field_order_suspends_across_command_cycle",
+                    () -> PrimevalGameTests::fieldOrderSuspendsAcrossCommandCycle);
 
     private PrimevalGameTests() {
     }
@@ -506,6 +514,16 @@ public final class PrimevalGameTests {
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "follower_passively_collects_items"),
                 new FunctionGameTestInstance(FOLLOWER_PASSIVELY_COLLECTS_ITEMS.getKey(),
                         isolatedTestData(event, "follower_passive_collect"))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "marked_quarry_packet_lifecycle"),
+                new FunctionGameTestInstance(MARKED_QUARRY_PACKET_LIFECYCLE.getKey(),
+                        isolatedTestData(event, "marked_quarry_packet_lifecycle"))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "field_order_suspends_across_command_cycle"),
+                new FunctionGameTestInstance(FIELD_ORDER_SUSPENDS_ACROSS_COMMAND_CYCLE.getKey(),
+                        isolatedTestData(event, "field_order_command_cycle"))
         );
     }
 
@@ -3654,6 +3672,99 @@ public final class PrimevalGameTests {
                 .thenExecute(() -> helper.assertTrue(dinosaur.hasFieldWork()
                                 && dinosaur.isFieldWorkContinuous(),
                         "The passive retrieval order stopped after one pickup"))
+                .thenSucceed();
+    }
+
+    private static void markedQuarryPacketLifecycle(GameTestHelper helper) {
+        BlockPos tableRelative = new BlockPos(1, 1, 1);
+        BlockPos dinosaurRelative = new BlockPos(3, 1, 3);
+        BlockPos targetRelative = new BlockPos(5, 1, 3);
+        forceTicking(helper, tableRelative, dinosaurRelative, targetRelative);
+        for (int x = 0; x <= 7; x++) {
+            for (int z = 0; z <= 6; z++) helper.setBlock(new BlockPos(x, 0, z), Blocks.DIRT);
+        }
+        helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
+        helper.setBlock(targetRelative, Blocks.IRON_ORE);
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
+        player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
+        player.snapTo(helper.absolutePos(new BlockPos(2, 1, 3)).getCenter().x,
+                helper.absolutePos(new BlockPos(2, 1, 3)).getY(),
+                helper.absolutePos(new BlockPos(2, 1, 3)).getCenter().z, 0.0F, 0.0F);
+        BlockPos table = helper.absolutePos(tableRelative);
+        BlockPos target = helper.absolutePos(targetRelative);
+        CommandTableBlock.claimExisting(player, table);
+        FieldDodoEntity dinosaur = helper.spawn(ModEntities.TYRANNOSAURUS.get(), dinosaurRelative);
+        helper.assertTrue(DinosaurOwnership.addToActiveIfRoom(player, dinosaur, table)
+                        && DinosaurOwnership.setCommandMode(player, dinosaur, DinosaurCommandMode.FOLLOW).success(),
+                "The marked-order test companion could not become an active follower");
+        dinosaur.setInvulnerable(true);
+        ItemStack whistle = new ItemStack(ModItems.DINO_WHISTLE.get());
+        DinoWhistleSettings settings = new DinoWhistleSettings(
+                DinoWhistleSettings.FieldMode.QUARRY,
+                DinoWhistleSettings.Pattern.CONNECTED,
+                48);
+        settings.write(whistle);
+        player.setItemInHand(InteractionHand.MAIN_HAND, whistle);
+        RequestWhistleFollowersPayload request = new RequestWhistleFollowersPayload(target, target, false);
+        helper.assertTrue(RequestWhistleFollowersPayload.rememberValidatedSelection(player, request, settings),
+                "The server rejected a valid marked quarry selection");
+        helper.assertTrue(AssignWhistleFieldWorkPayload.apply(player,
+                        new AssignWhistleFieldWorkPayload(dinosaur.getUUID(), target, target, false)),
+                "Choosing a compatible follower did not commit the pending quarry order");
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(helper.getBlockState(targetRelative).isAir(),
+                        "The quarry order accepted through the network lifecycle never broke its target"))
+                .thenExecute(() -> helper.assertTrue(!dinosaur.hasFieldWork(),
+                        "The completed network-assigned quarry remained active"))
+                .thenSucceed();
+    }
+
+    private static void fieldOrderSuspendsAcrossCommandCycle(GameTestHelper helper) {
+        BlockPos tableRelative = new BlockPos(1, 1, 1);
+        BlockPos dinosaurRelative = new BlockPos(3, 1, 3);
+        BlockPos targetRelative = new BlockPos(5, 1, 3);
+        forceTicking(helper, tableRelative, dinosaurRelative, targetRelative);
+        for (int x = 0; x <= 7; x++) {
+            for (int z = 0; z <= 6; z++) helper.setBlock(new BlockPos(x, 0, z), Blocks.DIRT);
+        }
+        helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
+        helper.setBlock(targetRelative, Blocks.IRON_ORE);
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
+        player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
+        BlockPos table = helper.absolutePos(tableRelative);
+        BlockPos target = helper.absolutePos(targetRelative);
+        CommandTableBlock.claimExisting(player, table);
+        FieldDodoEntity dinosaur = helper.spawn(ModEntities.SPINOSAURUS.get(), dinosaurRelative);
+        helper.assertTrue(DinosaurOwnership.addToActiveIfRoom(player, dinosaur, table)
+                        && DinosaurOwnership.setCommandMode(player, dinosaur, DinosaurCommandMode.FOLLOW).success(),
+                "The command-cycle test companion could not become an active follower");
+        dinosaur.setInvulnerable(true);
+        dinosaur.assignFieldWork(new DinoWhistleSettings(
+                DinoWhistleSettings.FieldMode.QUARRY,
+                DinoWhistleSettings.Pattern.CONNECTED,
+                48), target, null);
+        helper.assertTrue(dinosaur.hasFieldWork() && dinosaur.isFieldWorkActive(),
+                "The initial quarry order was not active");
+        helper.assertTrue(DinosaurOwnership.setCommandMode(player, dinosaur, DinosaurCommandMode.HOME).success(),
+                "The follower could not return Home");
+        helper.assertTrue(dinosaur.hasFieldWork() && !dinosaur.isFieldWorkActive(),
+                "Home either erased the saved order or left field duty running");
+
+        helper.startSequence()
+                .thenIdle(30)
+                .thenExecute(() -> helper.assertTrue(helper.getBlockState(targetRelative).is(Blocks.IRON_ORE),
+                        "A suspended Home companion continued mining its field order"))
+                .thenExecute(() -> helper.assertTrue(
+                        DinosaurOwnership.setCommandMode(player, dinosaur, DinosaurCommandMode.FOLLOW).success()
+                                && dinosaur.isFieldWorkActive(),
+                        "Returning to Follow did not resume the saved field order"))
+                .thenWaitUntil(() -> helper.assertTrue(helper.getBlockState(targetRelative).isAir(),
+                        "The resumed quarry order never completed"))
+                .thenExecute(() -> helper.assertTrue(!dinosaur.hasFieldWork(),
+                        "The resumed quarry order stayed active after completion"))
                 .thenSucceed();
     }
 

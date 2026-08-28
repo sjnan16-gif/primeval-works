@@ -199,6 +199,10 @@ public final class WhistleFollowerPickerScreen extends Screen {
         WhistleFollowerPickerScreen screen = active;
         Minecraft minecraft = Minecraft.getInstance();
         if (screen == null || minecraft.level == null) return;
+        if (minecraft.screen != screen) {
+            active = null;
+            return;
+        }
         renderTarget(event, screen.payload.first(), 0xFFFFFFFF, 4.0F);
         if (screen.payload.hasSecond()) renderTarget(event, screen.payload.second(), 0xFF77D3A0, 4.0F);
     }

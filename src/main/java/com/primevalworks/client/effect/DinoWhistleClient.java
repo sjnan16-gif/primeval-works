@@ -181,11 +181,12 @@ public final class DinoWhistleClient {
         }
 
         AABB search = minecraft.player.getBoundingBox().inflate(DinoWhistleSettings.MAX_RANGE + 18.0D);
+        if (settings.mode() != DinoWhistleSettings.FieldMode.QUARRY) return;
         for (FieldDodoEntity dinosaur : minecraft.level.getEntitiesOfClass(
                 FieldDodoEntity.class,
                 search,
                 candidate -> candidate.isOwnedBy(minecraft.player.getUUID())
-                        && candidate.hasFieldWork()
+                        && candidate.isFieldWorkActive()
                         && candidate.getFieldWorkMode() == DinoWhistleSettings.FieldMode.QUARRY)) {
             BlockPos first = dinosaur.getFieldWorkFirst().orElse(null);
             if (first == null) continue;

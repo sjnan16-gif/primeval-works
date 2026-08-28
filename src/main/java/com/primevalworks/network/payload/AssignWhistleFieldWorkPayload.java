@@ -2,7 +2,6 @@ package com.primevalworks.network.payload;
 
 import com.primevalworks.PrimevalWorks;
 import com.primevalworks.world.entity.FieldDodoEntity;
-import com.primevalworks.world.item.DinoWhistleItem;
 import com.primevalworks.world.ownership.DinosaurOwnership;
 import com.primevalworks.world.work.DinoFieldWorkRules;
 import com.primevalworks.world.work.DinoWhistleSettings;
@@ -13,7 +12,6 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.UUID;
@@ -38,27 +36,38 @@ public record AssignWhistleFieldWorkPayload(UUID dinosaurId, BlockPos first, Blo
 
     public static void handle(AssignWhistleFieldWorkPayload payload, IPayloadContext context) {
         if (!(context.player() instanceof ServerPlayer player)) return;
-        context.enqueueWork(() -> {
-            ItemStack whistle = DinoWhistleItem.findHeld(player);
-            DinoWhistleSettings settings = whistle.isEmpty() ? null : DinoWhistleSettings.read(whistle);
-            RequestWhistleFollowersPayload selection = new RequestWhistleFollowersPayload(
-                    payload.first, payload.second, payload.hasSecond);
+        context.enqueueWork(() -> apply(player, payload));
+    }
+
+    public static boolean apply(ServerPlayer player, AssignWhistleFieldWorkPayload payload) {
+        RequestWhistleFollowersPayload.PendingSelection pending =
+                RequestWhistleFollowersPayload.pendingSelection(player, payload).orElse(null);
+        if (pending == null) {
+            player.sendOverlayMessage(net.minecraft.network.chat.Component.literal(
+                    "That mark expired. Mark the block again."));
+            return false;
+        }
+        DinoWhistleSettings settings = pending.settings();
+        try {
             FieldDodoEntity dinosaur = DinosaurOwnership.findLoaded(player.level().getServer(), payload.dinosaurId);
             boolean availableFollower = DinosaurOwnership.loadedFollowers(player).stream()
                     .limit(DinosaurOwnership.followerLimit(player))
                     .anyMatch(follower -> follower.getUUID().equals(payload.dinosaurId));
-            if (settings == null || !settings.mode().requiresMark()
+            if (!settings.mode().requiresMark()
                     || dinosaur == null || dinosaur.level() != player.level()
                     || !dinosaur.isOwnedBy(player.getUUID())
                     || !availableFollower
                     || dinosaur.getCommandMode() != DinosaurCommandMode.FOLLOW
-                    || dinosaur.isOnExpedition() || dinosaur.isIncapacitated()
-                    || !RequestWhistleFollowersPayload.validSelection(player, selection, settings)) return;
+                    || dinosaur.isOnExpedition() || dinosaur.isIncapacitated()) {
+                player.sendOverlayMessage(net.minecraft.network.chat.Component.literal(
+                        "That companion is no longer available for this order."));
+                return false;
+            }
             int rating = DinoFieldWorkRules.rating(dinosaur, settings.mode());
             if (!DinoFieldWorkRules.supports(dinosaur.getSpecies(), settings.mode())) {
                 player.sendOverlayMessage(net.minecraft.network.chat.Component.literal(
                         "That species has a different field specialty."));
-                return;
+                return false;
             }
             if (settings.mode() == DinoWhistleSettings.FieldMode.QUARRY
                     && settings.pattern() == DinoWhistleSettings.Pattern.AREA
@@ -69,20 +78,23 @@ public record AssignWhistleFieldWorkPayload(UUID dinosaurId, BlockPos first, Blo
                         required > com.primevalworks.world.entity.DinosaurProgression.MAX_LEVEL
                                 ? "That quarry is beyond the maximum field boundary."
                                 : "Level this dinosaur to " + required + " to clear that quarry."));
-                return;
+                return false;
             }
             if (rating <= 0
                     || !DinoFieldWorkRules.validTarget(player.level(), payload.first, settings.mode(), rating)) {
                 player.sendOverlayMessage(net.minecraft.network.chat.Component.literal(
                         "That companion cannot work this target."));
-                return;
+                return false;
             }
             dinosaur.assignFieldWork(settings, payload.first, payload.hasSecond ? payload.second : null);
-            RequestWhistleFollowersPayload.clearStagedCorner(player);
             player.sendOverlayMessage(net.minecraft.network.chat.Component.literal(
                     dinosaur.getDisplayName().getString() + " received the "
                             + DinoFieldWorkRules.specialtyName(settings.mode()) + " order."));
-        });
+            return dinosaur.hasFieldWork() && dinosaur.getFieldWorkMode() == settings.mode();
+        } finally {
+            RequestWhistleFollowersPayload.clearStagedCorner(player);
+            RequestWhistleFollowersPayload.clearPendingSelection(player);
+        }
     }
 
     @Override
