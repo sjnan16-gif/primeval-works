@@ -74,7 +74,6 @@ public final class FieldDodoRenderer<R extends LivingEntityRenderState & GeoRend
                 1.0F / profile.modelScale(),
                 profile.statusIconScale()
         ));
-        withRenderLayer(new DinosaurMouthItemLayer<>(context, this, profile));
     }
 
     @Override

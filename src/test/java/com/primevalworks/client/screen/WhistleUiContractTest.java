@@ -179,10 +179,14 @@ final class WhistleUiContractTest {
     @Test
     void remoteCompanionWorkIsReplacedByOneLargeCallBackAction() throws Exception {
         String companion = Files.readString(CLIENT.resolve("screen/CompanionScreen.java"));
-        assertTrue(companion.contains("outsideBaseTogether()"));
+        assertTrue(companion.contains("dinosaurOutsideBase()"));
         assertTrue(companion.contains("callBack ? \"CALL BACK\" : \"JOBS\""));
         assertTrue(companion.contains("DinosaurCommandPayload.RECALL_HOME"));
         assertTrue(companion.contains("new Rect(JOBS.x(), JOBS.y(), 74, JOBS.height())"));
+        assertTrue(companion.contains("state.baseRadius = Mth.clamp(payload.baseRadius(), 8, 128)"),
+                "Call Back is not using the authoritative upgraded base radius");
+        assertFalse(companion.contains("minecraft.player.distanceToSqr(commandTablePos.getCenter())"),
+                "Call Back still waits for both the player and dinosaur to leave the base");
     }
 
     private static void assertUsesBubble(Path path) throws Exception {

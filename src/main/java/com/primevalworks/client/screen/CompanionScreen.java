@@ -8,7 +8,6 @@ import com.primevalworks.network.payload.FeedDodoPayload;
 import com.primevalworks.network.payload.DinosaurCommandPayload;
 import com.primevalworks.network.payload.DinosaurCommandStatePayload;
 import com.primevalworks.registry.ModEntities;
-import com.primevalworks.world.block.CommandTableBlock;
 import com.primevalworks.world.entity.FieldDodoEntity;
 import com.primevalworks.world.work.DinosaurCommandMode;
 import com.primevalworks.world.work.DinoFieldWorkRules;
@@ -196,7 +195,7 @@ public final class CompanionScreen extends Screen {
             return true;
         }
         if (jobsActionRect(layout).contains(event.x(), event.y())) {
-            if (outsideBaseTogether()) {
+            if (dinosaurOutsideBase()) {
                 ClientPacketDistributor.sendToServer(new DinosaurCommandPayload(
                         dodo.getId(), DinosaurCommandPayload.RECALL_HOME));
                 playUiClick(1.02F);
@@ -212,7 +211,7 @@ public final class CompanionScreen extends Screen {
             return true;
         }
         if (global(layout, INFO).contains(event.x(), event.y())) {
-            if (outsideBaseTogether()) {
+            if (dinosaurOutsideBase()) {
                 state.notice = "Call this companion back before changing its base work.";
                 playUiClick(0.72F);
                 return true;
@@ -301,7 +300,7 @@ public final class CompanionScreen extends Screen {
         drawJobSummary(graphics, layout, uiMouseX, uiMouseY, time);
         drawAction(graphics, global(layout, FEED), "FEED", 0xFFD86B32, Action.FEED, uiMouseX, uiMouseY, time);
         Rect jobs = jobsActionRect(layout);
-        boolean callBack = outsideBaseTogether();
+        boolean callBack = dinosaurOutsideBase();
         drawAction(graphics, jobs, callBack ? "CALL BACK" : "JOBS",
                 callBack ? 0xFFD09A16 : 0xFF477895, Action.JOBS, uiMouseX, uiMouseY, time);
         if (state.commandMode == DinosaurCommandMode.FOLLOW && !callBack) {
@@ -539,7 +538,7 @@ public final class CompanionScreen extends Screen {
             return new HoverInfo("FEED", "Choose suitable food from your inventory and feed this companion now.", 0xFFD86B32);
         }
         if (jobsActionRect(layout).contains(mouseX, mouseY)) {
-            if (outsideBaseTogether()) {
+            if (dinosaurOutsideBase()) {
                 return new HoverInfo("CALL BACK",
                         "Send this companion home before changing its permanent base assignment.", 0xFFD09A16);
             }
@@ -1123,6 +1122,7 @@ public final class CompanionScreen extends Screen {
         screen.state.commandMode = DinosaurCommandMode.byId(payload.mode());
         screen.state.followers = Math.max(0, payload.followers());
         screen.state.followerLimit = Math.max(1, payload.followerLimit());
+        screen.state.baseRadius = Mth.clamp(payload.baseRadius(), 8, 128);
         if (!payload.message().isBlank()) screen.state.notice = payload.message();
     }
 
@@ -1285,16 +1285,14 @@ public final class CompanionScreen extends Screen {
     }
 
     private Rect jobsActionRect(Layout layout) {
-        return global(layout, outsideBaseTogether()
+        return global(layout, dinosaurOutsideBase()
                 ? new Rect(JOBS.x(), JOBS.y(), 74, JOBS.height()) : JOBS);
     }
 
-    private boolean outsideBaseTogether() {
-        if (minecraft == null || minecraft.player == null || minecraft.level == null) return false;
-        double radius = CommandTableBlock.baseRadius(minecraft.level, commandTablePos);
+    private boolean dinosaurOutsideBase() {
+        double radius = Math.max(8, state.baseRadius);
         double radiusSquared = radius * radius;
-        return dodo.distanceToSqr(commandTablePos.getCenter()) > radiusSquared
-                && minecraft.player.distanceToSqr(commandTablePos.getCenter()) > radiusSquared;
+        return dodo.distanceToSqr(commandTablePos.getCenter()) > radiusSquared;
     }
 
     private Rect feedSlot(FeedPickerLayout picker, int inventorySlot) {
@@ -1789,6 +1787,7 @@ public final class CompanionScreen extends Screen {
         private DinosaurCommandMode commandMode;
         private int followers;
         private int followerLimit;
+        private int baseRadius;
         private String notice;
 
         private static PrototypeState create(FieldDodoEntity dodo) {
@@ -1797,6 +1796,7 @@ public final class CompanionScreen extends Screen {
             state.assignmentIndex = dodo.getWorkJobIndex();
             state.commandMode = dodo.getCommandMode();
             state.followerLimit = 1;
+            state.baseRadius = 50;
             state.notice = dodo.getType() == ModEntities.TYRANNOSAURUS.get()
                     ? "Watching the base perimeter."
                     : "Pecking loose berries into a tidy pile.";

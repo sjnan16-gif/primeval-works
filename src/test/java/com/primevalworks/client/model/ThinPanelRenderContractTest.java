@@ -18,6 +18,10 @@ final class ThinPanelRenderContractTest {
         assertTrue(renderer.contains("return RenderTypes.entityCutoutCull(texture);"));
         assertFalse(renderer.contains("profile.assetName().equals(\"pteranodon\")\n                 ||"),
                 "Thin-panel culling was limited to a species allow-list again");
+        assertFalse(renderer.contains("DinosaurMouthItemLayer"),
+                "Transport cargo returned to the old mouth-mounted render layer");
+        assertFalse(Files.exists(SOURCE.resolve("entity/DinosaurMouthItemLayer.java")),
+                "The retired mouth-mounted cargo layer is still shipped");
     }
 
     @Test

@@ -16,45 +16,43 @@ public record DinosaurVisualProfile(
         float statusIconScale,
         float previewWidth,
         float previewHeight,
-        String headBone,
-        String carryBone,
-        float carriedItemScale
+        String headBone
 ) {
     public static DinosaurVisualProfile forType(EntityType<?> type) {
         String species = BuiltInRegistries.ENTITY_TYPE.getKey(type).getPath();
         return switch (species) {
             case "field_dodo" -> new DinosaurVisualProfile(
                     "dodo", texture("dodo"), texture("dodo_blink"),
-                    1.0F, 0.0F, 0.42F, 1.75F, 0.82F, 0.88F, 1.56F, "Head", "Head", 0.46F
+                    1.0F, 0.0F, 0.42F, 1.75F, 0.82F, 0.88F, 1.56F, "Head"
             );
             case "tyrannosaurus" -> new DinosaurVisualProfile(
                     "t_rex", texture("t_rex"), texture("t_rex_blink"),
-                    1.0F, 0.015625F, 1.25F, 3.42F, 1.34F, 2.03F, 3.25F, "head", "lowerjaw", 0.72F
+                    1.0F, 0.015625F, 1.25F, 3.42F, 1.34F, 2.03F, 3.25F, "head"
             );
             case "brachiosaurus" -> placeholder(1.95F, 1.15F, 3.35F);
             case "spinosaurus" -> new DinosaurVisualProfile(
                     "spino", texture("spino"), texture("spino_blink"),
                     1.0F, 0.0F, 1.52F, 5.38F, 1.48F, 2.03F, 5.05F,
-                    "head2", "lowerjaw", 0.82F
+                    "head2"
             );
             case "stegosaurus" -> new DinosaurVisualProfile(
                     "stegosaurus", texture("stegosaurus"), texture("stegosaurus_blink"),
-                    1.0F, 0.0F, 1.12F, 3.14F, 1.18F, 1.75F, 2.88F, "Head", "lowerjaw", 0.68F
+                    1.0F, 0.0F, 1.12F, 3.14F, 1.18F, 1.75F, 2.88F, "Head"
             );
             case "triceratops" -> placeholder(1.22F, 0.82F, 2.05F);
             case "parasaurolophus" -> new DinosaurVisualProfile(
                     "parasaurolophus", texture("parasaurolophus"), texture("parasaurolophus_blink"),
-                    1.0F, 0.0F, 1.0F, 3.55F, 1.14F, 1.50F, 3.32F, "Head", "Head2", 0.62F
+                    1.0F, 0.0F, 1.0F, 3.55F, 1.14F, 1.50F, 3.32F, "Head"
             );
             case "velociraptor" -> new DinosaurVisualProfile(
                     "velociraptor", texture("velociraptor"), texture("velociraptor_blink"),
                     1.0F, 0.0F, 0.56F, 1.78F, 0.88F, 0.77F, 1.55F,
-                    "head2", "lowerjaw", 0.48F
+                    "head2"
             );
             case "ankylosaurus" -> placeholder(0.98F, 0.72F, 1.62F);
             case "pteranodon" -> new DinosaurVisualProfile(
                     "pteranodon", texture("pteranodon"), texture("pteranodon_blink"),
-                    1.0F, 0.0F, 0.78F, 2.42F, 1.0F, 8.75F, 1.0F, "Head", "lowerjaw", 0.54F
+                    1.0F, 0.0F, 0.78F, 2.42F, 1.0F, 8.75F, 1.0F, "Head"
             );
             case "dilophosaurus", "pachycephalosaurus" -> placeholder(0.88F, 0.56F, 1.52F);
             default -> placeholder(0.78F, 0.48F, 1.42F);
@@ -65,7 +63,7 @@ public record DinosaurVisualProfile(
         return new DinosaurVisualProfile(
                 "field_dodo", texture("dodo"), texture("dodo_blink"),
                 scale, 0.0F, shadow, indicatorHeight, 0.92F, 0.88F * scale, 1.56F * scale,
-                "head", "carry_socket", 0.48F
+                "head"
         );
     }
 

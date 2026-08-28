@@ -300,7 +300,8 @@ public final class EnergyNetworkScreen extends Screen {
         for (int checked = 0; checked < budget && !scanComplete; checked++) {
             ColumnOffset column = scanColumns.get(scanColumnIndex);
             BlockPos pos = tablePos.offset(column.x, scanY - tablePos.getY(), column.z);
-            if (minecraft.level.isLoaded(pos)) {
+            if (pos.distSqr(tablePos) <= (double)baseRadius * baseRadius
+                    && minecraft.level.isLoaded(pos)) {
                 BlockState state = minecraft.level.getBlockState(pos);
                 if (BaseEnergyRules.isGenerator(state)) addDistinct(generators, pos.immutable());
                 else if (state.is(ModBlocks.TURBINE_PART.get())) {
@@ -452,12 +453,15 @@ public final class EnergyNetworkScreen extends Screen {
     private static AABB turbineBounds(BlockPos pos, BlockState state) {
         Direction facing = state.getValue(TurbineBlock.FACING);
         boolean eastWest = facing.getAxis() == Direction.Axis.Z;
-        double height = TurbineBlock.isWindTurbine(state) ? 4.0D : 3.0D;
+        boolean wind = TurbineBlock.isWindTurbine(state);
+        double height = wind ? 4.0D : 3.0D;
+        double minimumWidthOffset = wind ? -1.0D : -2.0D;
+        double maximumWidthOffset = wind ? 2.0D : 3.0D;
         return eastWest
-                ? new AABB(pos.getX() - 1.0D, pos.getY(), pos.getZ(),
-                        pos.getX() + 2.0D, pos.getY() + height, pos.getZ() + 1.0D)
-                : new AABB(pos.getX(), pos.getY(), pos.getZ() - 1.0D,
-                        pos.getX() + 1.0D, pos.getY() + height, pos.getZ() + 2.0D);
+                ? new AABB(pos.getX() + minimumWidthOffset, pos.getY(), pos.getZ(),
+                        pos.getX() + maximumWidthOffset, pos.getY() + height, pos.getZ() + 1.0D)
+                : new AABB(pos.getX(), pos.getY(), pos.getZ() + minimumWidthOffset,
+                        pos.getX() + 1.0D, pos.getY() + height, pos.getZ() + maximumWidthOffset);
     }
 
     private Vec3 desiredCameraPosition() {
@@ -561,7 +565,12 @@ public final class EnergyNetworkScreen extends Screen {
         SubmitNodeCollector submits = event.getSubmitNodeCollector();
         PoseStack pose = event.getPoseStack();
         Vec3 camera = event.getLevelRenderState().cameraRenderState.pos;
-        for (BlockPos pos : screen.generators) screen.renderHighlight(pose, submits, pos, 0xFFFFD66B, 3.0F, camera);
+        for (BlockPos pos : screen.generators) {
+            boolean active = minecraft.level.getBlockEntity(pos) instanceof TurbineBlockEntity turbine
+                    && (turbine.isWorkerActive() || turbine.isPassiveActive());
+            screen.renderHighlight(pose, submits, pos, active ? 0xFFFFECA0 : 0xC8FFD66B,
+                    active ? 4.0F : 3.0F, camera);
+        }
         for (BlockPos pos : screen.consumers) {
             boolean enabled = screen.enabledConsumers.contains(pos);
             screen.renderHighlight(pose, submits, pos, enabled ? 0xE88ED074 : 0x8CFFF4DF,
@@ -602,27 +611,17 @@ public final class EnergyNetworkScreen extends Screen {
 
     private void renderEnergyIcons(SubmitCustomGeometryEvent event, PoseStack pose,
                                    SubmitNodeCollector submits, Vec3 camera) {
+        for (BlockPos pos : generators) {
+            AABB sourceBounds = bounds(pos);
+            renderEnergyIcon(event, pose, submits, camera, pos, sourceBounds, true);
+        }
         for (BlockPos pos : consumers) {
             AABB blockBounds = WorksiteIndicatorRenderer.indicatorBounds(minecraft.level, pos);
-            Vec3 center = blockBounds.getCenter();
-            boolean focused = pos.equals(hoveredPos);
-            pose.pushPose();
-            double distance = camera.distanceTo(center);
-            double bob = Math.sin((minecraft.level.getGameTime() + pos.asLong() * 0.01D) * 0.12D) * 0.08D;
-            pose.translate(center.x - camera.x, blockBounds.maxY + 0.25D + bob - camera.y, center.z - camera.z);
-            pose.mulPose(event.getLevelRenderState().cameraRenderState.orientation);
-            float distanceScale = Mth.clamp(0.34F + (float)Math.max(0.0D, distance - 8.0D) * 0.010F,
-                    0.34F, 0.62F);
-            double footprint = Math.max(blockBounds.getXsize(), blockBounds.getZsize());
-            float blockScale = (float)Math.min(1.42D, Math.max(0.86D, 0.80D + Math.sqrt(footprint) * 0.20D));
-            float iconScale = (focused ? distanceScale * 1.28F : distanceScale) * blockScale;
-            pose.scale(iconScale, iconScale, iconScale);
-            int iconColor = focused ? 0xFFFFFFFF : 0xB8FFFFFF;
-            submits.submitCustomGeometry(pose, RenderTypes.entityTranslucent(ENERGY_ICON),
-                    (matrix, vertices) -> renderIconQuad(matrix, vertices, iconColor));
-            pose.popPose();
+            renderEnergyIcon(event, pose, submits, camera, pos, blockBounds, false);
 
+            boolean focused = pos.equals(hoveredPos);
             if (!focused) continue;
+            Vec3 center = blockBounds.getCenter();
             Component label = Component.literal(formatEnergy(BaseEnergyRules.demandPerSecond(minecraft.level, pos)) + " E/S")
                     .withStyle(Style.EMPTY.withBold(true));
             pose.pushPose();
@@ -634,6 +633,34 @@ public final class EnergyNetworkScreen extends Screen {
                     0x00F000F0, 0xFFFFFFFF, 0x720C0910, 0);
             pose.popPose();
         }
+    }
+
+    private void renderEnergyIcon(
+            SubmitCustomGeometryEvent event,
+            PoseStack pose,
+            SubmitNodeCollector submits,
+            Vec3 camera,
+            BlockPos pos,
+            AABB blockBounds,
+            boolean generator
+    ) {
+        Vec3 center = blockBounds.getCenter();
+        boolean focused = pos.equals(hoveredPos);
+        pose.pushPose();
+        double distance = camera.distanceTo(center);
+        double bob = Math.sin((minecraft.level.getGameTime() + pos.asLong() * 0.01D) * 0.12D) * 0.08D;
+        pose.translate(center.x - camera.x, blockBounds.maxY + 0.25D + bob - camera.y, center.z - camera.z);
+        pose.mulPose(event.getLevelRenderState().cameraRenderState.orientation);
+        float distanceScale = Mth.clamp(0.34F + (float)Math.max(0.0D, distance - 8.0D) * 0.010F,
+                0.34F, 0.62F);
+        double footprint = Math.max(blockBounds.getXsize(), blockBounds.getZsize());
+        float blockScale = (float)Math.min(1.42D, Math.max(0.86D, 0.80D + Math.sqrt(footprint) * 0.20D));
+        float iconScale = (focused ? distanceScale * 1.28F : distanceScale) * blockScale;
+        pose.scale(iconScale, iconScale, iconScale);
+        int iconColor = focused ? 0xFFFFFFFF : generator ? 0xE8FFF0A8 : 0xB8FFFFFF;
+        submits.submitCustomGeometry(pose, RenderTypes.entityTranslucent(ENERGY_ICON),
+                (matrix, vertices) -> renderIconQuad(matrix, vertices, iconColor));
+        pose.popPose();
     }
 
     private static void renderIconQuad(PoseStack.Pose matrix, VertexConsumer vertices, int color) {

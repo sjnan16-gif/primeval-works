@@ -1,6 +1,7 @@
 package com.primevalworks.network.payload;
 
 import com.primevalworks.PrimevalWorks;
+import com.primevalworks.world.block.CommandTableBlock;
 import com.primevalworks.world.entity.FieldDodoEntity;
 import com.primevalworks.world.ownership.DinosaurOwnership;
 import com.primevalworks.world.work.DinosaurCommandMode;
@@ -27,10 +28,12 @@ public record DinosaurCommandPayload(int entityId, int requestedMode) implements
         if (!(context.player() instanceof ServerPlayer player)) return;
         context.enqueueWork(() -> {
             if (!(player.level().getEntity(payload.entityId) instanceof FieldDodoEntity dinosaur)
-                    || !dinosaur.isOwnedBy(player.getUUID())
-                    || player.distanceToSqr(dinosaur) > 64.0D * 64.0D) return;
+                    || !dinosaur.isOwnedBy(player.getUUID())) return;
             String message = "";
             boolean recall = payload.requestedMode == RECALL_HOME;
+            if (recall ? !canRecall(player, dinosaur) : player.distanceToSqr(dinosaur) > 64.0D * 64.0D) {
+                return;
+            }
             int modeId = recall ? DinosaurCommandMode.HOME.ordinal() : payload.requestedMode;
             if (modeId >= 0 && modeId < DinosaurCommandMode.values().length) {
                 DinosaurCommandMode mode = DinosaurCommandMode.byId(modeId);
@@ -45,6 +48,18 @@ public record DinosaurCommandPayload(int entityId, int requestedMode) implements
             }
             PacketDistributor.sendToPlayer(player, DinosaurCommandStatePayload.from(player, dinosaur, message));
         });
+    }
+
+    private static boolean canRecall(ServerPlayer player, FieldDodoEntity dinosaur) {
+        if (!DinosaurOwnership.activeIds(player).contains(dinosaur.getUUID())) return false;
+        CommandTableBlock.ClaimedTable table = CommandTableBlock.getClaimedTable(player).orElse(null);
+        if (table == null || table.level() != player.level()
+                || dinosaur.getCommandTablePos().filter(table.pos()::equals).isEmpty()) {
+            return false;
+        }
+        double interactionRangeSquared = 64.0D * 64.0D;
+        return player.distanceToSqr(dinosaur) <= interactionRangeSquared
+                || player.distanceToSqr(table.pos().getCenter()) <= interactionRangeSquared;
     }
 
     @Override

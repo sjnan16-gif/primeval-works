@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 final class TurbineGeoModelTest {
     @Test
@@ -51,6 +52,10 @@ final class TurbineGeoModelTest {
         assertTrue(water.contains("\"visible_bounds_offset\": [0, 1.75, 0]"));
         assertTrue(water.contains("\"name\": \"all\""));
         assertTrue(water.contains("\"name\": \"big ass bone\""));
+        assertTrue(water.contains("\"rotation\": [0, 0, -45], \"uv\": [0, 86]"),
+                "The lower-left blade lost its corrected brown UV island");
+        assertFalse(water.contains("\"rotation\": [0, 0, -45], \"uv\": [78, 66]"),
+                "A blade is still mapped onto the blue/white Blockbench guide pixels");
 
         String animation = Files.readString(Path.of(
                 "src/main/resources/assets/primevalworks/geckolib/animations/block/water_turbine.animation.json"));

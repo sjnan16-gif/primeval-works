@@ -2767,6 +2767,14 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             cancelWorkAction();
             return;
         }
+        CommandTableBlockEntity table = commandTableEntity();
+        if (table == null || !assignedWorkTargetsInsideBase(table.baseRadius())) {
+            workEnabled = false;
+            cancelWorkAction();
+            navigation.stop();
+            DinosaurOwnership.syncRecord(this);
+            return;
+        }
         if (workerCooldown > 0) {
             workerCooldown--;
             cancelWorkAction();
@@ -2780,6 +2788,20 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             case 4 -> startExpedition();
             default -> cancelWorkAction();
         }
+    }
+
+    private boolean assignedWorkTargetsInsideBase(int radius) {
+        if (commandTablePos == null) return false;
+        double radiusSquared = (double)radius * radius;
+        for (List<BlockPos> positions : List.of(
+                workSourcePositions,
+                workWorkstationPositions,
+                workDestinationPositions,
+                workFallbackPositions
+        )) {
+            if (positions.stream().anyMatch(pos -> pos.distSqr(commandTablePos) > radiusSquared)) return false;
+        }
+        return workAreaEndPos == null || workAreaEndPos.distSqr(commandTablePos) <= radiusSquared;
     }
 
     private void runFieldWork() {
@@ -3254,7 +3276,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             workerCooldown = 30;
             return;
         }
-        if (!closeTo(turbinePos)) {
+        if (!closeToEnergyStation(turbinePos)) {
             moveTo(turbinePos);
             return;
         }
@@ -3330,6 +3352,11 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         setSpeed(0.0F);
         xxa = 0.0F;
         zza = 0.0F;
+        if (getSpecies() == DinosaurSpecies.PTERANODON && autonomousTransportFlight && !onGround()) {
+            setNoGravity(true);
+            entityData.set(PTERO_FLIGHT_MODE, PTERO_FLIGHT_HOVERING);
+            entityData.set(PTERO_AIRSPEED, 0.0F);
+        }
         getLookControl().setLookAt(
                 targetPos.getX() + 0.5D,
                 targetPos.getY() + 0.55D,
@@ -4225,6 +4252,19 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         return getBoundingBox().inflate(reach, verticalReach, reach).intersects(new AABB(pos));
     }
 
+    private boolean closeToEnergyStation(BlockPos pos) {
+        if (getSpecies() != DinosaurSpecies.SPINOSAURUS || !isWaterTurbineTarget(pos)) {
+            return closeTo(pos);
+        }
+        Vec3 turbineCenter = pos.getCenter().add(0.0D, 0.85D, 0.0D);
+        Vec3 workCenter = position().add(0.0D, getBbHeight() * 0.38D, 0.0D);
+        double horizontalReach = Math.max(2.1D, workInteractionDistance() + getBbWidth() * 0.35D);
+        return isInWater()
+                && workCenter.multiply(1.0D, 0.0D, 1.0D)
+                .distanceToSqr(turbineCenter.multiply(1.0D, 0.0D, 1.0D)) <= horizontalReach * horizontalReach
+                && Math.abs(workCenter.y - turbineCenter.y) <= 1.15D;
+    }
+
     private boolean closeToFieldTarget(BlockPos pos) {
         double horizontalReach = getSpecies().fieldWorkReach() * getScale();
         double verticalReach = Math.max(3.25D, horizontalReach * 0.82D);
@@ -4250,6 +4290,10 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         }
         double collisionClearance = getBbWidth() * 0.5D + 0.60D;
         Vec3 approach = center.add(away.scale(Math.max(0.82D, collisionClearance)));
+        if (getSpecies() == DinosaurSpecies.SPINOSAURUS && isWaterTurbineTarget(pos)) {
+            double bodyWorkOffset = getBbHeight() * 0.38D;
+            approach = new Vec3(approach.x, pos.getY() + 1.35D - bodyWorkOffset, approach.z);
+        }
         if (commandMode == DinosaurCommandMode.FOLLOW && fieldWorkEnabled) {
             double verticalReach = Math.max(3.25D, getSpecies().fieldWorkReach() * getScale() * 0.82D);
             if (Math.abs(center.y - getY()) <= verticalReach) {
@@ -4263,12 +4307,18 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         if (pos == null) return;
         cancelWorkAction();
         double horizontalDistanceSquared = Vec3.atCenterOf(pos).subtract(position()).horizontalDistanceSqr();
-        if (getSpecies() == DinosaurSpecies.PTERANODON && isTransportWorkActive() && !isVehicle()) {
+        if (getSpecies() == DinosaurSpecies.PTERANODON && isAutonomousPteranodonFlightAllowed() && !isVehicle()) {
             double flightThreshold = 196.0D / Math.max(0.82F, 0.84F + getPassiveStrength() * 0.16F);
-            if (autonomousTransportFlight || horizontalDistanceSquared >= flightThreshold || stalledNavigationTicks >= 40) {
+            double verticalDistance = Math.abs(pos.getY() + 0.5D - getY());
+            if (autonomousTransportFlight || horizontalDistanceSquared >= flightThreshold
+                    || verticalDistance >= 2.5D || stalledNavigationTicks >= 40) {
                 tickAutonomousTransportFlight(pos);
                 return;
             }
+        }
+        if (getSpecies() == DinosaurSpecies.SPINOSAURUS && isWaterTurbineTarget(pos) && isInWater()) {
+            tickSpinosaurusAquaticWorkMovement(pos);
+            return;
         }
         if (!pos.equals(navigationTarget)) {
             navigation.stop();
@@ -4278,8 +4328,9 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             recoveryWaypointTicks = 0;
             Vec3 approach = workApproachPoint(pos);
             boolean pathStarted = navigation.moveTo(
-                    approach.x, pos.getY(), approach.z, movementSpeedForWork());
-            if (!pathStarted && getSpecies() == DinosaurSpecies.PTERANODON && isTransportWorkActive() && !isVehicle()) {
+                    approach.x, approach.y, approach.z, movementSpeedForWork());
+            if (!pathStarted && getSpecies() == DinosaurSpecies.PTERANODON
+                    && isAutonomousPteranodonFlightAllowed() && !isVehicle()) {
                 tickAutonomousTransportFlight(pos);
                 return;
             }
@@ -4315,7 +4366,38 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                 && isRaptorTransportPursuitActive();
         if (navigation.isDone() || (!raptorTransportRun && tickCount % 10 == 0)) {
             Vec3 approach = workApproachPoint(pos);
-            navigation.moveTo(approach.x, pos.getY(), approach.z, speed);
+            boolean pathStarted = navigation.moveTo(approach.x, approach.y, approach.z, speed);
+            if (!pathStarted && getSpecies() == DinosaurSpecies.PTERANODON
+                    && isAutonomousPteranodonFlightAllowed() && !isVehicle()) {
+                tickAutonomousTransportFlight(pos);
+            }
+        }
+    }
+
+    private boolean isWaterTurbineTarget(BlockPos pos) {
+        return level().isLoaded(pos) && level().getBlockState(pos).is(ModBlocks.WATER_TURBINE.get());
+    }
+
+    private void tickSpinosaurusAquaticWorkMovement(BlockPos target) {
+        Vec3 approach = workApproachPoint(target);
+        Vec3 offset = approach.subtract(position());
+        navigation.stop();
+        getMoveControl().setWait();
+        navigationTarget = target.immutable();
+        if (offset.lengthSqr() > 0.02D) {
+            double speed = Mth.clamp(offset.length() * 0.055D, 0.20D, 0.43D)
+                    * getMutationStatMultiplier();
+            Vec3 desired = offset.normalize().scale(speed);
+            desired = new Vec3(desired.x, Mth.clamp(desired.y, -0.20D, 0.20D), desired.z);
+            Vec3 movement = getDeltaMovement().lerp(desired, 0.24D);
+            setDeltaMovement(movement);
+            float desiredYaw = (float)(Mth.atan2(offset.z, offset.x) * Mth.RAD_TO_DEG) - 90.0F;
+            setYRot(Mth.approachDegrees(getYRot(), desiredYaw,
+                    getSpecies().turnDegreesPerTick() * 1.45F));
+            yBodyRot = Mth.approachDegrees(yBodyRot, getYRot(), getSpecies().turnDegreesPerTick());
+            yHeadRot = Mth.approachDegrees(yHeadRot, desiredYaw, getSpecies().turnDegreesPerTick() * 1.8F);
+            entityData.set(SPINO_SWIMMING, true);
+            entityData.set(SPINO_SWIM_SPEED, (float)movement.length());
         }
     }
 
@@ -4333,6 +4415,8 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
 
     private boolean isAutonomousPteranodonFlightAllowed() {
         if (getSpecies() != DinosaurSpecies.PTERANODON) return false;
+        if (commandMode == DinosaurCommandMode.HOME && workEnabled
+                && workJobIndex >= 0 && workJobIndex <= 3) return true;
         if (isTransportWorkActive()) return true;
         ServerPlayer owner = commandOwner();
         return commandMode == DinosaurCommandMode.FOLLOW
@@ -4371,8 +4455,16 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         Vec3 offset = desiredPoint.subtract(position());
 
         if (horizontalDistance <= 2.1D && Math.abs(offset.y) <= 1.35D) {
-            stopAutonomousTransportFlight();
-            navigation.moveTo(targetCenter.x, target.getY() + 0.5D, targetCenter.z, movementSpeedForWork());
+            if (commandMode == DinosaurCommandMode.HOME && workEnabled
+                    && workJobIndex >= 0 && workJobIndex <= 3 && !onGround()) {
+                setNoGravity(true);
+                entityData.set(PTERO_FLIGHT_MODE, PTERO_FLIGHT_HOVERING);
+                setDeltaMovement(getDeltaMovement().lerp(Vec3.ZERO, 0.30D));
+                entityData.set(PTERO_AIRSPEED, (float)getDeltaMovement().horizontalDistance());
+            } else {
+                stopAutonomousTransportFlight();
+                navigation.moveTo(targetCenter.x, target.getY() + 0.5D, targetCenter.z, movementSpeedForWork());
+            }
             return;
         }
 
@@ -4456,7 +4548,18 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                             && insideBaseBoundary(candidate.position(), 6.0D)
             ));
         } else {
-            goalSelector.addGoal(1, new PanicGoal(this, 1.35D));
+            goalSelector.addGoal(1, new PanicGoal(this, 1.35D) {
+                @Override
+                protected boolean shouldPanic() {
+                    DamageSource source = FieldDodoEntity.this.getLastDamageSource();
+                    if (source != null
+                            && source.getEntity() instanceof Player player
+                            && FieldDodoEntity.this.isOwnedBy(player.getUUID())) {
+                        return false;
+                    }
+                    return super.shouldPanic();
+                }
+            });
         }
         goalSelector.addGoal(2, new FollowCommandOwnerGoal());
         goalSelector.addGoal(2, new StayCommandGoal());

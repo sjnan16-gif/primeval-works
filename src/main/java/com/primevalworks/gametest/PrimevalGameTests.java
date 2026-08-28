@@ -94,6 +94,12 @@ public final class PrimevalGameTests {
             TEST_FUNCTIONS.register("energy_work_cycle", () -> PrimevalGameTests::energyWorkCycle);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> ENERGY_WORKER_STAYS_ON_DUTY =
             TEST_FUNCTIONS.register("energy_worker_stays_on_duty", () -> PrimevalGameTests::energyWorkerStaysOnDuty);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> SPINOSAURUS_SWIMS_TO_WATER_TURBINE =
+            TEST_FUNCTIONS.register("spinosaurus_swims_to_water_turbine",
+                    () -> PrimevalGameTests::spinosaurusSwimsToWaterTurbine);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> PTERANODON_FLIES_TO_AIRBORNE_WORK =
+            TEST_FUNCTIONS.register("pteranodon_flies_to_airborne_work",
+                    () -> PrimevalGameTests::pteranodonFliesToAirborneWork);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> WORK_ORDER_SURVIVES_ROSTER_ROUND_TRIP =
             TEST_FUNCTIONS.register("work_order_survives_roster_round_trip", () -> PrimevalGameTests::workOrderSurvivesRosterRoundTrip);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> ACTIVE_WORK_RESTORES_AFTER_LOGIN =
@@ -256,6 +262,16 @@ public final class PrimevalGameTests {
         event.registerTest(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "energy_worker_stays_on_duty"),
                 new FunctionGameTestInstance(ENERGY_WORKER_STAYS_ON_DUTY.getKey(), isolatedTestData(event, "energy_continuous"))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "spinosaurus_swims_to_water_turbine"),
+                new FunctionGameTestInstance(SPINOSAURUS_SWIMS_TO_WATER_TURBINE.getKey(),
+                        isolatedTestData(event, "spinosaurus_water_work", 500))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "pteranodon_flies_to_airborne_work"),
+                new FunctionGameTestInstance(PTERANODON_FLIES_TO_AIRBORNE_WORK.getKey(),
+                        isolatedTestData(event, "pteranodon_air_work", 500))
         );
         event.registerTest(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "work_order_survives_roster_round_trip"),
@@ -799,6 +815,8 @@ public final class PrimevalGameTests {
     }
 
     private static void passiveWorkerHoldsFieldAnchor(GameTestHelper helper) {
+        helper.getLevel().clockManager().setTotalTicks(
+                helper.getLevel().dimensionType().defaultClock().orElseThrow(), 1_000L);
         BlockPos dinosaurRelative = new BlockPos(2, 1, 3);
         BlockPos ownerRelative = new BlockPos(16, 1, 3);
         BlockPos cropRelative = new BlockPos(5, 1, 3);
@@ -1918,18 +1936,17 @@ public final class PrimevalGameTests {
         );
         helper.assertTrue(BaseEnergyRules.isPowered(helper.getLevel(), consumer),
                 "A saved energy connection did not immediately rebuild its missing runtime index");
-
-        helper.runAfterDelay(21, () -> {
-            helper.assertTrue(table.storedEnergy() < 40.0F && table.storedEnergy() > 38.0F,
-                    "The connected block did not drain its 1 E/S demand from storage");
-            helper.assertTrue(Math.abs(table.consumptionPerSecond() - 1.0F) < 0.01F,
-                    "The server did not report the connected block's energy loss rate");
-            helper.assertTrue(!table.toggleEnergyConsumer(helper.getLevel(), consumer),
-                    "Clicking an active energy device did not disconnect it");
-            helper.assertTrue(!table.isEnergyConsumerEnabled(consumer),
-                    "The disconnected block remained attached to the network");
-            helper.succeed();
-        });
+        CommandTableBlockEntity.serverTick(
+                helper.getLevel(), helper.absolutePos(tableRelative), helper.getBlockState(tableRelative), table);
+        helper.assertTrue(table.storedEnergy() < 40.0F && table.storedEnergy() > 39.0F,
+                "The connected block did not drain its 1 E/S demand from storage");
+        helper.assertTrue(Math.abs(table.consumptionPerSecond() - 1.0F) < 0.01F,
+                "The server did not report the connected block's energy loss rate");
+        helper.assertTrue(!table.toggleEnergyConsumer(helper.getLevel(), consumer),
+                "Clicking an active energy device did not disconnect it");
+        helper.assertTrue(!table.isEnergyConsumerEnabled(consumer),
+                "The disconnected block remained attached to the network");
+        helper.succeed();
     }
 
     private static void poweredInteractionRequiresEnergy(GameTestHelper helper) {
@@ -2729,6 +2746,84 @@ public final class PrimevalGameTests {
                             "The selected cargo filter moved an unselected item");
                     helper.assertTrue(dodo.getCarriedStack().isEmpty(),
                             "Dodo kept cargo after completing delivery: " + dodo.getCarriedStack());
+                })
+                .thenSucceed();
+    }
+
+    private static void spinosaurusSwimsToWaterTurbine(GameTestHelper helper) {
+        BlockPos tableRelative = new BlockPos(2, 1, 10);
+        BlockPos turbineRelative = new BlockPos(13, 1, 4);
+        BlockPos dinosaurRelative = new BlockPos(2, 1, 4);
+        forceTicking(helper, tableRelative, turbineRelative, dinosaurRelative);
+        for (int x = 0; x <= 15; x++) {
+            for (int z = 0; z <= 11; z++) helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+        }
+        for (int x = 1; x <= 15; x++) for (int y = 1; y <= 6; y++) {
+            for (int z = 2; z <= 6; z++) helper.setBlock(new BlockPos(x, y, z), Blocks.WATER);
+        }
+        helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
+        placeSubmergedWaterTurbine(helper, turbineRelative);
+        FieldDodoEntity spinosaurus = helper.spawn(ModEntities.SPINOSAURUS.get(), dinosaurRelative);
+        BlockPos table = helper.absolutePos(tableRelative);
+        BlockPos turbine = helper.absolutePos(turbineRelative);
+        spinosaurus.assignWork(
+                2, table, List.of(), List.of(turbine), List.of(), null, List.of(),
+                List.of(), List.of(), Map.of(turbine, 3),
+                0, 3, 1, 0, 0, 0, 0, 1, true, true
+        );
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(
+                        spinosaurus.getWorkAction() == 3,
+                        "The Spinosaurus never swam down to its assigned Water Turbine; position="
+                                + spinosaurus.position() + ", water=" + spinosaurus.isInWater()
+                ))
+                .thenExecute(() -> {
+                    helper.assertTrue(spinosaurus.isInWater() && spinosaurus.isSpinosaurusSwimming(),
+                            "The Water Turbine worker returned to idle surface movement");
+                    helper.assertBlockEntityData(
+                            turbineRelative,
+                            TurbineBlockEntity.class,
+                            TurbineBlockEntity::isWorkerActive,
+                            () -> Component.literal("The submerged turbine did not receive its worker heartbeat")
+                    );
+                })
+                .thenSucceed();
+    }
+
+    private static void pteranodonFliesToAirborneWork(GameTestHelper helper) {
+        BlockPos tableRelative = new BlockPos(2, 1, 2);
+        BlockPos turbineRelative = new BlockPos(12, 7, 4);
+        BlockPos dinosaurRelative = new BlockPos(2, 1, 4);
+        forceTicking(helper, tableRelative, turbineRelative, dinosaurRelative);
+        for (int x = 0; x <= 15; x++) for (int z = 0; z <= 8; z++) {
+            helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+        }
+        helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
+        helper.setBlock(turbineRelative, ModBlocks.WIND_TURBINE.get());
+        FieldDodoEntity pteranodon = helper.spawn(ModEntities.PTERANODON.get(), dinosaurRelative);
+        BlockPos table = helper.absolutePos(tableRelative);
+        BlockPos turbine = helper.absolutePos(turbineRelative);
+        pteranodon.assignWork(
+                2, table, List.of(), List.of(turbine), List.of(), null, List.of(),
+                List.of(), List.of(), Map.of(turbine, 3),
+                0, 3, 1, 0, 0, 0, 0, 1, true, true
+        );
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(
+                        pteranodon.getWorkAction() == 3,
+                        "The Pteranodon never flew to its elevated workstation; position=" + pteranodon.position()
+                ))
+                .thenExecute(() -> {
+                    helper.assertTrue(pteranodon.isPteranodonAirborne() && !pteranodon.onGround(),
+                            "The Pteranodon did not hold an airborne work pose");
+                    helper.assertBlockEntityData(
+                            turbineRelative,
+                            TurbineBlockEntity.class,
+                            TurbineBlockEntity::isWorkerActive,
+                            () -> Component.literal("The elevated turbine did not receive its worker heartbeat")
+                    );
                 })
                 .thenSucceed();
     }
