@@ -130,8 +130,19 @@ final class WhistleUiContractTest {
         assertTrue(picker.contains("hotbar.png"));
         assertTrue(picker.contains("extractPreview"));
         assertTrue(picker.contains("slotReveal"));
+        assertTrue(picker.contains("payload.selectionToken()"));
         assertFalse(picker.contains("graphics.fill(0, 0, width, height"));
         assertFalse(picker.contains("PANEL_WIDTH"));
+    }
+
+    @Test
+    void assignedQuarryAreasKeepAnimatedDiagonalFaceStripes() throws Exception {
+        String client = Files.readString(CLIENT.resolve("effect/DinoWhistleClient.java"));
+        assertTrue(client.contains("submitVerticalFaceStripes"));
+        assertTrue(client.contains("emitVerticalFaceStripes"));
+        assertTrue(client.contains("0x7AC9FFD9"));
+        assertTrue(client.contains("2.0F, true, true"),
+                "The persisted assigned area lost its animated vertical-face treatment");
     }
 
     @Test

@@ -189,7 +189,7 @@ public final class DinoWhistleClient {
                     boolean levelValid = absoluteValid && (availableLevel < 0
                             || availableLevel >= DinoFieldWorkRules.requiredLevel(areaFirst, second));
                     renderArea(event, areaFirst, second,
-                            levelValid ? 0x706FE49A : 0x70E65A54, 2.5F, levelValid);
+                            levelValid ? 0x706FE49A : 0x70E65A54, 2.5F, levelValid, false);
                 }
             }
         }
@@ -206,7 +206,7 @@ public final class DinoWhistleClient {
             if (first == null) continue;
             BlockPos second = dinosaur.getFieldWorkSecond().orElse(null);
             if (dinosaur.getFieldWorkPattern() == DinoWhistleSettings.Pattern.AREA && second != null) {
-                renderArea(event, first, second, 0x586FE49A, 2.0F, true);
+                renderArea(event, first, second, 0x586FE49A, 2.0F, true, true);
             } else {
                 renderBlock(event, first, 0x786FE49A, 2.5F);
             }
@@ -226,7 +226,8 @@ public final class DinoWhistleClient {
     }
 
     private static void renderArea(SubmitCustomGeometryEvent event, BlockPos first, BlockPos second,
-                                   int color, float width, boolean movingStripes) {
+                                   int color, float width, boolean movingStripes,
+                                   boolean verticalFaceStripes) {
         double minX = Math.min(first.getX(), second.getX());
         double minY = Math.min(first.getY(), second.getY());
         double minZ = Math.min(first.getZ(), second.getZ());
@@ -236,6 +237,10 @@ public final class DinoWhistleClient {
         VoxelShape shape = Shapes.create(new AABB(minX, minY, minZ, maxX, maxY, maxZ));
         submitShape(event, shape, color, width);
         if (movingStripes) submitMovingStripes(event, shape, 0xE9C9FFD9, width + 0.8F);
+        if (verticalFaceStripes) {
+            submitVerticalFaceStripes(event, new AABB(minX, minY, minZ, maxX, maxY, maxZ),
+                    0x7AC9FFD9, width + 0.25F);
+        }
     }
 
     private static void submitShape(SubmitCustomGeometryEvent event, VoxelShape shape, int color, float width) {
@@ -289,5 +294,59 @@ public final class DinoWhistleClient {
                                 .setColor(color).setNormal(matrix, normal).setLineWidth(width);
                     }
                 }));
+    }
+
+    private static void submitVerticalFaceStripes(SubmitCustomGeometryEvent event, AABB bounds,
+                                                  int color, float width) {
+        Vec3 camera = event.getLevelRenderState().cameraRenderState.pos;
+        SubmitNodeCollector submits = event.getSubmitNodeCollector();
+        PoseStack pose = event.getPoseStack();
+        double spacing = 0.78D;
+        double slope = 0.52D;
+        double phase = ((Util.getNanos() / 1_000_000_000.0D) * 0.46D) % spacing;
+        submits.submitCustomGeometry(pose, WorksitePlannerScreen.XRAY_HIGHLIGHT_TYPE,
+                (matrix, vertices) -> {
+                    emitVerticalFaceStripes(matrix, vertices, camera, bounds.minX - 0.003D,
+                            bounds.minZ, bounds.maxZ, bounds.minY, bounds.maxY,
+                            true, spacing, slope, phase, color, width);
+                    emitVerticalFaceStripes(matrix, vertices, camera, bounds.maxX + 0.003D,
+                            bounds.minZ, bounds.maxZ, bounds.minY, bounds.maxY,
+                            true, spacing, slope, phase, color, width);
+                    emitVerticalFaceStripes(matrix, vertices, camera, bounds.minZ - 0.003D,
+                            bounds.minX, bounds.maxX, bounds.minY, bounds.maxY,
+                            false, spacing, slope, phase, color, width);
+                    emitVerticalFaceStripes(matrix, vertices, camera, bounds.maxZ + 0.003D,
+                            bounds.minX, bounds.maxX, bounds.minY, bounds.maxY,
+                            false, spacing, slope, phase, color, width);
+                });
+    }
+
+    private static void emitVerticalFaceStripes(PoseStack.Pose matrix,
+                                                com.mojang.blaze3d.vertex.VertexConsumer vertices,
+                                                Vec3 camera, double fixed, double minAcross,
+                                                double maxAcross, double minY, double maxY,
+                                                boolean fixedX, double spacing, double slope,
+                                                double phase, int color, float width) {
+        double height = maxY - minY;
+        for (double intercept = minAcross - height * slope - spacing + phase;
+             intercept <= maxAcross + spacing; intercept += spacing) {
+            double fromY = Math.max(minY, minY + (minAcross - intercept) / slope);
+            double toY = Math.min(maxY, minY + (maxAcross - intercept) / slope);
+            if (toY - fromY <= 1.0E-4D) continue;
+            double fromAcross = intercept + slope * (fromY - minY);
+            double toAcross = intercept + slope * (toY - minY);
+            double x1 = fixedX ? fixed : fromAcross;
+            double z1 = fixedX ? fromAcross : fixed;
+            double x2 = fixedX ? fixed : toAcross;
+            double z2 = fixedX ? toAcross : fixed;
+            Vector3f normal = new Vector3f((float)(x2 - x1), (float)(toY - fromY),
+                    (float)(z2 - z1)).normalize();
+            vertices.addVertex(matrix, (float)(x1 - camera.x), (float)(fromY - camera.y),
+                            (float)(z1 - camera.z))
+                    .setColor(color).setNormal(matrix, normal).setLineWidth(width);
+            vertices.addVertex(matrix, (float)(x2 - camera.x), (float)(toY - camera.y),
+                            (float)(z2 - camera.z))
+                    .setColor(color).setNormal(matrix, normal).setLineWidth(width);
+        }
     }
 }

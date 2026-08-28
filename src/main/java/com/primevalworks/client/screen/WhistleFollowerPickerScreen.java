@@ -176,8 +176,8 @@ public final class WhistleFollowerPickerScreen extends Screen {
             }
             pressedIndex = index;
             pressedAt = Util.getNanos();
-            ClientPacketDistributor.sendToServer(new AssignWhistleFieldWorkPayload(entry.uuid(),
-                    payload.first(), payload.second(), payload.hasSecond()));
+            ClientPacketDistributor.sendToServer(new AssignWhistleFieldWorkPayload(
+                    entry.uuid(), payload.selectionToken()));
             PrimevalUiSounds.click(1.08F);
             onClose();
             return true;

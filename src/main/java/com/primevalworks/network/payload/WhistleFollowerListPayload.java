@@ -15,6 +15,7 @@ import java.util.UUID;
 
 public record WhistleFollowerListPayload(BlockPos first, BlockPos second, boolean hasSecond,
                                          int mode, int pattern, int range,
+                                         long selectionToken,
                                          List<Entry> entries) implements CustomPacketPayload {
     public static final Type<WhistleFollowerListPayload> TYPE = new Type<>(
             Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "whistle_follower_list"));
@@ -28,6 +29,7 @@ public record WhistleFollowerListPayload(BlockPos first, BlockPos second, boolea
         buffer.writeVarInt(payload.mode);
         buffer.writeVarInt(payload.pattern);
         buffer.writeVarInt(payload.range);
+        buffer.writeLong(payload.selectionToken);
         buffer.writeVarInt(Math.min(3, payload.entries.size()));
         for (Entry entry : payload.entries.stream().limit(3).toList()) {
             buffer.writeVarInt(entry.entityId);
@@ -47,6 +49,7 @@ public record WhistleFollowerListPayload(BlockPos first, BlockPos second, boolea
         int mode = buffer.readVarInt();
         int pattern = buffer.readVarInt();
         int range = buffer.readVarInt();
+        long selectionToken = buffer.readLong();
         int count = Math.min(3, buffer.readVarInt());
         List<Entry> entries = new ArrayList<>(count);
         for (int index = 0; index < count; index++) {
@@ -54,7 +57,7 @@ public record WhistleFollowerListPayload(BlockPos first, BlockPos second, boolea
                     buffer.readUtf(48), buffer.readVarInt(), buffer.readVarInt(), buffer.readBoolean()));
         }
         return new WhistleFollowerListPayload(first, second, hasSecond, mode, pattern,
-                range, List.copyOf(entries));
+                range, selectionToken, List.copyOf(entries));
     }
 
     public static void handle(WhistleFollowerListPayload payload, IPayloadContext context) {

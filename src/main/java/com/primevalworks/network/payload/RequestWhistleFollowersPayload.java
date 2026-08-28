@@ -35,6 +35,7 @@ public record RequestWhistleFollowersPayload(BlockPos first, BlockPos second, bo
     private static final String PENDING_RANGE = "PrimevalWhistlePendingRange";
     private static final String PENDING_DIMENSION = "PrimevalWhistlePendingDimension";
     private static final String PENDING_AT = "PrimevalWhistlePendingAt";
+    private static final String PENDING_TOKEN = "PrimevalWhistlePendingToken";
     private static final long PENDING_SELECTION_LIFETIME = 20L * 30L;
     public static final Type<RequestWhistleFollowersPayload> TYPE = new Type<>(
             Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "request_whistle_followers"));
@@ -96,14 +97,15 @@ public record RequestWhistleFollowersPayload(BlockPos first, BlockPos second, bo
                         dinosaur.getDisplayName().getString(), dinosaur.getSpecies().registryName(),
                         dinosaur.getDinosaurLevel(), rating, valid));
             }
+            long selectionToken = 0L;
             if (entries.isEmpty()) {
                 clearPendingSelection(player);
             } else {
-                rememberPendingSelection(player, payload, settings);
+                selectionToken = rememberPendingSelection(player, payload, settings);
             }
             PacketDistributor.sendToPlayer(player, new WhistleFollowerListPayload(payload.first,
                     payload.second, payload.hasSecond, settings.mode().ordinal(), settings.pattern().ordinal(),
-                    settings.range(), entries));
+                    settings.range(), selectionToken, entries));
         });
     }
 
@@ -128,37 +130,37 @@ public record RequestWhistleFollowersPayload(BlockPos first, BlockPos second, bo
         data.remove(STAGED_AT);
     }
 
-    public static Optional<PendingSelection> pendingSelection(ServerPlayer player,
-                                                               AssignWhistleFieldWorkPayload payload) {
+    public static Optional<PendingSelection> pendingSelection(ServerPlayer player, long selectionToken) {
         var data = player.getPersistentData();
+        long storedToken = data.getLongOr(PENDING_TOKEN, 0L);
+        if (selectionToken == 0L || storedToken == 0L || selectionToken != storedToken) {
+            return Optional.empty();
+        }
         long age = player.level().getGameTime() - data.getLongOr(PENDING_AT, Long.MIN_VALUE);
         boolean present = age >= 0L && age <= PENDING_SELECTION_LIFETIME
-                && data.getLongOr(PENDING_FIRST, Long.MIN_VALUE) == payload.first().asLong()
-                && data.getBooleanOr(PENDING_HAS_SECOND, false) == payload.hasSecond()
-                && (!payload.hasSecond()
-                || data.getLongOr(PENDING_SECOND, Long.MIN_VALUE) == payload.second().asLong())
+                && data.getLongOr(PENDING_FIRST, Long.MIN_VALUE) != Long.MIN_VALUE
                 && data.getStringOr(PENDING_DIMENSION, "")
                 .equals(player.level().dimension().identifier().toString());
         if (!present) {
             clearPendingSelection(player);
             return Optional.empty();
         }
+        BlockPos first = BlockPos.of(data.getLongOr(PENDING_FIRST, 0L));
+        boolean hasSecond = data.getBooleanOr(PENDING_HAS_SECOND, false);
+        BlockPos second = hasSecond ? BlockPos.of(data.getLongOr(PENDING_SECOND, first.asLong())) : first;
         return Optional.of(new PendingSelection(
-                payload.first().immutable(),
-                payload.hasSecond() ? payload.second().immutable() : payload.first().immutable(),
-                payload.hasSecond(),
+                first, second, hasSecond,
                 new DinoWhistleSettings(
                         DinoWhistleSettings.FieldMode.byId(data.getIntOr(PENDING_MODE, 0)),
                         DinoWhistleSettings.Pattern.byId(data.getIntOr(PENDING_PATTERN, 0)),
                         data.getIntOr(PENDING_RANGE, DinoWhistleSettings.DEFAULT.range()))));
     }
 
-    public static boolean rememberValidatedSelection(ServerPlayer player,
-                                                     RequestWhistleFollowersPayload payload) {
+    public static long rememberValidatedSelection(ServerPlayer player,
+                                                  RequestWhistleFollowersPayload payload) {
         DinoWhistleSettings settings = payload.settings();
-        if (!validSelection(player, payload, settings)) return false;
-        rememberPendingSelection(player, payload, settings);
-        return true;
+        if (!validSelection(player, payload, settings)) return 0L;
+        return rememberPendingSelection(player, payload, settings);
     }
 
     public static void clearPendingSelection(ServerPlayer player) {
@@ -171,11 +173,14 @@ public record RequestWhistleFollowersPayload(BlockPos first, BlockPos second, bo
         data.remove(PENDING_RANGE);
         data.remove(PENDING_DIMENSION);
         data.remove(PENDING_AT);
+        data.remove(PENDING_TOKEN);
     }
 
-    private static void rememberPendingSelection(ServerPlayer player,
-                                                 RequestWhistleFollowersPayload payload,
-                                                 DinoWhistleSettings settings) {
+    private static long rememberPendingSelection(ServerPlayer player,
+                                                RequestWhistleFollowersPayload payload,
+                                                DinoWhistleSettings settings) {
+        long selectionToken;
+        do selectionToken = player.getRandom().nextLong(); while (selectionToken == 0L);
         var data = player.getPersistentData();
         data.putLong(PENDING_FIRST, payload.first.asLong());
         data.putLong(PENDING_SECOND, payload.second.asLong());
@@ -185,6 +190,8 @@ public record RequestWhistleFollowersPayload(BlockPos first, BlockPos second, bo
         data.putInt(PENDING_RANGE, settings.range());
         data.putString(PENDING_DIMENSION, player.level().dimension().identifier().toString());
         data.putLong(PENDING_AT, player.level().getGameTime());
+        data.putLong(PENDING_TOKEN, selectionToken);
+        return selectionToken;
     }
 
     private static boolean stageFirstCorner(ServerPlayer player, BlockPos corner,

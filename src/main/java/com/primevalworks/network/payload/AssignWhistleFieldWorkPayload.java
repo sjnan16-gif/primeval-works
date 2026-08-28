@@ -6,7 +6,6 @@ import com.primevalworks.world.ownership.DinosaurOwnership;
 import com.primevalworks.world.work.DinoFieldWorkRules;
 import com.primevalworks.world.work.DinoWhistleSettings;
 import com.primevalworks.world.work.DinosaurCommandMode;
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -16,23 +15,15 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.UUID;
 
-public record AssignWhistleFieldWorkPayload(UUID dinosaurId, BlockPos first, BlockPos second, boolean hasSecond)
+public record AssignWhistleFieldWorkPayload(UUID dinosaurId, long selectionToken)
         implements CustomPacketPayload {
     public static final Type<AssignWhistleFieldWorkPayload> TYPE = new Type<>(
             Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "assign_whistle_field_work"));
     public static final StreamCodec<RegistryFriendlyByteBuf, AssignWhistleFieldWorkPayload> STREAM_CODEC = StreamCodec.of(
             (buffer, payload) -> {
                 buffer.writeUUID(payload.dinosaurId);
-                buffer.writeLong(payload.first.asLong());
-                buffer.writeBoolean(payload.hasSecond);
-                if (payload.hasSecond) buffer.writeLong(payload.second.asLong());
-            }, buffer -> {
-                UUID id = buffer.readUUID();
-                BlockPos first = BlockPos.of(buffer.readLong());
-                boolean hasSecond = buffer.readBoolean();
-                return new AssignWhistleFieldWorkPayload(id, first,
-                        hasSecond ? BlockPos.of(buffer.readLong()) : first, hasSecond);
-            });
+                buffer.writeLong(payload.selectionToken);
+            }, buffer -> new AssignWhistleFieldWorkPayload(buffer.readUUID(), buffer.readLong()));
 
     public static void handle(AssignWhistleFieldWorkPayload payload, IPayloadContext context) {
         if (!(context.player() instanceof ServerPlayer player)) return;
@@ -41,7 +32,7 @@ public record AssignWhistleFieldWorkPayload(UUID dinosaurId, BlockPos first, Blo
 
     public static boolean apply(ServerPlayer player, AssignWhistleFieldWorkPayload payload) {
         RequestWhistleFollowersPayload.PendingSelection pending =
-                RequestWhistleFollowersPayload.pendingSelection(player, payload).orElse(null);
+                RequestWhistleFollowersPayload.pendingSelection(player, payload.selectionToken).orElse(null);
         if (pending == null) {
             player.sendOverlayMessage(net.minecraft.network.chat.Component.literal(
                     "That mark expired. Mark the block again."));
@@ -72,8 +63,8 @@ public record AssignWhistleFieldWorkPayload(UUID dinosaurId, BlockPos first, Blo
             if (settings.mode() == DinoWhistleSettings.FieldMode.QUARRY
                     && settings.pattern() == DinoWhistleSettings.Pattern.AREA
                     && !DinoFieldWorkRules.areaWithinLimits(
-                            payload.first, payload.second, dinosaur.getDinosaurLevel())) {
-                int required = DinoFieldWorkRules.requiredLevel(payload.first, payload.second);
+                            pending.first(), pending.second(), dinosaur.getDinosaurLevel())) {
+                int required = DinoFieldWorkRules.requiredLevel(pending.first(), pending.second());
                 player.sendOverlayMessage(net.minecraft.network.chat.Component.literal(
                         required > com.primevalworks.world.entity.DinosaurProgression.MAX_LEVEL
                                 ? "That quarry is beyond the maximum field boundary."
@@ -81,12 +72,12 @@ public record AssignWhistleFieldWorkPayload(UUID dinosaurId, BlockPos first, Blo
                 return false;
             }
             if (rating <= 0
-                    || !DinoFieldWorkRules.validTarget(player.level(), payload.first, settings.mode(), rating)) {
+                    || !DinoFieldWorkRules.validTarget(player.level(), pending.first(), settings.mode(), rating)) {
                 player.sendOverlayMessage(net.minecraft.network.chat.Component.literal(
                         "That companion cannot work this target."));
                 return false;
             }
-            dinosaur.assignFieldWork(settings, payload.first, payload.hasSecond ? payload.second : null);
+            dinosaur.assignFieldWork(settings, pending.first(), pending.hasSecond() ? pending.second() : null);
             player.sendOverlayMessage(net.minecraft.network.chat.Component.literal(
                     dinosaur.getDisplayName().getString() + " received the "
                             + DinoFieldWorkRules.specialtyName(settings.mode()) + " order."));

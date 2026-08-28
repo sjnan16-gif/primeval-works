@@ -90,7 +90,7 @@ Both `/pw` and `/primevalworks` are valid aliases. Commands require cheats/opera
 ## Whistle, follower, and persistence checks
 
 1. Right-click a Dino Whistle in the player inventory or while holding it. Its normal vanilla tooltip must remain visible, and the authored setup panel should open immediately without a hold timer or permanent sidebar.
-2. Configure Connected Quarry and left-click one block; then configure Area Quarry and left-click two opposite corners. Both must open the follower picker over the mark, execute only the bounded order, and clear when finished. Lumber uses one left-clicked log; Harvest and Collect do not consume attack input.
+2. Configure Connected Quarry and left-click one block; then configure Area Quarry and left-click two opposite corners. Both must open the follower picker over the mark, assign without a false `mark expired` message, execute only the bounded order, and clear when finished. An assigned Area keeps moving edge dashes plus diagonal lines travelling across all four vertical faces while the Whistle is held. Lumber uses one left-clicked log; Harvest and Collect do not consume attack input.
 3. Open Collect's plus slot. The setup card must slide left while the searchable creative-style item catalogue slides right. Search, scroll, click, and drag must all select a filter without consuming an item.
 4. Assign a passive Harvest or Collect order, switch the dinosaur to Home and Stay, then back to Follow. The same order, range, filter, and marked settings must resume rather than reset.
 5. Repeat the previous check across a chunk unload, logout/rejoin, full client restart, depot storage/reactivation, and dedicated-server restart. The dinosaur UUID and field order must remain unique and server-authoritative.

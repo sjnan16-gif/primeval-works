@@ -3723,16 +3723,20 @@ public final class PrimevalGameTests {
                 48);
         RequestWhistleFollowersPayload request =
                 new RequestWhistleFollowersPayload(target, target, false, markedSettings);
-        helper.assertTrue(RequestWhistleFollowersPayload.rememberValidatedSelection(player, request),
+        long selectionToken = RequestWhistleFollowersPayload.rememberValidatedSelection(player, request);
+        helper.assertTrue(selectionToken != 0L,
                 "The server rejected a valid Connected quarry selection after Area was previously saved");
-        helper.assertTrue(RequestWhistleFollowersPayload.pendingSelection(player,
-                        new AssignWhistleFieldWorkPayload(dinosaur.getUUID(), target, target, false))
+        helper.assertTrue(RequestWhistleFollowersPayload.pendingSelection(player, selectionToken + 1L).isEmpty(),
+                "A forged marked-order token opened the current pending selection");
+        helper.assertTrue(RequestWhistleFollowersPayload.pendingSelection(player, selectionToken)
                         .map(selection -> selection.settings().pattern() == DinoWhistleSettings.Pattern.CONNECTED)
                         .orElse(false),
-                "The marked-order handoff replaced Connected with the stale Area setting");
+                "A rejected forged token erased the valid Connected quarry handoff");
         helper.assertTrue(AssignWhistleFieldWorkPayload.apply(player,
-                        new AssignWhistleFieldWorkPayload(dinosaur.getUUID(), target, target, false)),
+                        new AssignWhistleFieldWorkPayload(dinosaur.getUUID(), selectionToken)),
                 "Choosing a compatible follower did not commit the pending quarry order");
+        helper.assertTrue(RequestWhistleFollowersPayload.pendingSelection(player, selectionToken).isEmpty(),
+                "A committed marked-order token could be replayed");
 
         helper.startSequence()
                 .thenWaitUntil(() -> helper.assertTrue(helper.getBlockState(targetRelative).isAir(),
