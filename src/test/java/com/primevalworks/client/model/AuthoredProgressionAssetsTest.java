@@ -72,6 +72,46 @@ final class AuthoredProgressionAssetsTest {
         assertTrue(states.contains("facing=west,powered=true"));
     }
 
+    @Test
+    void authoredEggMachineAndSwordExportsAreWiredToStableIds() throws Exception {
+        assertImage("textures/block/small_dinosaur_egg.png", 32, 32);
+        assertImage("textures/block/big_dinosaur_egg.png", 64, 64);
+        assertImage("textures/block/large_dinosaur_egg.png", 64, 64);
+        for (String egg : new String[]{"small_dinosaur_egg", "big_dinosaur_egg", "large_dinosaur_egg"}) {
+            String geometry = Files.readString(ASSETS.resolve("geckolib/models/block/" + egg + ".geo.json"));
+            assertTrue(geometry.contains("geometry." + egg));
+            assertTrue(Files.readString(ASSETS.resolve("items/" + egg + ".json"))
+                    .contains("primevalworks:item/" + egg));
+            assertTrue(Files.readString(ASSETS.resolve("models/item/" + egg + ".json"))
+                    .contains("primevalworks:block/" + egg));
+        }
+        assertTrue(Files.readString(ASSETS.resolve("geckolib/animations/block/dinosaur_egg.animation.json"))
+                .contains("animation.dinosaur_egg.wobble"));
+
+        assertImage("textures/block/premium_egg_incubator.png", 128, 128);
+        assertImage("textures/block/ancient_furnace.png", 64, 64);
+        assertImage("textures/block/ancient_furnace_on.png", 64, 64);
+        String incubator = Files.readString(ASSETS.resolve("models/block/premium_egg_incubator.json"));
+        assertTrue(incubator.contains("[2, 0.01, 2]") && incubator.contains("[1, 0.51, 1]"));
+        String furnace = Files.readString(ASSETS.resolve("models/block/ancient_furnace.json"));
+        assertTrue(furnace.contains("\"uv\": [4, 4, 8, 8]"));
+        assertTrue(Files.readString(ASSETS.resolve("models/block/ancient_furnace_on.json"))
+                .contains("primevalworks:block/ancient_furnace_on"));
+
+        assertImage("textures/item/primordial_sword.png", 16, 16);
+        assertImage("textures/item/primordial_sword_model.png", 64, 64);
+        assertTrue(Files.readString(ASSETS.resolve("geckolib/models/item/primordial_sword.geo.json"))
+                .contains("geometry.primordial_sword"));
+        assertTrue(Files.readString(ASSETS.resolve("geckolib/models/item/primordial_sword.geo.json"))
+                .contains("\"format_version\": \"1.12.0\""));
+        assertTrue(Files.readString(ASSETS.resolve("geckolib/animations/item/primordial_sword.animation.json"))
+                .contains("\"idle\""));
+        String swordDefinition = Files.readString(ASSETS.resolve("items/primordial_sword.json"));
+        assertTrue(swordDefinition.contains("minecraft:display_context"));
+        assertTrue(swordDefinition.contains("primevalworks:item/primordial_sword_3d"));
+        assertTrue(swordDefinition.contains("geckolib:geckolib"));
+    }
+
     private static void assertLocalItemModel(String name) throws Exception {
         assertTrue(Files.readString(ASSETS.resolve("items/" + name + ".json"))
                 .contains("primevalworks:item/" + name));

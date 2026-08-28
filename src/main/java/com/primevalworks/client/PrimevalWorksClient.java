@@ -10,6 +10,7 @@ import com.primevalworks.client.model.entity.DinosaurVisualProfile;
 import com.primevalworks.client.render.entity.FieldDodoRenderer;
 import com.primevalworks.client.render.WorksiteIndicatorRenderer;
 import com.primevalworks.client.render.block.PremiumEggIncubatorRenderer;
+import com.primevalworks.client.render.block.DinosaurEggRenderer;
 import com.primevalworks.client.render.block.TurbineRenderer;
 import com.primevalworks.client.render.block.DartTurretRenderer;
 import com.primevalworks.client.render.block.LaserTurretRenderer;
@@ -114,6 +115,7 @@ public final class PrimevalWorksClient {
                 ModBlockEntities.PREMIUM_EGG_INCUBATOR.get(),
                 PremiumEggIncubatorRenderer::new
         );
+        event.registerBlockEntityRenderer(ModBlockEntities.DINOSAUR_EGG.get(), DinosaurEggRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.TURBINE.get(), TurbineRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.DART_TURRET.get(), DartTurretRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.LASER_TURRET.get(), LaserTurretRenderer::new);

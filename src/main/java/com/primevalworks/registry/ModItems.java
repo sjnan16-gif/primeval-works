@@ -14,6 +14,7 @@ import com.primevalworks.world.item.DinosaurEggItem;
 import com.primevalworks.world.item.DinosaurEggBlockItem;
 import com.primevalworks.world.item.TurbineBlockItem;
 import com.primevalworks.world.item.DinoWhistleItem;
+import com.primevalworks.world.item.PrimordialSwordItem;
 
 import java.util.List;
 
@@ -111,7 +112,8 @@ public final class ModItems {
     );
     public static final DeferredItem<Item> PRIMORDIAL_SWORD = ITEMS.registerItem(
             "primordial_sword",
-            properties -> new Item(ToolMaterial.NETHERITE.applySwordProperties(properties, 6.0F, -2.2F))
+            properties -> new PrimordialSwordItem(
+                    ToolMaterial.NETHERITE.applySwordProperties(properties, 6.0F, -2.2F))
     );
     public static final DeferredItem<Item> MAGIC_SHARD_FRAGMENT = ITEMS.registerSimpleItem("magic_shard_fragment");
     public static final DeferredItem<Item> MAGIC_SHARD = ITEMS.registerSimpleItem("magic_shard");

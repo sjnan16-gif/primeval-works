@@ -1,0 +1,12 @@
+{
+  "credit": "Made with Blockbench",
+  "parent": "minecraft:block/block",
+  "textures": {
+    "particle": "primevalworks:item/primordial_sword_model"
+  },
+  "texture_size": [64, 64],
+  "display": {
+    "thirdperson_righthand": {"translation": [0, -5, 1.25]},
+    "thirdperson_lefthand": {"translation": [0, -5, 1.25]}
+  }
+}

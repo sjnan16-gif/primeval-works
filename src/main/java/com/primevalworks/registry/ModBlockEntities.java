@@ -12,6 +12,7 @@ import com.primevalworks.world.block.entity.DartTurretBlockEntity;
 import com.primevalworks.world.block.entity.LaserTurretBlockEntity;
 import com.primevalworks.world.block.entity.LaserObserverBlockEntity;
 import com.primevalworks.world.block.entity.SpinosaurusHeadBlockEntity;
+import com.primevalworks.world.block.entity.DinosaurEggBlockEntity;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -55,6 +56,13 @@ public final class ModBlockEntities {
             BLOCK_ENTITIES.register("premium_egg_incubator", () -> new BlockEntityType<>(
                     PremiumEggIncubatorBlockEntity::new,
                     ModBlocks.PREMIUM_EGG_INCUBATOR.get()
+            ));
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<DinosaurEggBlockEntity>> DINOSAUR_EGG =
+            BLOCK_ENTITIES.register("dinosaur_egg", () -> new BlockEntityType<>(
+                    DinosaurEggBlockEntity::new,
+                    ModBlocks.SMALL_DINOSAUR_EGG.get(),
+                    ModBlocks.BIG_DINOSAUR_EGG.get(),
+                    ModBlocks.LARGE_DINOSAUR_EGG.get()
             ));
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ProcessorBlockEntity>> PROCESSOR =
             BLOCK_ENTITIES.register("processor", () -> new BlockEntityType<>(

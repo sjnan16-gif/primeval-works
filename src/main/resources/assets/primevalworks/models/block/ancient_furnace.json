@@ -1,8 +1,21 @@
 {
-  "parent": "minecraft:block/orientable",
+  "parent": "minecraft:block/block",
   "textures": {
-    "top": "minecraft:block/polished_blackstone",
-    "front": "minecraft:block/furnace_front",
-    "side": "minecraft:block/deepslate_bricks"
-  }
+    "furnace": "primevalworks:block/ancient_furnace",
+    "particle": "primevalworks:block/ancient_furnace"
+  },
+  "elements": [
+    {
+      "from": [0, 0, 0],
+      "to": [16, 16, 16],
+      "faces": {
+        "north": {"uv": [4, 4, 8, 8], "texture": "#furnace", "cullface": "north"},
+        "east": {"uv": [0, 4, 4, 8], "texture": "#furnace", "cullface": "east"},
+        "south": {"uv": [12, 4, 16, 8], "texture": "#furnace", "cullface": "south"},
+        "west": {"uv": [8, 4, 12, 8], "texture": "#furnace", "cullface": "west"},
+        "up": {"uv": [8, 4, 4, 0], "texture": "#furnace", "cullface": "up"},
+        "down": {"uv": [12, 0, 8, 4], "texture": "#furnace", "cullface": "down"}
+      }
+    }
+  ]
 }

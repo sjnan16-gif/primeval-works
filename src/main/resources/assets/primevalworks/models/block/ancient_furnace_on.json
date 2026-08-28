@@ -1,8 +1,7 @@
 {
-  "parent": "minecraft:block/orientable",
+  "parent": "primevalworks:block/ancient_furnace",
   "textures": {
-    "top": "minecraft:block/polished_blackstone",
-    "front": "minecraft:block/furnace_front_on",
-    "side": "minecraft:block/deepslate_bricks"
+    "furnace": "primevalworks:block/ancient_furnace_on",
+    "particle": "primevalworks:block/ancient_furnace_on"
   }
 }

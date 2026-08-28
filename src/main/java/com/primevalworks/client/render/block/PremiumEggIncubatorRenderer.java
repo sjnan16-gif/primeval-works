@@ -76,7 +76,11 @@ public final class PremiumEggIncubatorRenderer
 
         float settle = Mth.clamp(state.animationTime / 10.0F, 0.0F, 1.0F);
         float bob = Mth.sin(state.animationTime * 0.045F) * 0.004F;
-        float modelHeight = state.eggSize == DinosaurEggSize.SMALL ? 0.6875F : 1.0F;
+        float modelHeight = switch (state.eggSize) {
+            case SMALL -> 0.5F;
+            case BIG -> 0.75F;
+            case LARGE -> 1.0F;
+        };
         poseStack.pushPose();
         poseStack.translate(0.5F, IncubatorEggFit.centerYForModelHeight(modelHeight) + bob, 0.5F);
         poseStack.mulPose(Axis.ZP.rotationDegrees(Mth.sin(state.animationTime * 0.035F) * 0.8F));

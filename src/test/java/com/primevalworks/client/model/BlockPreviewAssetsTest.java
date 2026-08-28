@@ -41,9 +41,9 @@ final class BlockPreviewAssetsTest {
             Map.entry("laser_turret", "primevalworks:block/laser_turret_item"),
             Map.entry("spinosaurus_head", "primevalworks:block/spinosaurus_head"),
             Map.entry("premium_egg_incubator", "primevalworks:block/premium_egg_incubator"),
-            Map.entry("small_dinosaur_egg", "primevalworks:block/small_dinosaur_egg"),
-            Map.entry("big_dinosaur_egg", "primevalworks:block/big_dinosaur_egg"),
-            Map.entry("large_dinosaur_egg", "primevalworks:block/large_dinosaur_egg")
+            Map.entry("small_dinosaur_egg", "primevalworks:item/small_dinosaur_egg"),
+            Map.entry("big_dinosaur_egg", "primevalworks:item/big_dinosaur_egg"),
+            Map.entry("large_dinosaur_egg", "primevalworks:item/large_dinosaur_egg")
     );
 
     @Test
@@ -84,7 +84,7 @@ final class BlockPreviewAssetsTest {
         assertTrue(trophy.contains("\"gui\":") && trophy.contains("\"scale\": [0.48, 0.48, 0.48]"),
                 "The full-size Spinosaurus trophy no longer has a fitted inventory presentation");
         for (String egg : List.of("small_dinosaur_egg", "big_dinosaur_egg", "large_dinosaur_egg")) {
-            assertParent(egg, "primevalworks:item/template_dinosaur_egg");
+            assertItemParent(egg, "primevalworks:item/template_dinosaur_egg");
         }
     }
 
@@ -94,6 +94,14 @@ final class BlockPreviewAssetsTest {
         Matcher matcher = PARENT_REFERENCE.matcher(json);
         assertTrue(matcher.find() && matcher.group(1).equals(expectedParent),
                 blockModel + " stopped using its reviewed item-only presentation");
+    }
+
+    private static void assertItemParent(String itemModel, String expectedParent) throws Exception {
+        String json = Files.readString(Path.of(
+                "src/main/resources/assets/primevalworks/models/item/" + itemModel + ".json"));
+        Matcher matcher = PARENT_REFERENCE.matcher(json);
+        assertTrue(matcher.find() && matcher.group(1).equals(expectedParent),
+                itemModel + " stopped using its reviewed item presentation");
     }
 
     private static void assertUsesMinecraftPresentation(Path model, Set<Path> visited) throws Exception {

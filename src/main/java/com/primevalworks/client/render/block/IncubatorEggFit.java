@@ -5,10 +5,14 @@ public final class IncubatorEggFit {
     }
 
     public static float scaleForModelHeight(float modelHeight) {
-        return modelHeight < 0.8F ? 0.86F : 0.60F;
+        if (modelHeight <= 0.5F) return 1.60F;
+        if (modelHeight <= 0.75F) return 1.48F;
+        return 1.34F;
     }
 
     public static float centerYForModelHeight(float modelHeight) {
-        return modelHeight < 0.8F ? 0.755F : 0.61F;
+        if (modelHeight <= 0.5F) return 0.58F;
+        if (modelHeight <= 0.75F) return 0.54F;
+        return 0.49F;
     }
 }

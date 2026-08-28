@@ -1,1 +1,17 @@
-{"model":{"type":"minecraft:model","model":"primevalworks:item/primordial_sword"}}
+{
+  "model": {
+    "type": "minecraft:select",
+    "property": "minecraft:display_context",
+    "cases": [
+      {
+        "when": "gui",
+        "model": {"type": "minecraft:model", "model": "primevalworks:item/primordial_sword"}
+      }
+    ],
+    "fallback": {
+      "type": "minecraft:special",
+      "base": "primevalworks:item/primordial_sword_3d",
+      "model": {"type": "geckolib:geckolib"}
+    }
+  }
+}

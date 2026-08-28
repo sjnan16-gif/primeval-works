@@ -15,7 +15,7 @@ import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.SupportType;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -25,7 +25,7 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jspecify.annotations.Nullable;
 
-public abstract class DinosaurEggBlock extends Block {
+public abstract class DinosaurEggBlock extends BaseEntityBlock {
     private final DinosaurEggSize size;
     private final VoxelShape shape;
 
@@ -37,6 +37,11 @@ public abstract class DinosaurEggBlock extends Block {
 
     public DinosaurEggSize size() {
         return size;
+    }
+
+    @Override
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return new com.primevalworks.world.block.entity.DinosaurEggBlockEntity(pos, state);
     }
 
     @Override
@@ -96,11 +101,11 @@ public abstract class DinosaurEggBlock extends Block {
         public static final MapCodec<Small> CODEC = simpleCodec(Small::new);
 
         public Small(BlockBehaviour.Properties properties) {
-            super(properties, DinosaurEggSize.SMALL, box(3.0D, 0.0D, 3.0D, 13.0D, 10.0D, 13.0D));
+            super(properties, DinosaurEggSize.SMALL, box(5.0D, 0.0D, 5.0D, 11.0D, 8.0D, 11.0D));
         }
 
         @Override
-        protected MapCodec<? extends Block> codec() {
+        protected MapCodec<? extends BaseEntityBlock> codec() {
             return CODEC;
         }
     }
@@ -109,11 +114,11 @@ public abstract class DinosaurEggBlock extends Block {
         public static final MapCodec<Big> CODEC = simpleCodec(Big::new);
 
         public Big(BlockBehaviour.Properties properties) {
-            super(properties, DinosaurEggSize.BIG, box(2.0D, 0.0D, 2.0D, 14.0D, 14.0D, 14.0D));
+            super(properties, DinosaurEggSize.BIG, box(3.5D, 0.0D, 3.5D, 12.5D, 12.0D, 12.5D));
         }
 
         @Override
-        protected MapCodec<? extends Block> codec() {
+        protected MapCodec<? extends BaseEntityBlock> codec() {
             return CODEC;
         }
     }
@@ -122,11 +127,11 @@ public abstract class DinosaurEggBlock extends Block {
         public static final MapCodec<Large> CODEC = simpleCodec(Large::new);
 
         public Large(BlockBehaviour.Properties properties) {
-            super(properties, DinosaurEggSize.LARGE, box(1.0D, 0.0D, 1.0D, 15.0D, 16.0D, 15.0D));
+            super(properties, DinosaurEggSize.LARGE, box(2.0D, 0.0D, 2.0D, 14.0D, 16.0D, 14.0D));
         }
 
         @Override
-        protected MapCodec<? extends Block> codec() {
+        protected MapCodec<? extends BaseEntityBlock> codec() {
             return CODEC;
         }
     }
