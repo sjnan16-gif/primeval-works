@@ -1,6 +1,0 @@
-{
-  "parent": "primevalworks:primeval/ancient_metal",
-  "criteria": {"piston": {"trigger": "minecraft:inventory_changed", "conditions": {"items": [{"items": "primevalworks:reinforced_piston"}]}}},
-  "display": {"icon": {"id": "primevalworks:reinforced_piston"}, "title": {"text": "A Stronger Push"}, "description": {"text": "Build a Reinforced Piston and connect it from the Energy Map."}},
-  "requirements": [["piston"]], "sends_telemetry_event": false
-}

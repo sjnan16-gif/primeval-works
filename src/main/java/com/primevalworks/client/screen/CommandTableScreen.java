@@ -866,6 +866,7 @@ public final class CommandTableScreen extends Screen {
                 viewport.width - 14, Math.round(13 * layout.scale));
         Rect bottom = new Rect(top.x, top.bottom() - 1, top.width, Math.round(15 * layout.scale));
         float dwell = hoverAmount(nodeDwells, hovered.id(), true);
+        float colorFade = hoverColorAmount(nodeDwells, hovered.id());
         float pop = 0.96F + dwell * 0.04F;
         withMotion(graphics, new Rect(top.x, top.y, top.width, top.height + bottom.height), 0.0F,
                 -dwell * 1.2F, pop, () -> {
@@ -876,13 +877,15 @@ public final class CommandTableScreen extends Screen {
                             : prerequisiteMet(hovered) ? "ITEM COST"
                             : "LOCKED";
                     Rect titleArea = new Rect(top.x + 5, top.y + 2, top.width - 10, top.height - 3);
+                    int titleColor = mixColor(prerequisiteMet(hovered) ? GOLD : RED, INK, colorFade);
                     fittedText(graphics, hovered.title().toUpperCase() + "   " + right, titleArea,
-                            prerequisiteMet(hovered) ? GOLD : RED, 0.70F, true);
+                            titleColor, 0.70F, true);
                     int costWidth = rank >= hovered.maxLevel() || !prerequisiteMet(hovered)
                             ? 0 : Math.min(bottom.width / 2, Math.max(56, Math.round(68 * layout.scale)));
                     Rect detailArea = new Rect(bottom.x + 5, bottom.y + 3,
                             Math.max(1, bottom.width - 13 - costWidth), bottom.height - 5);
-                    wrappedText(graphics, hovered.detail(), detailArea, MUTED, 0.59F, 2);
+                    wrappedText(graphics, hovered.detail(), detailArea,
+                            mixColor(MUTED, INK, colorFade), 0.59F, 2);
                     if (costWidth > 0) drawUpgradeCosts(graphics, hovered, rank,
                             new Rect(bottom.right() - costWidth - 4, bottom.y + 1, costWidth, bottom.height - 2));
                 });
@@ -1560,6 +1563,22 @@ public final class CommandTableScreen extends Screen {
         float seconds = (renderNowNanos - state.startedNanos) / 1_000_000_000.0F;
         if (seconds >= 1.35F) return 0.0F;
         return (1.0F - (float)Math.exp(-seconds * 18.0F)) * (float)Math.exp(-seconds * 2.8F);
+    }
+
+    private float hoverColorAmount(Map<Integer, HoverDwell> states, int key) {
+        HoverDwell state = states.get(key);
+        if (state == null || state.startedNanos == 0L) return 0.0F;
+        float seconds = Math.max(0.0F, (renderNowNanos - state.startedNanos) / 1_000_000_000.0F);
+        return 1.0F - (float)Math.exp(-seconds * 13.0F);
+    }
+
+    private static int mixColor(int from, int to, float amount) {
+        float value = Mth.clamp(amount, 0.0F, 1.0F);
+        int alpha = Math.round(Mth.lerp(value, from >>> 24, to >>> 24));
+        int red = Math.round(Mth.lerp(value, from >> 16 & 0xFF, to >> 16 & 0xFF));
+        int green = Math.round(Mth.lerp(value, from >> 8 & 0xFF, to >> 8 & 0xFF));
+        int blue = Math.round(Mth.lerp(value, from & 0xFF, to & 0xFF));
+        return alpha << 24 | red << 16 | green << 8 | blue;
     }
 
     private void centeredBold(GuiGraphicsExtractor graphics, String value, Rect rect, int color, float requestedScale) {

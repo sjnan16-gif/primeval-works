@@ -197,7 +197,8 @@ public final class CompanionScreen extends Screen {
         }
         if (jobsActionRect(layout).contains(event.x(), event.y())) {
             if (outsideBaseTogether()) {
-                requestCommandMode(DinosaurCommandMode.HOME);
+                ClientPacketDistributor.sendToServer(new DinosaurCommandPayload(
+                        dodo.getId(), DinosaurCommandPayload.RECALL_HOME));
                 playUiClick(1.02F);
                 pressed(Action.JOBS);
                 onClose();
@@ -1284,7 +1285,8 @@ public final class CompanionScreen extends Screen {
     }
 
     private Rect jobsActionRect(Layout layout) {
-        return global(layout, outsideBaseTogether() ? new Rect(303, JOBS.y(), 69, JOBS.height()) : JOBS);
+        return global(layout, outsideBaseTogether()
+                ? new Rect(JOBS.x(), JOBS.y(), 74, JOBS.height()) : JOBS);
     }
 
     private boolean outsideBaseTogether() {

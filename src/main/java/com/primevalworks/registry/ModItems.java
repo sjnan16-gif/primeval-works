@@ -85,10 +85,6 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> WATER_TURBINE = ITEMS.registerItem(
             "water_turbine", properties -> new TurbineBlockItem(
                     ModBlocks.WATER_TURBINE.get(), properties, TurbineBlockItem.Variant.WATER));
-    public static final DeferredItem<BlockItem> REINFORCED_PISTON =
-            ITEMS.registerSimpleBlockItem("reinforced_piston", ModBlocks.REINFORCED_PISTON);
-    public static final DeferredItem<BlockItem> STICKY_REINFORCED_PISTON =
-            ITEMS.registerSimpleBlockItem("sticky_reinforced_piston", ModBlocks.STICKY_REINFORCED_PISTON);
     public static final DeferredItem<BlockItem> LASER_OBSERVER =
             ITEMS.registerSimpleBlockItem("laser_observer", ModBlocks.LASER_OBSERVER);
     public static final DeferredItem<BlockItem> ANCIENT_BARREL =

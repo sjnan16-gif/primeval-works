@@ -10,7 +10,6 @@ import com.primevalworks.world.block.PremiumEggIncubatorBlock;
 import com.primevalworks.world.block.PoweredMachineBlock;
 import com.primevalworks.world.block.ProcessorBlock;
 import com.primevalworks.world.block.PoweredObserverBlock;
-import com.primevalworks.world.block.PoweredPistonBlock;
 import com.primevalworks.world.block.PrimevalBerryBushBlock;
 import com.primevalworks.world.block.TurbineBlock;
 import com.primevalworks.world.block.TurbinePartBlock;
@@ -72,14 +71,6 @@ public final class ModBlocks {
             "turbine_part",
             properties -> new TurbinePartBlock(properties.mapColor(MapColor.NONE).strength(4.0F)
                     .noOcclusion().noLootTable().sound(SoundType.METAL))
-    );
-    public static final DeferredBlock<Block> REINFORCED_PISTON = BLOCKS.registerBlock(
-            "reinforced_piston",
-            properties -> new PoweredPistonBlock(false, properties.mapColor(MapColor.STONE).strength(2.5F).sound(SoundType.STONE))
-    );
-    public static final DeferredBlock<Block> STICKY_REINFORCED_PISTON = BLOCKS.registerBlock(
-            "sticky_reinforced_piston",
-            properties -> new PoweredPistonBlock(true, properties.mapColor(MapColor.STONE).strength(2.5F).sound(SoundType.STONE))
     );
     public static final DeferredBlock<Block> LASER_OBSERVER = BLOCKS.registerBlock(
             "laser_observer",

@@ -18,7 +18,7 @@ public final class TurbineBlockItem extends BlockItem implements GeoItem {
     public enum Variant {
         WIND("wind_turbine", "wind_turbine", "Wind Turbine", 1.0F, 1.28F, -0.18F, 0.5F / 16.0F),
         UPGRADED_WIND("wind_turbine", "wind_turbine_upgraded", "Upgraded Wind Turbine", 1.0F, 1.28F, -0.18F, 0.5F / 16.0F),
-        WATER("water_turbine", "water_turbine", "Water Turbine", 0.64F, 1.35F, -0.90F, 0.0F);
+        WATER("water_turbine", "water_turbine", "Water Turbine", 0.64F, 1.55F, -1.10F, 0.0F);
 
         private final String model;
         private final String texture;

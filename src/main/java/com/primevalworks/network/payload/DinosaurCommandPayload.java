@@ -13,6 +13,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public record DinosaurCommandPayload(int entityId, int requestedMode) implements CustomPacketPayload {
+    public static final int RECALL_HOME = 100;
     public static final Type<DinosaurCommandPayload> TYPE = new Type<>(
             Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "dinosaur_command"));
     public static final StreamCodec<RegistryFriendlyByteBuf, DinosaurCommandPayload> STREAM_CODEC = StreamCodec.of(
@@ -29,9 +30,16 @@ public record DinosaurCommandPayload(int entityId, int requestedMode) implements
                     || !dinosaur.isOwnedBy(player.getUUID())
                     || player.distanceToSqr(dinosaur) > 64.0D * 64.0D) return;
             String message = "";
-            if (payload.requestedMode >= 0 && payload.requestedMode < DinosaurCommandMode.values().length) {
-                DinosaurOwnership.SwapResult result = DinosaurOwnership.setCommandMode(
-                        player, dinosaur, DinosaurCommandMode.byId(payload.requestedMode));
+            boolean recall = payload.requestedMode == RECALL_HOME;
+            int modeId = recall ? DinosaurCommandMode.HOME.ordinal() : payload.requestedMode;
+            if (modeId >= 0 && modeId < DinosaurCommandMode.values().length) {
+                DinosaurCommandMode mode = DinosaurCommandMode.byId(modeId);
+                DinosaurOwnership.SwapResult result = DinosaurOwnership.setCommandMode(player, dinosaur, mode);
+                if (result.success() && recall) {
+                    result = dinosaur.getCommandTablePos()
+                            .map(tablePos -> DinosaurOwnership.recallActive(player, tablePos, dinosaur.getUUID()))
+                            .orElse(result);
+                }
                 message = result.message();
                 player.sendOverlayMessage(net.minecraft.network.chat.Component.literal(message));
             }

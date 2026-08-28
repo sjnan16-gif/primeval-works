@@ -61,7 +61,7 @@ A Signal Baton links stations, inventories, Guard Posts, and the Command Table. 
 
 Ancient Metal and Sulfur enable powered machines. Water Turbines, Wind Turbines, and Kinetic Dynamos contribute base power. Players choose which machines receive limited power and which dinosaurs specialize in production.
 
-The Processor, Ancient Furnace, Reinforced Piston, Dart Turret, and advanced logistics appear here.
+The Processor, Ancient Furnace, Dart Turret, Laser Observer, and advanced logistics appear here.
 
 ### Chapter 4 — Primordial Mastery
 
@@ -292,7 +292,6 @@ A Compressed Core Buffer stores a short reserve measured in power-ticks. It brid
 - **Compressed Core Buffer** — stores short-term reserve power.
 - **Gust Fan** — Power 1 directional push for entities and loose items. This is separate from the Wind Turbine.
 - **Powered Observer** — Power 1 line sensor that detects block changes up to five blocks away and stops at the first colliding block.
-- **Reinforced Pistons** — Power 1 redstone machinery. Both variants push Obsidian and Crying Obsidian; the sticky form also pulls them while retaining vanilla protection for immovable blocks and block entities.
 
 ### Storage and defense
 

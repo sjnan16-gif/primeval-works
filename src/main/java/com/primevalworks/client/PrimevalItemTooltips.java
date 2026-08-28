@@ -32,8 +32,6 @@ public final class PrimevalItemTooltips {
             case "wind_turbine" -> "A basic wind-powered generator.";
             case "upgraded_wind_turbine" -> "Generates wind energy at full output.";
             case "water_turbine" -> "Generates energy in water.";
-            case "reinforced_piston" -> "A base-powered piston.";
-            case "sticky_reinforced_piston" -> "A sticky base-powered piston.";
             case "laser_observer" -> "Detects distant block updates.";
             case "ancient_barrel" -> "High-capacity automation storage.";
             case "dart_turret" -> "Automated base defense.";

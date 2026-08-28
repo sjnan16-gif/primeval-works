@@ -143,7 +143,6 @@ when dismounted. There is no permanent controls bubble competing with the vanill
 - Premium Egg Incubator: right-click with an egg inserts it; shift-right-click removes it;
   the egg and timer render in the world.
 - Wind and Water Turbines: assigned and inspected in the Energy Map.
-- Reinforced and Sticky Reinforced Pistons: redstone blocks controlled by the Energy Map.
 - Powered Observer: world/redstone block controlled by the Energy Map.
 - Berry Bush: behaves like a crop.
 - Swords: item models/tooltips, not screens.

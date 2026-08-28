@@ -1,29 +1,42 @@
 package com.primevalworks.client.effect;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.primevalworks.client.screen.DinoWhistleScreen;
+import com.primevalworks.client.screen.WorksitePlannerScreen;
 import com.primevalworks.network.payload.RequestWhistleFollowersPayload;
 import com.primevalworks.registry.ModItems;
+import com.primevalworks.world.entity.FieldDodoEntity;
 import com.primevalworks.world.item.DinoWhistleItem;
 import com.primevalworks.world.work.DinoFieldWorkRules;
 import com.primevalworks.world.work.DinoWhistleSettings;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.util.Util;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
+import net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
+import org.joml.Vector3f;
 
 public final class DinoWhistleClient {
     private static BlockPos areaFirst;
     private static DinoWhistleSettings.FieldMode areaMode;
     private static ResourceKey<Level> areaDimension;
+    private static long firstCornerMarkedAt;
 
     private DinoWhistleClient() {}
 
@@ -58,9 +71,11 @@ public final class DinoWhistleClient {
                 areaFirst = selected;
                 areaMode = settings.mode();
                 areaDimension = minecraft.level.dimension();
+                firstCornerMarkedAt = Util.getNanos();
                 minecraft.player.sendOverlayMessage(Component.literal("First corner saved. Mark the opposite corner."));
                 return;
             }
+            if (Util.getNanos() - firstCornerMarkedAt < 180_000_000L) return;
             if (!DinoFieldWorkRules.areaWithinLimits(areaFirst, selected)) {
                 minecraft.player.sendOverlayMessage(Component.literal(
                         "That area is too large. Mark a closer opposite corner."));
@@ -126,5 +141,83 @@ public final class DinoWhistleClient {
         areaFirst = null;
         areaMode = null;
         areaDimension = null;
+        firstCornerMarkedAt = 0L;
+    }
+
+    public static void submitWorldGeometry(SubmitCustomGeometryEvent event) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.player == null || minecraft.level == null) return;
+        ItemStack whistle = DinoWhistleItem.findHeld(minecraft.player);
+        if (whistle.isEmpty()) return;
+        DinoWhistleSettings settings = DinoWhistleSettings.read(whistle);
+
+        if (areaFirst != null) {
+            boolean currentSelection = areaMode == DinoWhistleSettings.FieldMode.QUARRY
+                    && settings.mode() == DinoWhistleSettings.FieldMode.QUARRY
+                    && settings.pattern() == DinoWhistleSettings.Pattern.AREA
+                    && minecraft.level.dimension().equals(areaDimension);
+            if (!currentSelection) {
+                clearAreaSelection();
+            } else {
+                renderBlock(event, areaFirst, 0xE96FE49A, 4.0F);
+                if (minecraft.hitResult instanceof BlockHitResult hit
+                        && DinoFieldWorkRules.areaWithinLimits(areaFirst, hit.getBlockPos())) {
+                    renderArea(event, areaFirst, hit.getBlockPos(), 0x706FE49A, 2.5F);
+                }
+            }
+        }
+
+        AABB search = minecraft.player.getBoundingBox().inflate(DinoWhistleSettings.MAX_RANGE + 18.0D);
+        for (FieldDodoEntity dinosaur : minecraft.level.getEntitiesOfClass(
+                FieldDodoEntity.class,
+                search,
+                candidate -> candidate.isOwnedBy(minecraft.player.getUUID())
+                        && candidate.hasFieldWork()
+                        && candidate.getFieldWorkMode() == DinoWhistleSettings.FieldMode.QUARRY)) {
+            BlockPos first = dinosaur.getFieldWorkFirst().orElse(null);
+            if (first == null) continue;
+            BlockPos second = dinosaur.getFieldWorkSecond().orElse(null);
+            if (dinosaur.getFieldWorkPattern() == DinoWhistleSettings.Pattern.AREA && second != null) {
+                renderArea(event, first, second, 0x486FE49A, 2.0F);
+            } else {
+                renderBlock(event, first, 0x786FE49A, 2.5F);
+            }
+        }
+    }
+
+    private static void renderBlock(SubmitCustomGeometryEvent event, BlockPos pos, int color, float width) {
+        Minecraft minecraft = Minecraft.getInstance();
+        BlockState state = minecraft.level.getBlockState(pos);
+        VoxelShape shape = state.getShape(minecraft.level, pos);
+        if (shape.isEmpty()) shape = Shapes.block();
+        submitShape(event, shape.move(pos.getX(), pos.getY(), pos.getZ()), color, width);
+    }
+
+    private static void renderArea(SubmitCustomGeometryEvent event, BlockPos first, BlockPos second,
+                                   int color, float width) {
+        double minX = Math.min(first.getX(), second.getX());
+        double minY = Math.min(first.getY(), second.getY());
+        double minZ = Math.min(first.getZ(), second.getZ());
+        double maxX = Math.max(first.getX(), second.getX()) + 1.0D;
+        double maxY = Math.max(first.getY(), second.getY()) + 1.0D;
+        double maxZ = Math.max(first.getZ(), second.getZ()) + 1.0D;
+        submitShape(event, Shapes.create(new AABB(minX, minY, minZ, maxX, maxY, maxZ)), color, width);
+    }
+
+    private static void submitShape(SubmitCustomGeometryEvent event, VoxelShape shape, int color, float width) {
+        Vec3 camera = event.getLevelRenderState().cameraRenderState.pos;
+        SubmitNodeCollector submits = event.getSubmitNodeCollector();
+        PoseStack pose = event.getPoseStack();
+        submits.submitCustomGeometry(pose, WorksitePlannerScreen.XRAY_HIGHLIGHT_TYPE,
+                (matrix, vertices) -> shape.forAllEdges((x1, y1, z1, x2, y2, z2) -> {
+                    Vector3f normal = new Vector3f((float)(x2 - x1), (float)(y2 - y1),
+                            (float)(z2 - z1)).normalize();
+                    vertices.addVertex(matrix, (float)(x1 - camera.x), (float)(y1 - camera.y),
+                                    (float)(z1 - camera.z))
+                            .setColor(color).setNormal(matrix, normal).setLineWidth(width);
+                    vertices.addVertex(matrix, (float)(x2 - camera.x), (float)(y2 - camera.y),
+                                    (float)(z2 - camera.z))
+                            .setColor(color).setNormal(matrix, normal).setLineWidth(width);
+                }));
     }
 }

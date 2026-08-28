@@ -93,6 +93,7 @@ public final class PrimevalWorksClient {
         NeoForge.EVENT_BUS.addListener(SubmitCustomGeometryEvent.class, EnergyNetworkScreen::submitWorldGeometry);
         NeoForge.EVENT_BUS.addListener(SubmitCustomGeometryEvent.class, WorksiteIndicatorRenderer::submitGeometry);
         NeoForge.EVENT_BUS.addListener(SubmitCustomGeometryEvent.class, WhistleFollowerPickerScreen::submitWorldGeometry);
+        NeoForge.EVENT_BUS.addListener(SubmitCustomGeometryEvent.class, DinoWhistleClient::submitWorldGeometry);
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, PteranodonFlightFeedback::tickInput);
         NeoForge.EVENT_BUS.addListener(MovementInputUpdateEvent.class,
                 PteranodonFlightFeedback::preserveSpinosaurusLandSprint);

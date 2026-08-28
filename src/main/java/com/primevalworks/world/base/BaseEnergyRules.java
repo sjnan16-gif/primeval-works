@@ -41,10 +41,6 @@ public final class BaseEnergyRules {
         if (block == ModBlocks.LASER_OBSERVER.get()) {
             return 1;
         }
-        if (block == ModBlocks.REINFORCED_PISTON.get()
-                || block == ModBlocks.STICKY_REINFORCED_PISTON.get()) {
-            return 2;
-        }
         if (block == ModBlocks.PREMIUM_EGG_INCUBATOR.get()) {
             return 2;
         }

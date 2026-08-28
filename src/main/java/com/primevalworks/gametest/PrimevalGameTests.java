@@ -58,7 +58,6 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
-import net.minecraft.world.level.block.piston.PistonBaseBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.item.ItemStack;
@@ -149,12 +148,13 @@ public final class PrimevalGameTests {
             TEST_FUNCTIONS.register("hungry_dinosaur_eats_from_food_box", () -> PrimevalGameTests::hungryDinosaurEatsFromFoodBox);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> TURBINES_USE_FULL_STRUCTURE =
             TEST_FUNCTIONS.register("turbines_use_full_structure", () -> PrimevalGameTests::turbinesUseFullStructure);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> WATER_TURBINES_COUPLE_TWO_NEIGHBORS =
+            TEST_FUNCTIONS.register("water_turbines_couple_two_neighbors",
+                    () -> PrimevalGameTests::waterTurbinesCoupleTwoNeighbors);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> BASE_ENERGY_STORES_AND_DRAINS =
             TEST_FUNCTIONS.register("base_energy_stores_and_drains", () -> PrimevalGameTests::baseEnergyStoresAndDrains);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> ENERGY_STATION_REJECTS_SECOND_WORKER =
             TEST_FUNCTIONS.register("energy_station_rejects_second_worker", () -> PrimevalGameTests::energyStationRejectsSecondWorker);
-    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> POWERED_PISTON_REQUIRES_BASE_ENERGY =
-            TEST_FUNCTIONS.register("powered_piston_requires_base_energy", () -> PrimevalGameTests::poweredPistonRequiresBaseEnergy);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> POWERED_INTERACTION_REQUIRES_ENERGY =
             TEST_FUNCTIONS.register("powered_interaction_requires_energy", () -> PrimevalGameTests::poweredInteractionRequiresEnergy);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> HUGE_AND_ALBINO_MODIFIERS =
@@ -363,12 +363,13 @@ public final class PrimevalGameTests {
                 new FunctionGameTestInstance(BASE_ENERGY_STORES_AND_DRAINS.getKey(), isolatedTestData(event, "base_energy"))
         );
         event.registerTest(
-                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "energy_station_rejects_second_worker"),
-                new FunctionGameTestInstance(ENERGY_STATION_REJECTS_SECOND_WORKER.getKey(), isolatedTestData(event, "energy_worker_lock"))
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "water_turbines_couple_two_neighbors"),
+                new FunctionGameTestInstance(WATER_TURBINES_COUPLE_TWO_NEIGHBORS.getKey(),
+                        isolatedTestData(event, "water_turbine_coupling"))
         );
         event.registerTest(
-                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "powered_piston_requires_base_energy"),
-                new FunctionGameTestInstance(POWERED_PISTON_REQUIRES_BASE_ENERGY.getKey(), isolatedTestData(event, "powered_piston"))
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "energy_station_rejects_second_worker"),
+                new FunctionGameTestInstance(ENERGY_STATION_REJECTS_SECOND_WORKER.getKey(), isolatedTestData(event, "energy_worker_lock"))
         );
         event.registerTest(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "powered_interaction_requires_energy"),
@@ -571,8 +572,6 @@ public final class PrimevalGameTests {
             }
         }
         Block[] blocks = {
-                ModBlocks.REINFORCED_PISTON.get(),
-                ModBlocks.STICKY_REINFORCED_PISTON.get(),
                 ModBlocks.WIND_TURBINE.get(), ModBlocks.UPGRADED_WIND_TURBINE.get(),
                 ModBlocks.WATER_TURBINE.get(), ModBlocks.LASER_OBSERVER.get(),
                 ModBlocks.ANCIENT_BARREL.get(), ModBlocks.DART_TURRET.get(),
@@ -1791,6 +1790,54 @@ public final class PrimevalGameTests {
         helper.succeed();
     }
 
+    private static void waterTurbinesCoupleTwoNeighbors(GameTestHelper helper) {
+        BlockPos tableRelative = new BlockPos(2, 1, 7);
+        BlockPos leaderRelative = new BlockPos(7, 1, 7);
+        List<BlockPos> neighborPositions = List.of(
+                new BlockPos(7, 1, 4),
+                new BlockPos(7, 1, 10),
+                new BlockPos(10, 1, 7)
+        );
+        helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
+        placeSubmergedWaterTurbine(helper, leaderRelative);
+        for (BlockPos neighbor : neighborPositions) {
+            placeSubmergedWaterTurbine(helper, neighbor);
+        }
+
+        CommandTableBlockEntity table = helper.getBlockEntity(tableRelative, CommandTableBlockEntity.class);
+        TurbineBlockEntity leader = helper.getBlockEntity(leaderRelative, TurbineBlockEntity.class);
+        helper.assertTrue(leader.markWorkerActive(), "The worked Water Turbine rejected its worker heartbeat");
+        List<TurbineBlockEntity.CoupledTurbine> linked = leader.coupledWaterTurbines(table);
+        helper.assertTrue(linked.size() == 2, "A Water Turbine must couple exactly two valid neighbors");
+        helper.assertTrue(Math.abs(linked.get(0).outputMultiplier() - 0.55F) < 0.0001F,
+                "The first coupled turbine did not receive 55% output");
+        helper.assertTrue(Math.abs(linked.get(1).outputMultiplier() - 0.35F) < 0.0001F,
+                "The second coupled turbine did not receive 35% output");
+        for (TurbineBlockEntity.CoupledTurbine coupled : linked) {
+            helper.assertTrue(coupled.turbine().isWorkerActive(),
+                    "A coupled Water Turbine did not start its rotor");
+        }
+        long activeNeighbors = neighborPositions.stream()
+                .map(pos -> helper.getBlockEntity(pos, TurbineBlockEntity.class))
+                .filter(TurbineBlockEntity::isWorkerActive)
+                .count();
+        helper.assertTrue(activeNeighbors == 2,
+                "Coupling powered more than two neighboring Water Turbines");
+        helper.succeed();
+    }
+
+    private static void placeSubmergedWaterTurbine(GameTestHelper helper, BlockPos masterRelative) {
+        for (int x = -1; x <= 1; x++) {
+            helper.setBlock(masterRelative.offset(x, 0, 0), Blocks.WATER);
+        }
+        BlockState water = ModBlocks.WATER_TURBINE.get().defaultBlockState()
+                .setValue(TurbineBlock.FACING, Direction.NORTH)
+                .setValue(TurbineBlock.WATERLOGGED, true);
+        helper.setBlock(masterRelative, water);
+        ((TurbineBlock) ModBlocks.WATER_TURBINE.get()).assemble(
+                helper.getLevel(), helper.absolutePos(masterRelative), water);
+    }
+
     private static void baseEnergyStoresAndDrains(GameTestHelper helper) {
         BlockPos tableRelative = new BlockPos(2, 1, 2);
         BlockPos consumerRelative = new BlockPos(4, 1, 2);
@@ -1825,61 +1872,6 @@ public final class PrimevalGameTests {
                     "The disconnected block remained attached to the network");
             helper.succeed();
         });
-    }
-
-    private static void poweredPistonRequiresBaseEnergy(GameTestHelper helper) {
-        BlockPos tableRelative = new BlockPos(1, 1, 2);
-        BlockPos pistonRelative = new BlockPos(4, 1, 2);
-        BlockPos redstoneRelative = new BlockPos(3, 1, 2);
-        BlockPos obsidianRelative = new BlockPos(5, 1, 2);
-        BlockPos stickyRelative = new BlockPos(4, 1, 4);
-        BlockPos stickyRedstoneRelative = new BlockPos(3, 1, 4);
-        BlockPos stickyObsidianRelative = new BlockPos(5, 1, 4);
-        for (int x = 0; x <= 7; x++) {
-            helper.setBlock(new BlockPos(x, 0, 2), Blocks.STONE);
-            helper.setBlock(new BlockPos(x, 0, 4), Blocks.STONE);
-        }
-        helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
-        helper.setBlock(pistonRelative, ModBlocks.REINFORCED_PISTON.get().defaultBlockState()
-                .setValue(PistonBaseBlock.FACING, Direction.EAST));
-        helper.setBlock(obsidianRelative, Blocks.OBSIDIAN);
-        helper.setBlock(redstoneRelative, Blocks.REDSTONE_BLOCK);
-        helper.setBlock(stickyRelative, ModBlocks.STICKY_REINFORCED_PISTON.get().defaultBlockState()
-                .setValue(PistonBaseBlock.FACING, Direction.EAST));
-        helper.setBlock(stickyObsidianRelative, Blocks.CRYING_OBSIDIAN);
-        helper.setBlock(stickyRedstoneRelative, Blocks.REDSTONE_BLOCK);
-        CommandTableBlockEntity table = helper.getBlockEntity(tableRelative, CommandTableBlockEntity.class);
-        BlockPos piston = helper.absolutePos(pistonRelative);
-        BlockPos stickyPiston = helper.absolutePos(stickyRelative);
-
-        helper.startSequence()
-                .thenExecuteAfter(4, () -> helper.assertTrue(
-                        !helper.getBlockState(pistonRelative).getValue(PistonBaseBlock.EXTENDED),
-                        "The Reinforced Piston moved without base energy"
-                ))
-                .thenExecute(() -> {
-                    table.receiveGeneratedEnergy(100.0F);
-                    helper.assertTrue(table.toggleEnergyConsumer(helper.getLevel(), piston),
-                            "The Reinforced Piston could not connect to the base network");
-                    helper.assertTrue(table.toggleEnergyConsumer(helper.getLevel(), stickyPiston),
-                            "The Sticky Reinforced Piston could not connect to the base network");
-                })
-                .thenExecuteAfter(4, () -> helper.assertTrue(
-                        helper.getBlockState(pistonRelative).getValue(PistonBaseBlock.EXTENDED),
-                        "The energized Reinforced Piston did not respond to its redstone input"
-                ))
-                .thenWaitUntil(() -> {
-                    helper.assertBlockPresent(Blocks.OBSIDIAN, obsidianRelative.relative(Direction.EAST));
-                    helper.assertBlockPresent(Blocks.CRYING_OBSIDIAN,
-                            stickyObsidianRelative.relative(Direction.EAST));
-                })
-                .thenExecute(() -> {
-                    helper.setBlock(stickyRedstoneRelative, Blocks.AIR);
-                })
-                .thenExecuteAfter(5, () -> helper.assertBlockPresent(
-                        Blocks.CRYING_OBSIDIAN, stickyObsidianRelative
-                ))
-                .thenSucceed();
     }
 
     private static void poweredInteractionRequiresEnergy(GameTestHelper helper) {

@@ -142,7 +142,7 @@ Send the modeler `ART_ASSET_CONTRACT.md` before any export. If an asset cannot m
 Cut in this order while preserving the core loop:
 
 1. Extra endgame weapons and decorative material compression tiers.
-2. Laser Observer and reinforced piston variants.
+2. Secondary powered utility blocks.
 3. Ancient Spell Stone and mount equipment.
 4. Advanced route conditions beyond filters, priorities, and minimum stock.
 5. Secondary special animations that do not communicate work or danger.

@@ -137,8 +137,8 @@ final class WhistleUiContractTest {
         String companion = Files.readString(CLIENT.resolve("screen/CompanionScreen.java"));
         assertTrue(companion.contains("outsideBaseTogether()"));
         assertTrue(companion.contains("callBack ? \"CALL BACK\" : \"JOBS\""));
-        assertTrue(companion.contains("requestCommandMode(DinosaurCommandMode.HOME)"));
-        assertTrue(companion.contains("new Rect(303, JOBS.y(), 69, JOBS.height())"));
+        assertTrue(companion.contains("DinosaurCommandPayload.RECALL_HOME"));
+        assertTrue(companion.contains("new Rect(JOBS.x(), JOBS.y(), 74, JOBS.height())"));
     }
 
     private static void assertUsesBubble(Path path) throws Exception {

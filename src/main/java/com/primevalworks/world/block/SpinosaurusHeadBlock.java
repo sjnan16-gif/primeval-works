@@ -21,7 +21,10 @@ import org.jspecify.annotations.Nullable;
 public final class SpinosaurusHeadBlock extends BaseEntityBlock {
     public static final MapCodec<SpinosaurusHeadBlock> CODEC = simpleCodec(SpinosaurusHeadBlock::new);
     public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
-    private static final VoxelShape SHAPE = Block.box(3.0D, 0.0D, 0.0D, 13.0D, 14.0D, 16.0D);
+    private static final VoxelShape EAST_WEST_SHAPE = Block.box(
+            0.4D, 0.0D, 1.6D, 15.2D, 8.4D, 14.4D);
+    private static final VoxelShape NORTH_SOUTH_SHAPE = Block.box(
+            1.6D, 0.0D, 0.4D, 14.4D, 8.4D, 15.2D);
 
     public SpinosaurusHeadBlock(Properties properties) {
         super(properties);
@@ -50,7 +53,8 @@ public final class SpinosaurusHeadBlock extends BaseEntityBlock {
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return SHAPE;
+        return state.getValue(FACING).getAxis() == Direction.Axis.X
+                ? EAST_WEST_SHAPE : NORTH_SOUTH_SHAPE;
     }
 
     @Override
