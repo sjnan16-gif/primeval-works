@@ -46,6 +46,7 @@ import com.primevalworks.world.processor.ProcessorRecipes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.FunctionGameTestInstance;
@@ -53,6 +54,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.gametest.framework.TestData;
 import net.minecraft.gametest.framework.TestEnvironmentDefinition;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.server.level.ServerPlayer;
@@ -1963,7 +1965,11 @@ public final class PrimevalGameTests {
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
         CommandTableBlock.claimExisting(player, helper.absolutePos(tableRelative));
-        player.setItemInHand(InteractionHand.MAIN_HAND, ModItems.SMALL_DINOSAUR_EGG.get().getDefaultInstance());
+        ItemStack freshEgg = ModItems.SMALL_DINOSAUR_EGG.get().getDefaultInstance();
+        helper.assertTrue(DinosaurEggGenome.read(freshEgg).isEmpty()
+                        && freshEgg.get(DataComponents.CUSTOM_NAME) == null,
+                "A fresh creative egg carried incubated data or a generated name");
+        player.setItemInHand(InteractionHand.MAIN_HAND, freshEgg);
 
         helper.useBlock(incubatorRelative, player);
         PremiumEggIncubatorBlockEntity incubator = helper.getBlockEntity(
@@ -3368,6 +3374,12 @@ public final class PrimevalGameTests {
                 "A small incubated egg selected the wrong size class: " + incubator.getSelectedSpecies());
         DinosaurEggGenome lockedGenome = DinosaurEggGenome.read(incubator.getEgg())
                 .orElseThrow(() -> new AssertionError("The incubator did not write its locked genome to the egg"));
+        Component incubatedName = incubator.getEgg().get(DataComponents.ITEM_NAME);
+        helper.assertTrue(incubator.getEgg().get(DataComponents.CUSTOM_NAME) == null
+                        && incubatedName != null
+                        && incubatedName.getContents() instanceof TranslatableContents translated
+                        && translated.getKey().equals("item.primevalworks.incubated_dinosaur_egg"),
+                "The incubated egg did not receive its localized generated item name");
         ItemStack removedEgg = incubator.removeEgg();
         helper.assertTrue(!incubator.hasEgg(), "Removing an incubated egg did not clear the machine");
         player.setItemInHand(InteractionHand.MAIN_HAND, removedEgg);

@@ -111,10 +111,23 @@ final class AuthoredProgressionAssetsTest {
         assertTrue(swordDefinition.contains("primevalworks:item/primordial_sword_3d"));
         assertTrue(swordDefinition.contains("geckolib:geckolib"));
         String swordPresentation = Files.readString(ASSETS.resolve("models/item/primordial_sword_3d.json"));
-        assertTrue(swordPresentation.contains("minecraft:item/handheld"));
-        assertTrue(swordPresentation.contains("firstperson_righthand"));
-        assertTrue(swordPresentation.contains("firstperson_lefthand"));
+        assertFalse(swordPresentation.contains("\"parent\""));
         assertTrue(swordPresentation.contains("thirdperson_righthand"));
+        assertTrue(swordPresentation.contains("\"translation\": [0, -5, 1.25]"));
+        assertFalse(swordPresentation.contains("\"rotation\""));
+        assertFalse(swordPresentation.contains("\"scale\""));
+
+        String language = Files.readString(ASSETS.resolve("lang/en_us.json"));
+        for (String egg : new String[]{"small_dinosaur_egg", "big_dinosaur_egg", "large_dinosaur_egg"}) {
+            assertTrue(language.contains("\"block.primevalworks." + egg + "\""));
+            assertTrue(language.contains("\"item.primevalworks." + egg + "\""));
+        }
+        assertFalse(language.contains("heianreborn"));
+
+        String creativeTab = Files.readString(Path.of(
+                "src/main/java/com/primevalworks/registry/ModCreativeTabs.java"));
+        assertTrue(creativeTab.contains(".map(ItemStack::new)"));
+        assertFalse(creativeTab.contains("DinosaurEggGenome"));
     }
 
     private static void assertLocalItemModel(String name) throws Exception {

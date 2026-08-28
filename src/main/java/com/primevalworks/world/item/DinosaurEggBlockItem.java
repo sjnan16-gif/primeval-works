@@ -4,8 +4,11 @@ import com.primevalworks.world.egg.DinosaurEggGenome;
 import com.primevalworks.world.egg.DinosaurHatching;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -19,6 +22,12 @@ import java.util.function.Consumer;
 public final class DinosaurEggBlockItem extends BlockItem {
     public DinosaurEggBlockItem(Block block, Properties properties) {
         super(block, properties);
+    }
+
+    @Override
+    public void inventoryTick(ItemStack stack, ServerLevel level, Entity entity, EquipmentSlot slot) {
+        DinosaurEggGenome.repairGeneratedName(stack);
+        super.inventoryTick(stack, level, entity, slot);
     }
 
     @Override

@@ -5,6 +5,7 @@ import com.primevalworks.world.entity.FieldDodoEntity;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
@@ -39,13 +40,38 @@ public record DinosaurEggGenome(
             genome.putInt("HueVariant", hueVariant);
             root.put(ROOT, genome);
         });
-        stack.set(DataComponents.CUSTOM_NAME, Component.translatable(
+        stack.remove(DataComponents.CUSTOM_NAME);
+        stack.set(DataComponents.ITEM_NAME, displayName());
+        return stack;
+    }
+
+    public Component displayName() {
+        return Component.translatable(
                 origin == Origin.BRED
                         ? "item.primevalworks.bred_dinosaur_egg"
                         : "item.primevalworks.incubated_dinosaur_egg",
                 Component.translatable("entity.primevalworks." + species.registryName())
-        ));
-        return stack;
+        );
+    }
+
+    public static void repairGeneratedName(ItemStack stack) {
+        read(stack).ifPresent(genome -> {
+            Component customName = stack.get(DataComponents.CUSTOM_NAME);
+            if (customName != null && !isGeneratedName(customName)) return;
+            if (customName != null) stack.remove(DataComponents.CUSTOM_NAME);
+            Component generatedName = genome.displayName();
+            if (!generatedName.equals(stack.get(DataComponents.ITEM_NAME))) {
+                stack.set(DataComponents.ITEM_NAME, generatedName);
+            }
+        });
+    }
+
+    private static boolean isGeneratedName(Component name) {
+        if (!(name.getContents() instanceof TranslatableContents translated)) return false;
+        String key = translated.getKey();
+        return key.equals("item.primevalworks.bred_dinosaur_egg")
+                || key.equals("item.primevalworks.incubated_dinosaur_egg")
+                || key.startsWith("heianreborn.");
     }
 
     public static Optional<DinosaurEggGenome> read(ItemStack stack) {
