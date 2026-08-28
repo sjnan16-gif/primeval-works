@@ -5,6 +5,7 @@ import com.primevalworks.registry.ModBlocks;
 import com.primevalworks.registry.ModBlockEntities;
 import com.primevalworks.registry.ModEntities;
 import com.primevalworks.registry.ModItems;
+import com.primevalworks.network.payload.ConfigureDinoWhistlePayload;
 import com.primevalworks.world.block.entity.TurbineBlockEntity;
 import com.primevalworks.world.block.entity.PremiumEggIncubatorBlockEntity;
 import com.primevalworks.world.block.entity.CommandTableBlockEntity;
@@ -194,9 +195,9 @@ public final class PrimevalGameTests {
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> SPINOSAURUS_FOLLOWER_CATCHES_ON_LAND =
             TEST_FUNCTIONS.register("spinosaurus_follower_catches_on_land",
                     () -> PrimevalGameTests::spinosaurusFollowerCatchesOnLand);
-    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> PASSIVE_WORKER_CATCHES_OWNER =
-            TEST_FUNCTIONS.register("passive_worker_catches_owner",
-                    () -> PrimevalGameTests::passiveWorkerCatchesOwner);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> PASSIVE_WORKER_HOLDS_FIELD_ANCHOR =
+            TEST_FUNCTIONS.register("passive_worker_holds_field_anchor",
+                    () -> PrimevalGameTests::passiveWorkerHoldsFieldAnchor);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> PTERANODON_FOLLOWER_FLIES =
             TEST_FUNCTIONS.register("pteranodon_follower_flies",
                     () -> PrimevalGameTests::pteranodonFollowerFlies);
@@ -209,6 +210,9 @@ public final class PrimevalGameTests {
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> FOLLOWER_ORDER_SURVIVES_RELOAD =
             TEST_FUNCTIONS.register("follower_order_survives_reload",
                     () -> PrimevalGameTests::followerOrderSurvivesReload);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> WHISTLE_SETTINGS_SURVIVE_REOPEN =
+            TEST_FUNCTIONS.register("whistle_settings_survive_reopen",
+                    () -> PrimevalGameTests::whistleSettingsSurviveReopen);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> FOLLOWER_QUARRIES_MARKED_VEIN =
             TEST_FUNCTIONS.register("follower_quarries_marked_vein",
                     () -> PrimevalGameTests::followerQuarriesMarkedVein);
@@ -454,9 +458,9 @@ public final class PrimevalGameTests {
                         isolatedTestData(event, "spinosaurus_follow_land"))
         );
         event.registerTest(
-                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "passive_worker_catches_owner"),
-                new FunctionGameTestInstance(PASSIVE_WORKER_CATCHES_OWNER.getKey(),
-                        isolatedTestData(event, "passive_worker_follow"))
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "passive_worker_holds_field_anchor"),
+                new FunctionGameTestInstance(PASSIVE_WORKER_HOLDS_FIELD_ANCHOR.getKey(),
+                        isolatedTestData(event, "passive_worker_anchor"))
         );
         event.registerTest(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "pteranodon_follower_flies"),
@@ -477,6 +481,11 @@ public final class PrimevalGameTests {
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "follower_order_survives_reload"),
                 new FunctionGameTestInstance(FOLLOWER_ORDER_SURVIVES_RELOAD.getKey(),
                         isolatedTestData(event, "follower_order_reload"))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "whistle_settings_survive_reopen"),
+                new FunctionGameTestInstance(WHISTLE_SETTINGS_SURVIVE_REOPEN.getKey(),
+                        isolatedTestData(event, "whistle_settings"))
         );
         event.registerTest(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "follower_quarries_marked_vein"),
@@ -760,35 +769,42 @@ public final class PrimevalGameTests {
                 .thenSucceed();
     }
 
-    private static void passiveWorkerCatchesOwner(GameTestHelper helper) {
+    private static void passiveWorkerHoldsFieldAnchor(GameTestHelper helper) {
         BlockPos dinosaurRelative = new BlockPos(2, 1, 3);
         BlockPos ownerRelative = new BlockPos(16, 1, 3);
-        forceTicking(helper, dinosaurRelative, ownerRelative);
+        BlockPos cropRelative = new BlockPos(5, 1, 3);
+        forceTicking(helper, dinosaurRelative, ownerRelative, cropRelative);
         for (int x = 0; x <= 18; x++) for (int z = 0; z <= 6; z++) {
             helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
         }
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
         player.setUUID(UUID.randomUUID());
-        Vec3 ownerPosition = helper.absolutePos(ownerRelative).getCenter();
-        player.snapTo(ownerPosition.x, ownerPosition.y, ownerPosition.z, 90.0F, 0.0F);
+        Vec3 assignmentPosition = helper.absolutePos(new BlockPos(3, 1, 3)).getCenter();
+        player.snapTo(assignmentPosition.x, assignmentPosition.y, assignmentPosition.z, 90.0F, 0.0F);
         FieldDodoEntity dodo = helper.spawn(ModEntities.FIELD_DODO.get(), dinosaurRelative);
         dodo.setDinosaurOwner(player.getUUID());
         dodo.setCommandMode(DinosaurCommandMode.FOLLOW);
+        BlockPos anchor = dodo.blockPosition();
         dodo.assignPassiveFieldWork(new DinoWhistleSettings(
                 DinoWhistleSettings.FieldMode.HARVEST,
                 DinoWhistleSettings.Pattern.AREA,
-                48));
-        double startingDistance = dodo.distanceToSqr(player);
+                16));
+        helper.setBlock(cropRelative.below(), Blocks.FARMLAND);
+        helper.getLevel().setBlock(helper.absolutePos(cropRelative),
+                Blocks.WHEAT.defaultBlockState().setValue(CropBlock.AGE, 7), Block.UPDATE_ALL);
+        Vec3 ownerPosition = helper.absolutePos(ownerRelative).getCenter();
+        player.snapTo(ownerPosition.x, ownerPosition.y, ownerPosition.z, 90.0F, 0.0F);
 
         helper.startSequence()
                 .thenWaitUntil(() -> helper.assertTrue(
-                        dodo.distanceToSqr(player) < startingDistance * 0.50D,
-                        "Passive field work still cancelled Follow pursuit; position=" + dodo.position()
-                                + ", order=" + dodo.getFieldWorkMode()
-                                + ", pathDone=" + dodo.getNavigation().isDone()))
+                        helper.getBlockState(cropRelative).getValue(CropBlock.AGE) == 0,
+                        "The passive worker followed its owner instead of tending the saved field anchor"))
                 .thenExecute(() -> helper.assertTrue(dodo.hasFieldWork()
-                                && dodo.getFieldWorkMode() == DinoWhistleSettings.FieldMode.HARVEST,
-                        "Catching the owner erased the passive field assignment"))
+                                && dodo.getFieldWorkMode() == DinoWhistleSettings.FieldMode.HARVEST
+                                && dodo.getFieldWorkFirst().filter(anchor::equals).isPresent()
+                                && dodo.position().distanceToSqr(anchor.getCenter()) <= 16.0D * 16.0D
+                                && dodo.distanceToSqr(player) > 7.0D * 7.0D,
+                        "The passive worker abandoned or rewrote its fixed field leash"))
                 .thenExecute(() -> {
                     dodo.discard();
                     player.discard();
@@ -1233,6 +1249,9 @@ public final class PrimevalGameTests {
         BlockPos tableRelative = new BlockPos(5, 1, 4);
         BlockPos dodoRelative = new BlockPos(4, 1, 3);
         forceTicking(helper, sourceRelative, processorRelative, destinationRelative, tableRelative, dodoRelative);
+        for (int x = 0; x <= 10; x++) for (int y = 1; y <= 5; y++) for (int z = 0; z <= 5; z++) {
+            helper.setBlock(new BlockPos(x, y, z), Blocks.AIR);
+        }
         for (int x = 0; x <= 10; x++) for (int z = 0; z <= 5; z++) {
             helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
         }
@@ -1693,6 +1712,8 @@ public final class PrimevalGameTests {
     private static void commandTableUsesOneBlock(GameTestHelper helper) {
         BlockPos masterRelative = new BlockPos(2, 1, 2);
         BlockPos extensionRelative = new BlockPos(3, 1, 2);
+        helper.setBlock(masterRelative, Blocks.AIR);
+        helper.setBlock(extensionRelative, Blocks.AIR);
         helper.setBlock(new BlockPos(2, 0, 2), Blocks.STONE);
         helper.setBlock(new BlockPos(3, 0, 2), Blocks.STONE);
         BlockState state = ModBlocks.COMMAND_TABLE.get().defaultBlockState()
@@ -2058,6 +2079,13 @@ public final class PrimevalGameTests {
 
     private static void pteranodonSaddleMounts(GameTestHelper helper) {
         BlockPos dinosaurRelative = new BlockPos(3, 1, 3);
+        for (int x = 1; x <= 5; x++) {
+            for (int y = 1; y <= 8; y++) {
+                for (int z = 1; z <= 5; z++) {
+                    helper.setBlock(new BlockPos(x, y, z), Blocks.AIR);
+                }
+            }
+        }
         helper.setBlock(new BlockPos(3, 0, 3), Blocks.STONE);
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
         FieldDodoEntity pteranodon = helper.spawn(ModEntities.PTERANODON.get(), dinosaurRelative);
@@ -2592,6 +2620,9 @@ public final class PrimevalGameTests {
         BlockPos tableRelative = new BlockPos(4, 1, 4);
         BlockPos dodoRelative = new BlockPos(3, 1, 3);
         forceTicking(helper, sourceRelative, destinationRelative, tableRelative, dodoRelative);
+        for (int x = 0; x <= 8; x++) for (int y = 1; y <= 5; y++) for (int z = 0; z <= 5; z++) {
+            helper.setBlock(new BlockPos(x, y, z), Blocks.AIR);
+        }
         for (int x = 0; x <= 8; x++) {
             for (int z = 0; z <= 5; z++) {
                 helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
@@ -3392,6 +3423,29 @@ public final class PrimevalGameTests {
         helper.succeed();
     }
 
+    private static void whistleSettingsSurviveReopen(GameTestHelper helper) {
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        int slot = 4;
+        player.getInventory().setItem(slot, new ItemStack(ModItems.DINO_WHISTLE.get()));
+        ConfigureDinoWhistlePayload payload = new ConfigureDinoWhistlePayload(
+                slot,
+                DinoWhistleSettings.FieldMode.COLLECT.ordinal(),
+                DinoWhistleSettings.Pattern.AREA.ordinal(),
+                73,
+                "minecraft:coal");
+        helper.assertTrue(ConfigureDinoWhistlePayload.apply(player, payload),
+                "The server rejected the physical Whistle inventory slot");
+        ItemStack reopened = player.getInventory().getItem(slot).copy();
+        DinoWhistleSettings saved = DinoWhistleSettings.read(reopened);
+        helper.assertTrue(saved.mode() == DinoWhistleSettings.FieldMode.COLLECT
+                        && saved.pattern() == DinoWhistleSettings.Pattern.AREA
+                        && saved.range() == 73
+                        && saved.itemFilter().equals("minecraft:coal"),
+                "Closing and reopening the Whistle lost its saved settings");
+        player.discard();
+        helper.succeed();
+    }
+
     private static void followerQuarriesMarkedVein(GameTestHelper helper) {
         BlockPos tableRelative = new BlockPos(1, 1, 1);
         BlockPos dinosaurRelative = new BlockPos(3, 1, 3);
@@ -3425,6 +3479,17 @@ public final class PrimevalGameTests {
         helper.assertTrue(!nonspecialist.hasFieldWork(),
                 "A species without a field specialty accepted a whistle order");
         nonspecialist.discard();
+        FieldDodoEntity parasaurolophus = helper.spawn(
+                ModEntities.PARASAUROLOPHUS.get(), new BlockPos(3, 1, 5));
+        parasaurolophus.setCommandMode(DinosaurCommandMode.FOLLOW);
+        parasaurolophus.assignFieldWork(new DinoWhistleSettings(
+                DinoWhistleSettings.FieldMode.QUARRY,
+                DinoWhistleSettings.Pattern.CONNECTED,
+                48
+        ), target, null);
+        helper.assertTrue(!parasaurolophus.hasFieldWork(),
+                "Parasaurolophus accepted Quarry instead of remaining Lumber-only");
+        parasaurolophus.discard();
         FieldDodoEntity dinosaur = helper.spawn(ModEntities.TYRANNOSAURUS.get(), dinosaurRelative);
         helper.assertTrue(DinosaurOwnership.addToActiveIfRoom(player, dinosaur, table),
                 "The quarry test companion could not join the active crew");
@@ -3538,6 +3603,16 @@ public final class PrimevalGameTests {
                 .thenExecute(() -> helper.assertTrue(dinosaur.hasFieldWork()
                                 && dinosaur.isFieldWorkContinuous(),
                         "The passive harvest order stopped after one crop"))
+                .thenExecute(() -> {
+                    DinoWhistleSettings settings = new DinoWhistleSettings(
+                            DinoWhistleSettings.FieldMode.HARVEST,
+                            DinoWhistleSettings.Pattern.AREA,
+                            48);
+                    helper.assertTrue(!dinosaur.togglePassiveFieldWork(settings) && !dinosaur.hasFieldWork(),
+                            "Clicking an assigned passive follower did not turn the green slot off");
+                    helper.assertTrue(dinosaur.togglePassiveFieldWork(settings) && dinosaur.hasFieldWork(),
+                            "Clicking the follower again did not restore its passive duty");
+                })
                 .thenSucceed();
     }
 

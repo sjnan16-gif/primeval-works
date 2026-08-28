@@ -56,8 +56,8 @@ public record DinoWhistleSettings(FieldMode mode, Pattern pattern, int range, St
     public enum FieldMode {
         QUARRY("Quarry", "Mines a block vein or clears the bounded area between two marked corners."),
         LUMBER("Lumber", "Fells a chosen log or a bounded connected tree."),
-        HARVEST("Harvest", "Harvests mature crops without touching storage or machines."),
-        COLLECT("Collect", "Collects loose items around the follower and brings them to you.");
+        HARVEST("Harvest", "Harvests mature crops inside a saved field without touching storage or machines."),
+        COLLECT("Collect", "Collects loose items inside a saved field and holds them until you return.");
 
         private final String title;
         private final String description;
@@ -98,8 +98,8 @@ public record DinoWhistleSettings(FieldMode mode, Pattern pattern, int range, St
                         ? "Mine every safe block between two marked corners."
                         : "Mine the marked block and connected blocks of the same type.";
                 case LUMBER -> "Cut every connected log in the tree you mark.";
-                case HARVEST -> "Harvest and replant mature crops near the follower.";
-                case COLLECT -> "Retrieve matching loose items near the follower.";
+                case HARVEST -> "Harvest and replant mature crops around the saved work point.";
+                case COLLECT -> "Retrieve matching loose items around the saved work point.";
             };
         }
 

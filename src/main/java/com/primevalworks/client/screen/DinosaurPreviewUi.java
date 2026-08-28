@@ -64,6 +64,6 @@ public final class DinosaurPreviewUi {
         float projectedHeight = bounds.height() * Math.abs(Mth.cos(pitch))
                 + cameraDepth * Math.abs(Mth.sin(pitch));
         return Mth.clamp(Math.min(width / Math.max(0.35F, footprint),
-                height / Math.max(0.35F, projectedHeight)) * 1.08F, 1.5F, 44.0F);
+                height / Math.max(0.35F, projectedHeight)) * 0.97F, 1.5F, 44.0F);
     }
 }

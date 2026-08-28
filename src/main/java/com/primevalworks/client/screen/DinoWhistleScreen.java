@@ -48,6 +48,7 @@ public final class DinoWhistleScreen extends Screen {
     private final long[] hoverStarted = new long[16];
     private final List<PassiveWhistleFollowersPayload.Entry> followers = new ArrayList<>();
     private final List<ItemStack> catalogueItems = new ArrayList<>();
+    private final List<PreviewRequest> previewRequests = new ArrayList<>();
     private DinoWhistleSettings settings;
     private EditBox searchBox;
     private ItemStack draggedItem = ItemStack.EMPTY;
@@ -110,6 +111,7 @@ public final class DinoWhistleScreen extends Screen {
         updateParallax(mouseX, mouseY, deltaTime);
         updateSearchMotion(deltaTime);
         Motion motion = motion();
+        previewRequests.clear();
         float logicalMouseX = (float)motion.inverseX(mouseX);
         float logicalMouseY = (float)motion.inverseY(mouseY);
         updateSearchBox(motion);
@@ -123,6 +125,7 @@ public final class DinoWhistleScreen extends Screen {
             drawSearchPicker(graphics, searchPanel(), logicalMouseX, logicalMouseY);
         }
         graphics.pose().popMatrix();
+        drawFollowerPreviews(graphics, motion);
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         if (hoverTooltip != null) {
             graphics.nextStratum();
@@ -197,10 +200,11 @@ public final class DinoWhistleScreen extends Screen {
         Rect followers = followerRect(panel);
         boolean followersHovered = followers.contains(mouseX, mouseY);
         drawInteractiveRegion(graphics, followers, 3, followersHovered,
-                () -> drawFollowerRow(graphics, followers, mouseX, mouseY));
+                () -> drawFollowerRow(graphics, followers, mouseX, mouseY, followersHovered));
     }
 
-    private void drawFollowerRow(GuiGraphicsExtractor graphics, Rect row, float mouseX, float mouseY) {
+    private void drawFollowerRow(GuiGraphicsExtractor graphics, Rect row, float mouseX, float mouseY,
+                                 boolean rowHovered) {
         drawBubble(graphics, row);
         Rect followerLabel = new Rect(row.x + 3, row.y + 4, 46, row.h - 8);
         drawInsetBubble(graphics, followerLabel);
@@ -223,11 +227,11 @@ public final class DinoWhistleScreen extends Screen {
             Rect slot = followerSlot(row, index);
             PassiveWhistleFollowersPayload.Entry entry = followers.get(index);
             boolean hovered = slot.contains(mouseX, mouseY);
-            drawFollowerSlot(graphics, slot, entry, hovered, index);
+            drawFollowerSlot(graphics, row, slot, entry, hovered, rowHovered, index);
             if (hovered) {
                 hoverTooltip = tooltip(entry.name(), entry.compatible() ? modeColor() : 0xFF9C5149,
                         entry.compatible() ? entry.rating() + " star field rating" : "This species cannot do this order.",
-                        entry.assigned() ? "This duty is currently assigned." : "Click to assign this follower.");
+                        entry.assigned() ? "Click to stop this field duty." : "Click to assign this follower.");
             }
         }
         if (followers.isEmpty()) {
@@ -252,8 +256,9 @@ public final class DinoWhistleScreen extends Screen {
         }
     }
 
-    private void drawFollowerSlot(GuiGraphicsExtractor graphics, Rect slot,
-                                  PassiveWhistleFollowersPayload.Entry entry, boolean hovered, int index) {
+    private void drawFollowerSlot(GuiGraphicsExtractor graphics, Rect row, Rect slot,
+                                  PassiveWhistleFollowersPayload.Entry entry, boolean hovered,
+                                  boolean rowHovered, int index) {
         updateHover(index + 4, hovered);
         float scale = 1.0F + interactionMotion(index + 4, hovered) * 0.07F;
         graphics.pose().pushMatrix();
@@ -267,13 +272,54 @@ public final class DinoWhistleScreen extends Screen {
         }
         FieldDodoEntity dinosaur = entity(entry.entityId());
         if (dinosaur != null) {
-            DinosaurPreviewUi.draw(graphics, dinosaur, slot.x + 1, slot.y + 1,
-                    slot.w - 2, slot.h - 2, 0.0F, -8.0F);
+            previewRequests.add(new PreviewRequest(dinosaur,
+                    followerPreviewRect(row, slot, rowHovered, scale), entry.compatible()));
         }
         if (!entry.compatible()) {
             graphics.fill(slot.x + 2, slot.y + 2, slot.right() - 2, slot.bottom() - 2, 0x92211C20);
         } else if (hovered) {
             graphics.requestCursor(CursorTypes.POINTING_HAND);
+        }
+    }
+
+    private FloatRect followerPreviewRect(Rect row, Rect slot, boolean rowHovered, float slotScale) {
+        float rowAmount = interactionMotion(3, rowHovered);
+        float wobbleX = Mth.sin(renderNow / 1_000_000_000.0F * 7.1F + 3 * 0.83F)
+                * 0.45F * rowAmount;
+        float wobbleY = Mth.sin(renderNow / 1_000_000_000.0F * 8.4F + 3 * 1.17F)
+                * 0.26F * rowAmount;
+        float press = pressedKey == 3
+                ? Mth.clamp(1.0F - (renderNow - pressedAt) / 260_000_000.0F, 0.0F, 1.0F) : 0.0F;
+        float rowScale = 1.0F + rowAmount * 0.026F - Mth.sin(press * Mth.PI) * 0.032F;
+        float left = row.centerX() + (slot.x + 1 - row.centerX()) * rowScale + wobbleX;
+        float top = row.centerY() + (slot.y + 1 - row.centerY()) * rowScale + wobbleY;
+        float width = (slot.w - 2) * rowScale;
+        float height = (slot.h - 2) * rowScale;
+        float centerX = left + width * 0.5F;
+        float centerY = top + height * 0.5F;
+        return new FloatRect(centerX - width * slotScale * 0.5F,
+                centerY - height * slotScale * 0.5F,
+                width * slotScale, height * slotScale);
+    }
+
+    private void drawFollowerPreviews(GuiGraphicsExtractor graphics, Motion motion) {
+        if (previewRequests.isEmpty()) return;
+        float cursorX = Mth.clamp(parallaxX / 0.7F, -1.0F, 1.0F);
+        float cursorY = Mth.clamp(parallaxY / 0.45F, -1.0F, 1.0F);
+        for (PreviewRequest request : previewRequests) {
+            FloatRect logical = request.target;
+            FloatRect screen = new FloatRect(
+                    motion.screenX(logical.x),
+                    motion.screenY(logical.y),
+                    logical.w * motion.scale,
+                    logical.h * motion.scale);
+            DinosaurPreviewUi.draw(graphics, request.dinosaur,
+                    screen.x, screen.y, screen.w, screen.h,
+                    42.0F + cursorX * 5.5F, -25.0F + cursorY * 2.5F);
+            if (!request.compatible) {
+                graphics.fill(Mth.ceil(screen.x), Mth.ceil(screen.y),
+                        Mth.floor(screen.right()), Mth.floor(screen.bottom()), 0x8A211C20);
+            }
         }
     }
 
@@ -284,7 +330,7 @@ public final class DinoWhistleScreen extends Screen {
             graphics.fill(range.x + 2, range.y + 2, range.right() - 2, range.bottom() - 2, 0x18FFFFFF);
             graphics.requestCursor(CursorTypes.POINTING_HAND);
             hoverTooltip = tooltip(settings.mode() == DinoWhistleSettings.FieldMode.COLLECT ? "Search range" : "Leash",
-                    modeColor(), "The dinosaur stops field work outside this distance.",
+                    modeColor(), "The dinosaur stays inside this distance from its saved work point.",
                     "Drag the marker to set the range.");
         }
         Rect rangeLabel = new Rect(range.x + 3, range.y + 3, 47, range.h - 6);
@@ -925,6 +971,14 @@ public final class DinoWhistleScreen extends Screen {
         double inverseY(double screenY) { return pivotY + (screenY - pivotY - offsetY) / scale; }
         float screenX(float logicalX) { return pivotX + offsetX + (logicalX - pivotX) * scale; }
         float screenY(float logicalY) { return pivotY + offsetY + (logicalY - pivotY) * scale; }
+    }
+
+    private record PreviewRequest(FieldDodoEntity dinosaur, FloatRect target, boolean compatible) {
+    }
+
+    private record FloatRect(float x, float y, float w, float h) {
+        float right() { return x + w; }
+        float bottom() { return y + h; }
     }
 
     private record Rect(int x, int y, int w, int h) {

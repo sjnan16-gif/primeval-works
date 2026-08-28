@@ -172,11 +172,11 @@ public final class FieldDodoRenderer<R extends LivingEntityRenderState & GeoRend
         Vec3 defeatOffset = Vec3.ZERO;
         if (defeatProgress > 0.0F && dinosaur.getCommandTablePos().isPresent()) {
             renderState.lightCoords = FULL_BRIGHT_LIGHT;
-            float transfer = smoothStep(Mth.clamp((defeatProgress - 0.24F) / 0.76F, 0.0F, 1.0F));
-            float eased = transfer * transfer * (3.0F - 2.0F * transfer);
+            float transfer = smoothStep(Mth.clamp((defeatProgress - 0.27F) / 0.73F, 0.0F, 1.0F));
+            float eased = transfer * transfer;
             Vec3 target = dinosaur.getCommandTablePos().orElseThrow().getCenter().add(0.0D, 0.92D, 0.0D);
             defeatOffset = target.subtract(dinosaur.position()).scale(eased)
-                    .add(0.0D, Mth.sin(transfer * Mth.PI) * 1.85D, 0.0D);
+                    .add(0.0D, Mth.sin(transfer * Mth.PI) * 1.18D, 0.0D);
         }
         renderState.addGeckolibData(DEFEAT_PROGRESS, defeatProgress);
         renderState.addGeckolibData(DEFEAT_OFFSET, defeatOffset);
@@ -234,12 +234,16 @@ public final class FieldDodoRenderer<R extends LivingEntityRenderState & GeoRend
         }
         float progress = dinosaur.getDefeatTransferProgress(partialTick);
         if (progress <= 0.0F) return base;
-        float fade = smoothStep(Mth.clamp((progress - 0.52F) / 0.48F, 0.0F, 1.0F));
-        float red = smoothStep(Mth.clamp((progress - 0.03F) / 0.45F, 0.0F, 1.0F)) * 0.72F;
+        float fade = smoothStep(Mth.clamp((progress - 0.56F) / 0.44F, 0.0F, 1.0F));
+        float white = Mth.sin(Mth.clamp(progress / 0.28F, 0.0F, 1.0F) * Mth.PI) * 0.86F;
+        float red = smoothStep(Mth.clamp((progress - 0.20F) / 0.42F, 0.0F, 1.0F)) * 0.76F;
         int alpha = Mth.clamp(Math.round(ARGB.alpha(base) * (1.0F - fade * 0.94F)), 0, 255);
-        int resultRed = Math.round(Mth.lerp(red, ARGB.red(base), 236.0F));
-        int resultGreen = Math.round(Mth.lerp(red, ARGB.green(base), 54.0F));
-        int resultBlue = Math.round(Mth.lerp(red, ARGB.blue(base), 48.0F));
+        float paleRed = Mth.lerp(white, ARGB.red(base), 255.0F);
+        float paleGreen = Mth.lerp(white, ARGB.green(base), 246.0F);
+        float paleBlue = Mth.lerp(white, ARGB.blue(base), 226.0F);
+        int resultRed = Math.round(Mth.lerp(red, paleRed, 242.0F));
+        int resultGreen = Math.round(Mth.lerp(red, paleGreen, 58.0F));
+        int resultBlue = Math.round(Mth.lerp(red, paleBlue, 52.0F));
         return ARGB.color(alpha, resultRed, resultGreen, resultBlue);
     }
 
@@ -260,16 +264,16 @@ public final class FieldDodoRenderer<R extends LivingEntityRenderState & GeoRend
             super.scaleModelForRender(renderPassInfo, widthScale, heightScale);
             return;
         }
-        float snapPhase = Mth.clamp(progress / 0.16F, 0.0F, 1.0F);
-        float snap = backOut(snapPhase);
-        float small = Mth.lerp(snap, 1.0F, 0.31F);
-        float settle = Mth.clamp((progress - 0.12F) / 0.30F, 0.0F, 1.0F);
-        float wobble = Mth.sin(settle * Mth.PI * 3.0F)
-                * (1.0F - smoothStep(settle)) * 0.105F;
-        float transfer = smoothStep(Mth.clamp((progress - 0.24F) / 0.76F, 0.0F, 1.0F));
-        float collapse = Math.max(0.045F, (small + wobble) * (1.0F - transfer * transfer * 0.86F));
-        float horizontal = collapse * (1.0F + wobble * 0.42F);
-        float vertical = collapse * (1.0F - wobble * 0.64F);
+        float squeeze = smoothStep(Mth.clamp(progress / 0.18F, 0.0F, 1.0F));
+        float impact = Mth.sin(squeeze * Mth.PI);
+        float small = Mth.lerp(squeeze, 1.0F, 0.27F);
+        float settle = Mth.clamp((progress - 0.12F) / 0.31F, 0.0F, 1.0F);
+        float wobble = Mth.sin(settle * Mth.TWO_PI * 1.35F)
+                * (1.0F - smoothStep(settle)) * 0.070F;
+        float transfer = smoothStep(Mth.clamp((progress - 0.27F) / 0.73F, 0.0F, 1.0F));
+        float collapse = Math.max(0.040F, (small + wobble) * (1.0F - transfer * transfer * 0.88F));
+        float horizontal = collapse * (1.0F + impact * 0.18F + wobble * 0.48F);
+        float vertical = collapse * (1.0F - impact * 0.14F - wobble * 0.70F);
         super.scaleModelForRender(renderPassInfo, widthScale * horizontal, heightScale * vertical);
     }
 
@@ -381,8 +385,4 @@ public final class FieldDodoRenderer<R extends LivingEntityRenderState & GeoRend
         return clamped * clamped * (3.0F - 2.0F * clamped);
     }
 
-    private static float backOut(float value) {
-        float t = Mth.clamp(value, 0.0F, 1.0F) - 1.0F;
-        return 1.0F + 2.70158F * t * t * t + 1.70158F * t * t;
-    }
 }

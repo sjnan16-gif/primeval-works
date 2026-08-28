@@ -44,8 +44,9 @@ public record AssignPassiveWhistleWorkPayload(int inventorySlot, UUID dinosaurId
                     || !dinosaur.isOwnedBy(player.getUUID())
                     || dinosaur.getCommandMode() != DinosaurCommandMode.FOLLOW
                     || dinosaur.isOnExpedition() || dinosaur.isIncapacitated()
+                    || !DinoFieldWorkRules.supports(dinosaur.getSpecies(), settings.mode())
                     || DinoFieldWorkRules.rating(dinosaur, settings.mode()) <= 0) return;
-            dinosaur.assignPassiveFieldWork(settings);
+            boolean assigned = dinosaur.togglePassiveFieldWork(settings);
             String duty = switch (settings.mode()) {
                 case QUARRY -> "waiting for a marked quarry.";
                 case HARVEST -> "tending nearby crops.";
@@ -53,7 +54,9 @@ public record AssignPassiveWhistleWorkPayload(int inventorySlot, UUID dinosaurId
                 case LUMBER -> "waiting for a marked tree.";
             };
             player.sendOverlayMessage(Component.literal(
-                    dinosaur.getDisplayName().getString() + " is now " + duty));
+                    assigned
+                            ? dinosaur.getDisplayName().getString() + " is now " + duty
+                            : dinosaur.getDisplayName().getString() + " stopped field duty."));
             PacketDistributor.sendToPlayer(player, new PassiveWhistleFollowersPayload(payload.inventorySlot,
                     DinosaurOwnership.loadedFollowers(player).stream()
                             .limit(DinosaurOwnership.followerLimit(player))

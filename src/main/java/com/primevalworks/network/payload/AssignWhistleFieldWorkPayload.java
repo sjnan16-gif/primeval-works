@@ -55,6 +55,11 @@ public record AssignWhistleFieldWorkPayload(UUID dinosaurId, BlockPos first, Blo
                     || dinosaur.isOnExpedition() || dinosaur.isIncapacitated()
                     || !RequestWhistleFollowersPayload.validSelection(player, selection, settings)) return;
             int rating = DinoFieldWorkRules.rating(dinosaur, settings.mode());
+            if (!DinoFieldWorkRules.supports(dinosaur.getSpecies(), settings.mode())) {
+                player.sendOverlayMessage(net.minecraft.network.chat.Component.literal(
+                        "That species has a different field specialty."));
+                return;
+            }
             if (settings.mode() == DinoWhistleSettings.FieldMode.QUARRY
                     && settings.pattern() == DinoWhistleSettings.Pattern.AREA
                     && !DinoFieldWorkRules.areaWithinLimits(

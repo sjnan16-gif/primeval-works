@@ -1493,7 +1493,8 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     }
 
     public boolean hasFieldWork() {
-        return level().isClientSide() ? entityData.get(FIELD_WORK_MODE) >= 0 : fieldWorkEnabled;
+        boolean enabled = level().isClientSide() ? entityData.get(FIELD_WORK_MODE) >= 0 : fieldWorkEnabled;
+        return enabled && DinoFieldWorkRules.supports(getSpecies(), getFieldWorkMode());
     }
 
     public DinoWhistleSettings.FieldMode getFieldWorkMode() {
@@ -1562,7 +1563,8 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
 
     public void assignFieldWork(DinoWhistleSettings settings, BlockPos first, @Nullable BlockPos second) {
         if (level().isClientSide() || commandMode != DinosaurCommandMode.FOLLOW) return;
-        if (DinoFieldWorkRules.rating(this, settings.mode()) <= 0) return;
+        if (!DinoFieldWorkRules.supports(getSpecies(), settings.mode())
+                || DinoFieldWorkRules.rating(this, settings.mode()) <= 0) return;
         fieldWorkMode = settings.mode();
         fieldWorkPattern = settings.pattern();
         fieldWorkContinuous = settings.mode().isPassive();
@@ -1589,6 +1591,19 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     public void assignPassiveFieldWork(DinoWhistleSettings settings) {
         if (!settings.mode().isPassive()) return;
         assignFieldWork(settings, blockPosition(), null);
+    }
+
+    /** Toggles one passive Whistle duty without changing the dinosaur's Follow command. */
+    public boolean togglePassiveFieldWork(DinoWhistleSettings settings) {
+        if (level().isClientSide() || !settings.mode().isPassive()
+                || !DinoFieldWorkRules.supports(getSpecies(), settings.mode())) return false;
+        if (fieldWorkEnabled && fieldWorkMode == settings.mode()) {
+            settleFieldCargo();
+            clearFieldWork();
+            return false;
+        }
+        assignPassiveFieldWork(settings);
+        return fieldWorkEnabled && fieldWorkMode == settings.mode();
     }
 
     public void updatePassiveFieldSettings(DinoWhistleSettings settings) {
@@ -2001,7 +2016,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         lumberFastFelling = fieldWorkEnabled
                 && fieldWorkMode == DinoWhistleSettings.FieldMode.LUMBER
                 && input.getBooleanOr("PrimevalLumberFastFelling", false);
-        if (fieldWorkEnabled && DinoFieldWorkRules.specialty(getSpecies()) != fieldWorkMode) {
+        if (fieldWorkEnabled && !DinoFieldWorkRules.supports(getSpecies(), fieldWorkMode)) {
             fieldWorkEnabled = false;
             fieldWorkFirst = null;
             fieldWorkSecond = null;
@@ -2448,7 +2463,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                 && workerCooldown <= 0
                 && (commandMode == DinosaurCommandMode.FOLLOW || scheduleAllowsWork());
         ServerPlayer owner = commandMode == DinosaurCommandMode.FOLLOW ? commandOwner() : null;
-        boolean catchingOwner = owner != null && owner.level() == level()
+        boolean catchingOwner = !fieldWorkEnabled && owner != null && owner.level() == level()
                 && distanceToSqr(owner) > 100.0D;
         return !onExpedition
                 && getHunger() >= PrimevalTuning.server().foodBoxThreshold()
@@ -2461,7 +2476,8 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         }
 
         ServerPlayer owner = commandOwner();
-        if (commandMode == DinosaurCommandMode.FOLLOW && owner != null && getSpecies().combatCapable()) {
+        if (commandMode == DinosaurCommandMode.FOLLOW && !fieldWorkEnabled
+                && owner != null && getSpecies().combatCapable()) {
             LivingEntity attacked = owner.getLastHurtMob();
             LivingEntity attacker = owner.getLastHurtByMob();
             LivingEntity requestedTarget = attacked != null && attacked.isAlive() ? attacked
@@ -2758,17 +2774,10 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             navigation.stop();
             return;
         }
-        // Follow pursuit owns navigation while the owner is moving away. Field work
-        // resumes as soon as the follower is back in formation. Letting both systems
-        // issue paths in the same tick made passive workers, especially Spinosaurus,
-        // repeatedly cancel their own route and appear frozen.
-        if (fieldWorkMode.isPassive() && fieldDutyAllowsOwnerPursuit(owner)
-                && (ownerCatchupActive || distanceToSqr(owner) > followerStartDistanceSqr())) {
-            cancelWorkAction();
-            return;
-        }
         if (fieldWorkFirst == null && fieldWorkMode.isPassive()) {
             fieldWorkFirst = blockPosition().immutable();
+            entityData.set(FIELD_WORK_FIRST, Optional.of(fieldWorkFirst));
+            DinosaurOwnership.syncRecord(this);
         }
         if (fieldWorkFirst == null) {
             clearFieldWork();
@@ -2784,27 +2793,14 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             clearFieldWork();
             return;
         }
-        double allowed = fieldWorkRange;
-        Vec3 anchor = fieldWorkMode.isPassive() ? position()
-                : fieldWorkPattern == DinoWhistleSettings.Pattern.AREA && fieldWorkSecond != null
-                ? Vec3.atCenterOf(fieldWorkFirst).lerp(Vec3.atCenterOf(fieldWorkSecond), 0.5D)
-                : fieldWorkFirst.getCenter();
-        if (owner.position().distanceToSqr(anchor) > allowed * allowed) {
-            cancelWorkAction();
-            moveTo(owner.blockPosition());
-            return;
-        }
         if (fieldWorkMode == DinoWhistleSettings.FieldMode.COLLECT) {
-            fieldWorkFirst = blockPosition().immutable();
             runFieldCollection(owner);
             return;
-        }
-        if (fieldWorkMode == DinoWhistleSettings.FieldMode.HARVEST) {
-            fieldWorkFirst = blockPosition().immutable();
         }
         if (fieldWorkTargets.isEmpty() || fieldWorkCursor >= fieldWorkTargets.size()) {
             if (fieldWorkContinuous && fieldWorkRescanCooldown-- > 0) {
                 cancelWorkAction();
+                keepInsideFieldLeash();
                 return;
             }
             rebuildFieldTargets();
@@ -2812,6 +2808,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                 cancelWorkAction();
                 if (fieldWorkContinuous) {
                     fieldWorkRescanCooldown = 80;
+                    keepInsideFieldLeash();
                 } else {
                     clearFieldWork();
                 }
@@ -2948,8 +2945,8 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     }
 
     private void rebuildNearbyHarvestTargets(int rating) {
-        BlockPos center = blockPosition();
-        int radius = 7;
+        BlockPos center = fieldWorkFirst == null ? blockPosition() : fieldWorkFirst;
+        int radius = Math.min(32, fieldWorkRange);
         BlockPos min = center.offset(-radius, -2, -radius);
         BlockPos max = center.offset(radius, 2, radius);
         for (BlockPos candidate : BlockPos.betweenClosed(min, max)) {
@@ -2989,9 +2986,16 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         ItemStack carried = getCarriedStack();
         if (!carried.isEmpty()) {
             fieldCollectionTargetId = null;
-            if (distanceToSqr(owner) > 7.0D) {
+            Vec3 anchor = fieldWorkFirst == null ? position() : fieldWorkFirst.getCenter();
+            boolean ownerAtField = owner.position().distanceToSqr(anchor) <= 10.0D * 10.0D;
+            if (ownerAtField && distanceToSqr(owner) > 7.0D) {
                 markRaptorTransportRoute();
                 moveTo(owner.blockPosition());
+                return;
+            }
+            if (!ownerAtField) {
+                cancelWorkAction();
+                keepInsideFieldLeash();
                 return;
             }
             ItemStack remaining = carried.copy();
@@ -3070,7 +3074,9 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     private AABB fieldCollectionArea() {
         if (fieldWorkMode == DinoWhistleSettings.FieldMode.COLLECT) {
             double radius = Math.min(32.0D, fieldWorkRange);
-            return getBoundingBox().inflate(radius, Math.min(8.0D, radius * 0.35D), radius);
+            Vec3 center = fieldWorkFirst == null ? position() : fieldWorkFirst.getCenter();
+            double vertical = Math.min(8.0D, radius * 0.35D);
+            return new AABB(center, center).inflate(radius, vertical, radius);
         }
         if (fieldWorkPattern != DinoWhistleSettings.Pattern.AREA || fieldWorkSecond == null) {
             return new AABB(fieldWorkFirst).inflate(fieldWorkPattern == DinoWhistleSettings.Pattern.CONNECTED ? 6.0D : 1.5D);
@@ -4099,6 +4105,10 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
 
     private boolean insideBaseBoundary(Vec3 position, double padding) {
         if (commandMode == DinosaurCommandMode.FOLLOW) {
+            if (fieldWorkEnabled && fieldWorkFirst != null) {
+                double radius = Math.max(12.0D, fieldWorkRange + padding);
+                return fieldWorkFirst.getCenter().distanceToSqr(position) <= radius * radius;
+            }
             ServerPlayer owner = commandOwner();
             if (owner == null || owner.level() != level()) return false;
             double radius = Math.max(12.0D, 32.0D + padding);
@@ -5560,7 +5570,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             return ownerCatchupActive
                     || !navigation.isDone()
                     || getWorkAction() != 0
-                    || owner != null && owner.level() == level()
+                    || !fieldWorkEnabled && owner != null && owner.level() == level()
                     && distanceToSqr(owner) > followerStartDistanceSqr();
         }
         if (commandMode == DinosaurCommandMode.STAY) {
@@ -6394,7 +6404,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         public boolean canUse() {
             owner = commandOwner();
             return commandMode == DinosaurCommandMode.FOLLOW
-                    && fieldDutyAllowsOwnerPursuit(owner)
+                    && fieldDutyAllowsOwnerPursuit()
                     && owner != null
                     && owner.level() == level()
                     && !onExpedition
@@ -6407,7 +6417,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         @Override
         public boolean canContinueToUse() {
             return commandMode == DinosaurCommandMode.FOLLOW
-                    && fieldDutyAllowsOwnerPursuit(owner)
+                    && fieldDutyAllowsOwnerPursuit()
                     && owner != null
                     && owner.isAlive()
                     && owner.level() == level()
@@ -6535,24 +6545,15 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         return distance * distance;
     }
 
-    private boolean fieldDutyAllowsOwnerPursuit(@Nullable ServerPlayer owner) {
-        if (!fieldWorkEnabled) return true;
-        if (owner == null || owner.level() != level()) return false;
-        if (fieldWorkMode.isPassive()) {
-            if (!getCarriedStack().isEmpty()) return false;
-            if (fieldWorkMode == DinoWhistleSettings.FieldMode.COLLECT
-                    && fieldCollectionTarget() != null) return false;
-            if (fieldWorkMode == DinoWhistleSettings.FieldMode.HARVEST
-                    && fieldWorkCursor < fieldWorkTargets.size()) return false;
-            if (fieldWorkMode == DinoWhistleSettings.FieldMode.QUARRY
-                    && fieldWorkCursor < fieldWorkTargets.size()) return false;
-            return true;
-        }
-        if (fieldWorkFirst == null) return true;
-        Vec3 anchor = fieldWorkPattern == DinoWhistleSettings.Pattern.AREA && fieldWorkSecond != null
-                ? Vec3.atCenterOf(fieldWorkFirst).lerp(Vec3.atCenterOf(fieldWorkSecond), 0.5D)
-                : fieldWorkFirst.getCenter();
-        return owner.position().distanceToSqr(anchor) > fieldWorkRange * (double)fieldWorkRange;
+    private boolean fieldDutyAllowsOwnerPursuit() {
+        return !fieldWorkEnabled;
+    }
+
+    private void keepInsideFieldLeash() {
+        if (fieldWorkFirst == null) return;
+        double leash = Math.max(DinoWhistleSettings.MIN_RANGE, fieldWorkRange);
+        if (position().distanceToSqr(fieldWorkFirst.getCenter()) <= leash * leash) return;
+        moveTo(fieldWorkFirst);
     }
 
     private final class StayCommandGoal extends Goal {

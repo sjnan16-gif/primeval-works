@@ -3,6 +3,7 @@ package com.primevalworks.client.render.entity;
 import com.geckolib.cache.model.GeoBone;
 import com.geckolib.renderer.base.GeoRenderState;
 import com.geckolib.renderer.base.GeoRenderer;
+import com.geckolib.renderer.base.RenderPassInfo;
 import com.geckolib.renderer.layer.builtin.BlockAndItemGeoLayer;
 import com.geckolib.util.RenderUtil;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -54,6 +55,12 @@ public final class DinosaurMouthItemLayer<R extends LivingEntityRenderState & Ge
     @Override
     public void addRenderData(FieldDodoEntity dinosaur, Void relatedObject, R renderState, float partialTick) {
         renderState.addGeckolibData(CONTENTS, getRelevantBones(dinosaur, relatedObject, renderState, partialTick));
+    }
+
+    @Override
+    public void submitRenderTask(RenderPassInfo<R> renderPassInfo, SubmitNodeCollector renderTasks) {
+        if (renderPassInfo.getOrDefaultGeckolibData(FieldDodoRenderer.DEFEAT_PROGRESS, 0.0F) > 0.0F) return;
+        super.submitRenderTask(renderPassInfo, renderTasks);
     }
 
     @Override

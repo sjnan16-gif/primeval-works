@@ -88,6 +88,7 @@ public final class DodoIndicatorLayer<R extends LivingEntityRenderState & GeoRen
 
     @Override
     public void submitRenderTask(RenderPassInfo<R> renderPassInfo, SubmitNodeCollector renderTasks) {
+        if (renderPassInfo.getOrDefaultGeckolibData(FieldDodoRenderer.DEFEAT_PROGRESS, 0.0F) > 0.0F) return;
         submitCargo(renderPassInfo, renderTasks);
         boolean sleeping = renderPassInfo.getOrDefaultGeckolibData(SLEEPING, false);
         if (sleeping) {

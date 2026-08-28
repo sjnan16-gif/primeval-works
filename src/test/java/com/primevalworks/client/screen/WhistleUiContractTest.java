@@ -74,6 +74,10 @@ final class WhistleUiContractTest {
         assertTrue(config.contains("fitText(graphics, header"));
         assertTrue(config.contains("results.w - 16"));
         assertTrue(config.contains("behaviorValue.w - 10"));
+        assertTrue(config.contains("previewRequests.clear()"));
+        assertTrue(config.contains("drawFollowerPreviews(graphics, motion)"));
+        assertTrue(config.contains("motion.screenX(logical.x)")
+                && config.contains("logical.w * motion.scale"));
         assertFalse(config.contains("PANEL_INNER"));
         assertFalse(config.contains("CARD_HOVER"));
     }

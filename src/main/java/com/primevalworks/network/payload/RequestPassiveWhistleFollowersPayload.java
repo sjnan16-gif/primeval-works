@@ -35,6 +35,7 @@ public record RequestPassiveWhistleFollowersPayload(int inventorySlot) implement
             List<PassiveWhistleFollowersPayload.Entry> entries = new ArrayList<>();
             for (FieldDodoEntity dinosaur : DinosaurOwnership.loadedFollowers(player)) {
                 if (entries.size() >= DinosaurOwnership.followerLimit(player)) break;
+                if (!DinoFieldWorkRules.supports(dinosaur.getSpecies(), settings.mode())) continue;
                 int rating = DinoFieldWorkRules.rating(dinosaur, settings.mode());
                 if (rating <= 0) continue;
                 entries.add(new PassiveWhistleFollowersPayload.Entry(dinosaur.getId(), dinosaur.getUUID(),

@@ -29,24 +29,32 @@ public record ConfigureDinoWhistlePayload(int inventorySlot, int mode, int patte
 
     public static void handle(ConfigureDinoWhistlePayload payload, IPayloadContext context) {
         if (!(context.player() instanceof ServerPlayer player)) return;
-        context.enqueueWork(() -> {
-            ItemStack whistle = DinoWhistleItem.findInventoryWhistle(player, payload.inventorySlot);
-            if (whistle.isEmpty()) return;
-            DinoWhistleSettings.FieldMode mode = DinoWhistleSettings.FieldMode.byId(payload.mode);
-            Identifier filterId = payload.itemFilter == null ? null : Identifier.tryParse(payload.itemFilter);
-            String filter = mode == DinoWhistleSettings.FieldMode.COLLECT && filterId != null
-                    && BuiltInRegistries.ITEM.get(filterId).isPresent() ? filterId.toString() : "";
-            DinoWhistleSettings updated = new DinoWhistleSettings(mode,
-                    DinoWhistleSettings.Pattern.byId(payload.pattern), payload.range,
-                    filter);
-            updated.write(whistle);
-            if (updated.mode().isPassive()) {
-                DinosaurOwnership.loadedFollowers(player).forEach(
-                        dinosaur -> dinosaur.updatePassiveFieldSettings(updated));
-            }
-            player.getInventory().setChanged();
-            player.containerMenu.broadcastChanges();
-        });
+        context.enqueueWork(() -> apply(player, payload));
+    }
+
+    /** Applies one complete settings snapshot to the exact physical Whistle slot. */
+    public static boolean apply(ServerPlayer player, ConfigureDinoWhistlePayload payload) {
+        ItemStack whistle = DinoWhistleItem.findInventoryWhistle(player, payload.inventorySlot);
+        if (whistle.isEmpty()) return false;
+        DinoWhistleSettings.FieldMode mode = DinoWhistleSettings.FieldMode.byId(payload.mode);
+        Identifier filterId = payload.itemFilter == null ? null : Identifier.tryParse(payload.itemFilter);
+        String filter = mode == DinoWhistleSettings.FieldMode.COLLECT && filterId != null
+                && BuiltInRegistries.ITEM.get(filterId).isPresent() ? filterId.toString() : "";
+        DinoWhistleSettings updated = new DinoWhistleSettings(mode,
+                DinoWhistleSettings.Pattern.byId(payload.pattern), payload.range, filter);
+
+        // Replacing the slot guarantees component sync in both inventory and container views.
+        ItemStack updatedWhistle = whistle.copy();
+        updated.write(updatedWhistle);
+        player.getInventory().setItem(payload.inventorySlot, updatedWhistle);
+        if (updated.mode().isPassive()) {
+            DinosaurOwnership.loadedFollowers(player).forEach(
+                    dinosaur -> dinosaur.updatePassiveFieldSettings(updated));
+        }
+        player.getInventory().setChanged();
+        player.inventoryMenu.broadcastChanges();
+        if (player.containerMenu != player.inventoryMenu) player.containerMenu.broadcastChanges();
+        return true;
     }
 
     @Override
