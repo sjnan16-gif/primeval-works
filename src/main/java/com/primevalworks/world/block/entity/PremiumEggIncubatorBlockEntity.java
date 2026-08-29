@@ -9,7 +9,6 @@ import com.primevalworks.world.egg.DinosaurEggGenome;
 import com.primevalworks.world.entity.DinosaurSpecies;
 import com.primevalworks.world.entity.FieldDodoEntity;
 import com.primevalworks.world.entity.DinosaurMutationRules;
-import com.primevalworks.world.base.BaseEnergyRules;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.particles.ParticleTypes;
@@ -32,7 +31,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.UUID;
 
-public final class PremiumEggIncubatorBlockEntity extends BlockEntity implements ActiveEnergyConsumer {
+public final class PremiumEggIncubatorBlockEntity extends BlockEntity {
     public static final int INCUBATION_TICKS = DinosaurEggSize.SMALL.baseIncubationTicks();
     private static final int SCHEMA_VERSION = 2;
 
@@ -55,7 +54,6 @@ public final class PremiumEggIncubatorBlockEntity extends BlockEntity implements
             return;
         }
         if (incubator.progress < incubator.requiredTicks) {
-            if (!BaseEnergyRules.isPowered(level, incubator.commandTablePos, pos)) return;
             incubator.progress++;
             // Mark every elapsed tick for disk persistence. Client packets remain throttled,
             // but quitting between visual updates can no longer roll the timer back.
@@ -168,11 +166,6 @@ public final class PremiumEggIncubatorBlockEntity extends BlockEntity implements
 
     public boolean hasEgg() {
         return !egg.isEmpty();
-    }
-
-    @Override
-    public boolean requestsBaseEnergy(Level level) {
-        return hasEgg() && requiredTicks > 0 && progress < requiredTicks;
     }
 
     public int getProgress() {

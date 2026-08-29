@@ -502,9 +502,11 @@ public final class DinosaurOwnership {
         dinosaur.linkToCommandTable(tablePos);
         dinosaur.getNavigation().stop();
         moveToSlot(dinosaur, tablePos, slot);
+        dinosaur.holdAfterCommandTableRecall();
         upsert(records, capture(dinosaur));
         writeRecords(player.getPersistentData(), records);
-        return new SwapResult(true, dinosaur.getDisplayName().getString() + " returned to the Command Table.");
+        return new SwapResult(true, dinosaur.getDisplayName().getString()
+                + " returned to the Command Table and is waiting there.");
     }
 
     public static int activeLimit(ServerPlayer player, BlockPos tablePos) {

@@ -1591,6 +1591,35 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         DinosaurOwnership.syncRecord(this);
     }
 
+    public void holdAfterCommandTableRecall() {
+        if (level().isClientSide()) return;
+        if (commandMode == DinosaurCommandMode.FOLLOW) settleFieldCargo();
+        commandMode = DinosaurCommandMode.STAY;
+        entityData.set(COMMAND_MODE, DinosaurCommandMode.STAY.ordinal());
+        stayPosition = blockPosition().immutable();
+        cancelWorkAction();
+        navigation.stop();
+        getMoveControl().setWait();
+        navigationTarget = null;
+        spinosaurusAquaticWorkTarget = null;
+        stalledNavigationTicks = 0;
+        recoveryWaypointTicks = 0;
+        ownerCatchupActive = false;
+        fieldTargetApproachTicks = 0;
+        fieldCollectionApproachTicks = 0;
+        fieldCollectionTargetId = null;
+        fieldCollectionRetryAfter.clear();
+        workerCooldown = 0;
+        setTarget(null);
+        setSprinting(false);
+        stopAutonomousTransportFlight();
+        entityData.set(SPINO_SWIMMING, false);
+        entityData.set(SPINO_SWIM_SPEED, 0.0F);
+        setDeltaMovement(Vec3.ZERO);
+        resetFallDistance();
+        DinosaurOwnership.syncRecord(this);
+    }
+
     private void settleFieldCargo() {
         ItemStack carried = getCarriedStack().copy();
         if (carried.isEmpty() || !(level() instanceof ServerLevel serverLevel)) return;
@@ -4585,7 +4614,11 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         double bestDistance = Double.MAX_VALUE;
         int topY = Math.min(level().getMaxY() - 2, Math.max(target.getY() + 8, Mth.floor(getY()) + 1));
         int bottomY = Math.max(level().getMinY() + 1, target.getY() - 3);
-        for (int radius = 2; radius <= 7; radius++) {
+        int minimumRadius = 2;
+        if (target.getY() + 3 < getY()) {
+            minimumRadius = Math.max(minimumRadius, Mth.ceil(getBbWidth() + 1.5F));
+        }
+        for (int radius = minimumRadius; radius <= 10; radius++) {
             for (int x = -radius; x <= radius; x++) {
                 for (int z = -radius; z <= radius; z++) {
                     if (Math.max(Math.abs(x), Math.abs(z)) != radius) continue;

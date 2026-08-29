@@ -24,6 +24,9 @@ final class FoodBoxPresentationAssetsTest {
 
         String empty = Files.readString(ASSETS.resolve("models/block/food_box.json"));
         assertTrue(empty.contains("primevalworks:block/food_box_empty"));
+        assertTrue(empty.contains("\"from\": [2, 13, 14]")
+                        && empty.contains("\"to\": [14, 16, 14]"),
+                "The updated empty Food Box rim was replaced by the old lowered face");
         assertEquals(6, countOccurrences(empty, "\"from\""),
                 "The empty Food Box lost part of its authored six-element geometry");
 

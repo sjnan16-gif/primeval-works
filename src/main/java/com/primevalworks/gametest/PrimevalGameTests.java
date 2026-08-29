@@ -2149,21 +2149,20 @@ public final class PrimevalGameTests {
         helper.assertTrue(incubator.hasEgg(), "The unpowered Premium Egg Incubator did not accept its egg");
         helper.assertTrue(player.getMainHandItem().isEmpty(),
                 "The accepted incubator egg remained in the player's hand");
+        int initialProgress = incubator.getProgress();
         PremiumEggIncubatorBlockEntity.serverTick(
                 helper.getLevel(), helper.absolutePos(incubatorRelative),
                 helper.getBlockState(incubatorRelative), incubator
         );
-        helper.assertTrue(incubator.getProgress() == 0,
-                "The unpowered Premium Egg Incubator advanced its timer");
-
-        CommandTableBlockEntity table = helper.getBlockEntity(tableRelative, CommandTableBlockEntity.class);
-        table.receiveGeneratedEnergy(10.0F);
-        helper.assertTrue(table.toggleEnergyConsumer(helper.getLevel(), helper.absolutePos(incubatorRelative)),
-                "The incubator could not connect for the powered half of the interaction test");
+        helper.assertTrue(incubator.getProgress() > initialProgress,
+                "The Premium Egg Incubator silently waited for an energy-map assignment");
+        helper.assertTrue(BaseEnergyRules.demandPerSecond(
+                        helper.getLevel(), helper.absolutePos(incubatorRelative)) == 0.0F,
+                "The self-contained Premium Egg Incubator still registered hidden base-energy demand");
         helper.startSequence()
                 .thenExecuteAfter(3, () -> helper.assertTrue(
                         incubator.getProgress() > 0,
-                        "The connected Premium Egg Incubator did not begin incubating"
+                        "The Premium Egg Incubator did not keep counting down"
                 ))
                 .thenExecute(player::discard)
                 .thenSucceed();
@@ -2324,10 +2323,26 @@ public final class PrimevalGameTests {
         helper.assertTrue(recalled.isWorkEnabled() && recalled.getWorkJobIndex() == 3
                         && recalled.getWorkWorkstationPositions().equals(List.of(workstation)),
                 "Individual recall erased the chosen dinosaur's automation order");
-        recalled.discard();
-        untouched.discard();
-        player.discard();
-        helper.succeed();
+        helper.assertTrue(recalled.getCommandMode() == DinosaurCommandMode.STAY
+                        && recalled.getWorkAction() == 0,
+                "Individual recall left the dinosaur actively running its saved workstation order");
+        helper.startSequence()
+                .thenExecuteAfter(60, () -> helper.assertTrue(
+                        recalled.position().subtract(expected).horizontalDistanceSqr() < 0.05D
+                                && Math.abs(recalled.getY() - expected.y) <= 1.1D
+                                && recalled.getCommandMode() == DinosaurCommandMode.STAY
+                                && recalled.getWorkAction() == 0,
+                        "The recalled dinosaur resumed work or walked away from its table slot; position="
+                                + recalled.position() + ", expected=" + expected
+                                + ", mode=" + recalled.getCommandMode()
+                                + ", action=" + recalled.getWorkAction()
+                                + ", navigationDone=" + recalled.getNavigation().isDone()))
+                .thenExecute(() -> {
+                    recalled.discard();
+                    untouched.discard();
+                    player.discard();
+                })
+                .thenSucceed();
     }
 
     private static void pteranodonSaddleMounts(GameTestHelper helper) {
@@ -3547,12 +3562,7 @@ public final class PrimevalGameTests {
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
         CommandTableBlock.claimExisting(player, helper.absolutePos(tableRelative));
-        CommandTableBlockEntity table = helper.getBlockEntity(tableRelative, CommandTableBlockEntity.class);
         BlockPos incubatorPos = helper.absolutePos(incubatorRelative);
-        table.receiveGeneratedEnergy(20.0F);
-        helper.assertTrue(table.toggleEnergyConsumer(helper.getLevel(), incubatorPos),
-                "The incubator could not connect to the base energy network");
-        helper.onEachTick(() -> table.receiveGeneratedEnergy(3.0F / 20.0F));
         player.setItemInHand(InteractionHand.MAIN_HAND, ModItems.SMALL_DINOSAUR_EGG.get().getDefaultInstance());
         helper.useBlock(incubatorRelative, player);
         PremiumEggIncubatorBlockEntity incubator = helper.getBlockEntity(
@@ -4466,19 +4476,15 @@ public final class PrimevalGameTests {
         BlockPos tablePos = helper.absolutePos(tableRelative);
         BlockPos incubatorPos = helper.absolutePos(incubatorRelative);
         CommandTableBlock.claimExisting(player, tablePos);
-        CommandTableBlockEntity table = helper.getBlockEntity(tableRelative, CommandTableBlockEntity.class);
         PremiumEggIncubatorBlockEntity original = helper.getBlockEntity(
                 incubatorRelative, PremiumEggIncubatorBlockEntity.class);
         helper.assertTrue(original.insertEgg(player, ModItems.SMALL_DINOSAUR_EGG.get().getDefaultInstance()).success(),
                 "The reload test could not insert an egg");
-        helper.assertTrue(table.toggleEnergyConsumer(helper.getLevel(), incubatorPos),
-                "The reload test could not connect its incubator");
-        table.receiveGeneratedEnergy(20.0F);
-        CommandTableBlockEntity.serverTick(helper.getLevel(), tablePos, helper.getBlockState(tableRelative), table);
         PremiumEggIncubatorBlockEntity.serverTick(
                 helper.getLevel(), incubatorPos, helper.getBlockState(incubatorRelative), original);
         int savedProgress = original.getProgress();
-        helper.assertTrue(savedProgress > 0, "The incubator did not begin before its simulated reload");
+        helper.assertTrue(savedProgress > 0,
+                "The incubator did not begin its clock without a hidden energy-map setup step");
 
         CompoundTag saved = original.saveWithFullMetadata(helper.getLevel().registryAccess());
         helper.getLevel().removeBlockEntity(incubatorPos);
@@ -4490,8 +4496,6 @@ public final class PrimevalGameTests {
         helper.getLevel().setBlockEntity(restored);
         helper.assertTrue(restored.hasEgg() && restored.getProgress() == savedProgress,
                 "Reloading the incubator lost its egg or timer progress");
-        table.receiveGeneratedEnergy(4.0F);
-        CommandTableBlockEntity.serverTick(helper.getLevel(), tablePos, helper.getBlockState(tableRelative), table);
         PremiumEggIncubatorBlockEntity.serverTick(
                 helper.getLevel(), incubatorPos, helper.getBlockState(incubatorRelative), restored);
         helper.assertTrue(restored.getProgress() > savedProgress,
@@ -4506,12 +4510,10 @@ public final class PrimevalGameTests {
                 "The completed incubator state could not be reconstructed");
         PremiumEggIncubatorBlockEntity completed = (PremiumEggIncubatorBlockEntity)completedLoaded;
         helper.getLevel().setBlockEntity(completed);
-        helper.assertTrue(!table.toggleEnergyConsumer(helper.getLevel(), incubatorPos),
-                "The completed incubator could not be disconnected for its zero-energy hatch check");
 
         helper.startSequence()
                 .thenWaitUntil(() -> helper.assertTrue(!completed.hasEgg(),
-                        "A completed egg reloaded at 100% but never hatched without another energy tick"))
+                        "A completed egg reloaded at 100% but never hatched"))
                 .thenExecute(player::discard)
                 .thenSucceed();
     }
@@ -4519,13 +4521,13 @@ public final class PrimevalGameTests {
     private static void spinosaurusDescendsToWaterWork(GameTestHelper helper) {
         BlockPos tableRelative = new BlockPos(2, 11, 5);
         BlockPos spinoRelative = new BlockPos(5, 11, 5);
-        BlockPos turbineRelative = new BlockPos(12, 2, 5);
+        BlockPos turbineRelative = new BlockPos(5, 2, 5);
         for (int x = 0; x <= 7; x++) for (int z = 0; z <= 10; z++) {
             helper.setBlock(new BlockPos(x, 10, z), Blocks.STONE);
         }
-        for (int x = 8; x <= 18; x++) for (int z = 0; z <= 10; z++) {
+        for (int x = 0; x <= 13; x++) for (int z = 0; z <= 10; z++) {
             helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
-            for (int y = 1; y <= 6; y++) helper.setBlock(new BlockPos(x, y, z), Blocks.WATER);
+            for (int y = 1; y <= 9; y++) helper.setBlock(new BlockPos(x, y, z), Blocks.WATER);
         }
         helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
         BlockState turbineState = ModBlocks.WATER_TURBINE.get().defaultBlockState()
@@ -4550,6 +4552,8 @@ public final class PrimevalGameTests {
                 2, tablePos, List.of(), List.of(turbinePos), List.of(), null, List.of(),
                 List.of(), List.of(), Map.of(turbinePos, 3),
                 0, 3, 1, 0, 0, 0, 0, 1, true, true);
+        int[] pulsesAtRecall = {0};
+        Vec3 recalledPosition = new Vec3(tablePos.getX() + 2.5D, tablePos.getY() + 1.0D, tablePos.getZ() + 0.5D);
 
         helper.startSequence()
                 .thenWaitUntil(() -> helper.assertTrue(spinosaurus.isInWater(),
@@ -4567,6 +4571,28 @@ public final class PrimevalGameTests {
                                     + ", turbineValid=" + turbine.hasValidEnvironment());
                 })
                 .thenExecute(() -> {
+                    TurbineBlockEntity turbine = helper.getBlockEntity(turbineRelative, TurbineBlockEntity.class);
+                    pulsesAtRecall[0] = turbine.getGenerationPulseCount();
+                    DinosaurOwnership.SwapResult result = DinosaurOwnership.recallActive(
+                            player, tablePos, spinosaurus.getUUID());
+                    helper.assertTrue(result.success(),
+                            "The working underwater Spinosaurus could not be recalled: " + result.message());
+                    helper.assertTrue(spinosaurus.getCommandMode() == DinosaurCommandMode.STAY
+                                    && spinosaurus.getWorkAction() == 0,
+                            "Recall did not immediately stop the underwater work action");
+                })
+                .thenExecuteAfter(80, () -> {
+                    TurbineBlockEntity turbine = helper.getBlockEntity(turbineRelative, TurbineBlockEntity.class);
+                    helper.assertTrue(turbine.getGenerationPulseCount() == pulsesAtRecall[0],
+                            "The recalled Spinosaurus resumed generating at its underwater turbine");
+                    helper.assertTrue(spinosaurus.position().subtract(recalledPosition).horizontalDistanceSqr() < 0.05D
+                                    && Math.abs(spinosaurus.getY() - recalledPosition.y) <= 1.1D
+                                    && spinosaurus.getCommandMode() == DinosaurCommandMode.STAY
+                                    && spinosaurus.getWorkAction() == 0,
+                            "The recalled underwater worker did not remain paused beside its Command Table; position="
+                                    + spinosaurus.position() + ", expected=" + recalledPosition
+                                    + ", mode=" + spinosaurus.getCommandMode()
+                                    + ", action=" + spinosaurus.getWorkAction());
                     spinosaurus.discard();
                     player.discard();
                 })
