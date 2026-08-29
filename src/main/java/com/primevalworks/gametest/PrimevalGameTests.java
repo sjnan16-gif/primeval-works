@@ -38,6 +38,7 @@ import com.primevalworks.world.egg.DinosaurHatching;
 import com.primevalworks.world.egg.PremiumIncubationRules;
 import com.primevalworks.world.ownership.DinosaurOwnership;
 import com.primevalworks.world.inventory.FoodBoxMenu;
+import com.primevalworks.world.item.PrimordialSwordItem;
 import com.primevalworks.world.work.BaseInventoryIndex;
 import com.primevalworks.world.work.ExpeditionRewards;
 import com.primevalworks.world.work.WorkSpecialtyRules;
@@ -77,6 +78,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.entity.EntitySpawnReason;
@@ -251,6 +253,15 @@ public final class PrimevalGameTests {
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> WHISTLE_AVAILABILITY_AND_STOP =
             TEST_FUNCTIONS.register("whistle_availability_and_stop",
                     () -> PrimevalGameTests::whistleAvailabilityAndStop);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> COMMAND_MODES_RECOVER_NAVIGATION =
+            TEST_FUNCTIONS.register("command_modes_recover_navigation",
+                    () -> PrimevalGameTests::commandModesRecoverNavigation);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> QUARRY_DROPS_REACH_FULL_RANGE_COLLECTOR =
+            TEST_FUNCTIONS.register("quarry_drops_reach_full_range_collector",
+                    () -> PrimevalGameTests::quarryDropsReachFullRangeCollector);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> PRIMORDIAL_SWORD_HAS_WIDE_SWEEP =
+            TEST_FUNCTIONS.register("primordial_sword_has_wide_sweep",
+                    () -> PrimevalGameTests::primordialSwordHasWideSweep);
 
     private PrimevalGameTests() {
     }
@@ -563,6 +574,21 @@ public final class PrimevalGameTests {
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "whistle_availability_and_stop"),
                 new FunctionGameTestInstance(WHISTLE_AVAILABILITY_AND_STOP.getKey(),
                         isolatedTestData(event, "whistle_availability_stop"))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "command_modes_recover_navigation"),
+                new FunctionGameTestInstance(COMMAND_MODES_RECOVER_NAVIGATION.getKey(),
+                        isolatedTestData(event, "command_mode_navigation"))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "quarry_drops_reach_full_range_collector"),
+                new FunctionGameTestInstance(QUARRY_DROPS_REACH_FULL_RANGE_COLLECTOR.getKey(),
+                        isolatedTestData(event, "quarry_collect_handoff", 2_400))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "primordial_sword_has_wide_sweep"),
+                new FunctionGameTestInstance(PRIMORDIAL_SWORD_HAS_WIDE_SWEEP.getKey(),
+                        isolatedTestData(event, "primordial_sword_sweep"))
         );
     }
 
@@ -4055,6 +4081,137 @@ public final class PrimevalGameTests {
                 .thenExecute(() -> helper.assertTrue(!dinosaur.hasFieldWork(),
                         "The resumed quarry order stayed active after completion"))
                 .thenSucceed();
+    }
+
+    private static void commandModesRecoverNavigation(GameTestHelper helper) {
+        BlockPos spinosaurusRelative = new BlockPos(2, 1, 2);
+        BlockPos stayRelative = new BlockPos(5, 1, 6);
+        BlockPos displacedStayRelative = new BlockPos(16, 1, 6);
+        BlockPos ownerRelative = new BlockPos(24, 1, 2);
+        forceTicking(helper, spinosaurusRelative, displacedStayRelative, ownerRelative);
+        for (int x = 0; x <= 27; x++) for (int z = 0; z <= 8; z++) {
+            helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+            for (int y = 1; y <= 3; y++) helper.setBlock(new BlockPos(x, y, z), Blocks.AIR);
+        }
+        helper.setBlock(new BlockPos(4, 1, 2), Blocks.IRON_ORE);
+
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.setUUID(UUID.randomUUID());
+        Vec3 ownerPosition = helper.absolutePos(ownerRelative).getCenter();
+        player.snapTo(ownerPosition.x, ownerPosition.y, ownerPosition.z, 90.0F, 0.0F);
+
+        FieldDodoEntity spinosaurus = helper.spawn(ModEntities.SPINOSAURUS.get(), spinosaurusRelative);
+        spinosaurus.setDinosaurOwner(player.getUUID());
+        spinosaurus.setCommandMode(DinosaurCommandMode.FOLLOW);
+        spinosaurus.assignFieldWork(new DinoWhistleSettings(
+                        DinoWhistleSettings.FieldMode.QUARRY,
+                        DinoWhistleSettings.Pattern.CONNECTED,
+                        48),
+                helper.absolutePos(new BlockPos(4, 1, 2)), null);
+        spinosaurus.feed(-100);
+        spinosaurus.setInvulnerable(true);
+        Vec3 spinosaurusStart = spinosaurus.position();
+
+        FieldDodoEntity dodo = helper.spawn(ModEntities.FIELD_DODO.get(), stayRelative);
+        dodo.setDinosaurOwner(player.getUUID());
+        dodo.setCommandMode(DinosaurCommandMode.STAY);
+        Vec3 stayPoint = dodo.position();
+        Vec3 displaced = helper.absolutePos(displacedStayRelative).getCenter();
+        dodo.teleportTo(displaced.x, displaced.y, displaced.z);
+        dodo.setInvulnerable(true);
+        double displacedDistance = dodo.position().distanceToSqr(stayPoint);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(
+                        spinosaurus.position().subtract(spinosaurusStart).horizontalDistanceSqr() > 4.0D
+                                && spinosaurus.distanceToSqr(player)
+                                < spinosaurusStart.distanceToSqr(player.position()) * 0.72D,
+                        "A hungry suspended field order still blocked the Spinosaurus Follow command"))
+                .thenWaitUntil(() -> helper.assertTrue(
+                        dodo.position().distanceToSqr(stayPoint) < displacedDistance * 0.45D,
+                        "Stay navigation was canceled instead of returning the displaced dinosaur to its saved point"))
+                .thenExecute(() -> helper.assertTrue(
+                        spinosaurus.hasFieldWork()
+                                && spinosaurus.getCommandMode() == DinosaurCommandMode.FOLLOW
+                                && helper.getBlockState(new BlockPos(4, 1, 2)).is(Blocks.IRON_ORE),
+                        "Suspending an unrunnable field duty erased or executed its saved order"))
+                .thenExecute(() -> {
+                    spinosaurus.discard();
+                    dodo.discard();
+                    player.discard();
+                })
+                .thenSucceed();
+    }
+
+    private static void quarryDropsReachFullRangeCollector(GameTestHelper helper) {
+        BlockPos collectorRelative = new BlockPos(2, 1, 3);
+        BlockPos quarryRelative = new BlockPos(45, 1, 3);
+        BlockPos ownerRelative = new BlockPos(58, 1, 3);
+        forceTicking(helper, collectorRelative, quarryRelative, ownerRelative);
+        for (int x = 0; x <= 61; x++) for (int z = 0; z <= 6; z++) {
+            helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+            for (int y = 1; y <= 3; y++) helper.setBlock(new BlockPos(x, y, z), Blocks.AIR);
+        }
+        helper.setBlock(quarryRelative, Blocks.IRON_ORE);
+
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.setUUID(UUID.randomUUID());
+        Vec3 ownerPosition = helper.absolutePos(ownerRelative).getCenter();
+        player.snapTo(ownerPosition.x, ownerPosition.y, ownerPosition.z, 90.0F, 0.0F);
+
+        FieldDodoEntity quarry = helper.spawn(ModEntities.SPINOSAURUS.get(), quarryRelative.offset(-2, 0, 0));
+        quarry.setDinosaurOwner(player.getUUID());
+        quarry.setCommandMode(DinosaurCommandMode.FOLLOW);
+        quarry.setInvulnerable(true);
+        quarry.assignFieldWork(new DinoWhistleSettings(
+                        DinoWhistleSettings.FieldMode.QUARRY,
+                        DinoWhistleSettings.Pattern.CONNECTED,
+                        64), helper.absolutePos(quarryRelative), null);
+
+        FieldDodoEntity collector = helper.spawn(ModEntities.VELOCIRAPTOR.get(), collectorRelative);
+        collector.setDinosaurOwner(player.getUUID());
+        collector.setCommandMode(DinosaurCommandMode.FOLLOW);
+        collector.setInvulnerable(true);
+        collector.assignPassiveFieldWork(new DinoWhistleSettings(
+                DinoWhistleSettings.FieldMode.COLLECT,
+                DinoWhistleSettings.Pattern.AREA,
+                64,
+                "minecraft:raw_iron"));
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(
+                        helper.getBlockState(quarryRelative).isAir(),
+                        "The quarry specialist never produced the handoff drop"))
+                .thenWaitUntil(() -> helper.assertTrue(
+                        player.getInventory().countItem(Items.RAW_IRON) > 0,
+                        "Collect ignored a quarry drop inside the configured 64-block field"))
+                .thenExecute(() -> helper.assertTrue(
+                        collector.hasFieldWork() && collector.isFieldWorkContinuous(),
+                        "Collect stopped after completing one quarry handoff"))
+                .thenExecute(() -> {
+                    quarry.discard();
+                    collector.discard();
+                    player.discard();
+                })
+                .thenSucceed();
+    }
+
+    private static void primordialSwordHasWideSweep(GameTestHelper helper) {
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.setUUID(UUID.randomUUID());
+        FieldDodoEntity target = helper.spawn(ModEntities.FIELD_DODO.get(), new BlockPos(3, 1, 3));
+        ItemStack sword = new ItemStack(ModItems.PRIMORDIAL_SWORD.get());
+        player.setItemInHand(InteractionHand.MAIN_HAND, sword);
+        AABB targetBox = target.getBoundingBox();
+        AABB sweepBox = ((PrimordialSwordItem)ModItems.PRIMORDIAL_SWORD.get())
+                .getSweepHitBox(sword, player, target);
+        helper.assertTrue(sweepBox.getXsize() >= targetBox.getXsize() + 4.29D
+                        && sweepBox.getZsize() >= targetBox.getZsize() + 4.29D
+                        && PrimordialSwordItem.ATTACK_DAMAGE_BASELINE == 3.0F,
+                "The Primordial Sword lost its netherite-level damage cap or broad vanilla sweep");
+        target.discard();
+        player.discard();
+        helper.succeed();
     }
 
     private static void nightShiftDrainsMood(GameTestHelper helper) {

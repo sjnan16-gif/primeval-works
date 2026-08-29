@@ -69,7 +69,7 @@ Compressed Ancient Metal, Compressed Cores, species materials, and Primordial In
 
 The final rewards are:
 
-- **Primordial Sword** — hitting a target marks it for nearby guardians and builds an Echo charge from coordinated attacks.
+- **Primordial Sword** — a Netherite-level ancient blade whose fully charged vanilla sweep reaches a much broader group without adding a separate spell or cooldown system.
 - **Prime Incubator** — raises the minimum genetic quality and mutation odds, but never guarantees a perfect dinosaur.
 - **Sanctuary Beacon** — an expensive powered endgame block that suppresses ordinary hostile spawning inside one base. It does not affect spawners, bosses, raids, or scripted encounters.
 

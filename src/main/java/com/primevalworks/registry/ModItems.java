@@ -113,7 +113,10 @@ public final class ModItems {
     public static final DeferredItem<Item> PRIMORDIAL_SWORD = ITEMS.registerItem(
             "primordial_sword",
             properties -> new PrimordialSwordItem(
-                    ToolMaterial.NETHERITE.applySwordProperties(properties, 6.0F, -2.2F))
+                    ToolMaterial.NETHERITE.applySwordProperties(
+                            properties,
+                            PrimordialSwordItem.ATTACK_DAMAGE_BASELINE,
+                            PrimordialSwordItem.ATTACK_SPEED_BASELINE))
     );
     public static final DeferredItem<Item> MAGIC_SHARD_FRAGMENT = ITEMS.registerSimpleItem("magic_shard_fragment");
     public static final DeferredItem<Item> MAGIC_SHARD = ITEMS.registerSimpleItem("magic_shard");

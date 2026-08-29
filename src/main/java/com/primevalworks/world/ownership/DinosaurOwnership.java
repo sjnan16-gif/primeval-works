@@ -500,6 +500,7 @@ public final class DinosaurOwnership {
         for (UUID id : active) {
             FieldDodoEntity dinosaur = findLoaded(player.level().getServer(), id);
             if (dinosaur != null && dinosaur.isOwnedBy(player.getUUID())
+                    && dinosaur.level() == player.level()
                     && dinosaur.getCommandMode() == DinosaurCommandMode.FOLLOW
                     && !dinosaur.isOnExpedition() && !dinosaur.isIncapacitated()) {
                 followers.add(dinosaur);
