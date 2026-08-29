@@ -69,6 +69,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.item.ItemStack;
@@ -268,6 +269,18 @@ public final class PrimevalGameTests {
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> PRIMORDIAL_SWORD_HAS_WIDE_SWEEP =
             TEST_FUNCTIONS.register("primordial_sword_has_wide_sweep",
                     () -> PrimevalGameTests::primordialSwordHasWideSweep);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> DEPOT_SWAP_ONLY_MOVES_SELECTED_DINOSAUR =
+            TEST_FUNCTIONS.register("depot_swap_only_moves_selected_dinosaur",
+                    () -> PrimevalGameTests::depotSwapOnlyMovesSelectedDinosaur);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> DEPOT_DELETE_IS_SERVER_AUTHORITATIVE =
+            TEST_FUNCTIONS.register("depot_delete_is_server_authoritative",
+                    () -> PrimevalGameTests::depotDeleteIsServerAuthoritative);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> INCUBATOR_TIMER_SURVIVES_RELOAD =
+            TEST_FUNCTIONS.register("incubator_timer_survives_reload",
+                    () -> PrimevalGameTests::incubatorTimerSurvivesReload);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> SPINOSAURUS_DESCENDS_TO_WATER_WORK =
+            TEST_FUNCTIONS.register("spinosaurus_descends_to_water_work",
+                    () -> PrimevalGameTests::spinosaurusDescendsToWaterWork);
 
     private PrimevalGameTests() {
     }
@@ -605,6 +618,26 @@ public final class PrimevalGameTests {
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "primordial_sword_has_wide_sweep"),
                 new FunctionGameTestInstance(PRIMORDIAL_SWORD_HAS_WIDE_SWEEP.getKey(),
                         isolatedTestData(event, "primordial_sword_sweep"))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "depot_swap_only_moves_selected_dinosaur"),
+                new FunctionGameTestInstance(DEPOT_SWAP_ONLY_MOVES_SELECTED_DINOSAUR.getKey(),
+                        isolatedTestData(event, "depot_swap_isolation"))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "depot_delete_is_server_authoritative"),
+                new FunctionGameTestInstance(DEPOT_DELETE_IS_SERVER_AUTHORITATIVE.getKey(),
+                        isolatedTestData(event, "depot_delete_authority"))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "incubator_timer_survives_reload"),
+                new FunctionGameTestInstance(INCUBATOR_TIMER_SURVIVES_RELOAD.getKey(),
+                        isolatedTestData(event, "incubator_reload", 800))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "spinosaurus_descends_to_water_work"),
+                new FunctionGameTestInstance(SPINOSAURUS_DESCENDS_TO_WATER_WORK.getKey(),
+                        isolatedTestData(event, "spinosaurus_water_descent", 1_200))
         );
     }
 
@@ -4324,6 +4357,220 @@ public final class PrimevalGameTests {
         target.discard();
         player.discard();
         helper.succeed();
+    }
+
+    private static void depotSwapOnlyMovesSelectedDinosaur(GameTestHelper helper) {
+        BlockPos tableRelative = new BlockPos(2, 1, 2);
+        for (int x = 0; x <= 18; x++) for (int z = 0; z <= 8; z++) {
+            helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+        }
+        helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
+        ServerPlayer player = isolatedPlayer(helper);
+        player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
+        player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
+        BlockPos table = helper.absolutePos(tableRelative);
+        CommandTableBlock.claimExisting(player, table);
+
+        FieldDodoEntity first = helper.spawn(ModEntities.FIELD_DODO.get(), new BlockPos(12, 1, 2));
+        FieldDodoEntity second = helper.spawn(ModEntities.STEGOSAURUS.get(), new BlockPos(14, 1, 4));
+        FieldDodoEntity reserve = helper.spawn(ModEntities.PARASAUROLOPHUS.get(), new BlockPos(16, 1, 6));
+        helper.assertTrue(DinosaurOwnership.addToActiveIfRoom(player, first, table)
+                        && DinosaurOwnership.addToActiveIfRoom(player, second, table)
+                        && DinosaurOwnership.addToActiveIfRoom(player, reserve, table),
+                "The depot swap isolation test could not create its crew");
+        UUID reserveId = reserve.getUUID();
+        helper.assertTrue(DinosaurOwnership.storeActive(player, reserveId).success(),
+                "The reserve dinosaur could not enter the depot");
+
+        Vec3 firstPosition = helper.absolutePos(new BlockPos(12, 1, 2)).getCenter();
+        Vec3 secondPosition = helper.absolutePos(new BlockPos(14, 1, 4)).getCenter();
+        first.teleportTo(firstPosition.x, firstPosition.y - 0.5D, firstPosition.z);
+        second.teleportTo(secondPosition.x, secondPosition.y - 0.5D, secondPosition.z);
+        first.setCommandMode(DinosaurCommandMode.STAY);
+        second.setCommandMode(DinosaurCommandMode.STAY);
+        Vec3 firstBefore = first.position();
+        Vec3 secondBefore = second.position();
+
+        DinosaurOwnership.SwapResult result = DinosaurOwnership.swapIntoActive(player, table, reserveId, 2);
+        helper.assertTrue(result.success(), "The reserve dinosaur could not be equipped: " + result.message());
+        helper.assertTrue(first.position().distanceToSqr(firstBefore) < 0.001D
+                        && second.position().distanceToSqr(secondBefore) < 0.001D,
+                "Equipping one depot dinosaur called the rest of the crew back to the table");
+        helper.assertTrue(DinosaurOwnership.activeIds(player).equals(
+                        List.of(first.getUUID(), second.getUUID(), reserveId)),
+                "The isolated depot swap damaged active crew ordering");
+
+        helper.assertTrue(DinosaurOwnership.storeActive(player, reserveId).success(),
+                "The equipped reserve could not be returned for the occupied-slot check");
+        Vec3 secondBeforeReplacement = second.position();
+        result = DinosaurOwnership.swapIntoActive(player, table, reserveId, 0);
+        helper.assertTrue(result.success(), "The occupied depot slot could not be replaced: " + result.message());
+        helper.assertTrue(second.position().distanceToSqr(secondBeforeReplacement) < 0.001D,
+                "Replacing one occupied crew slot recalled an unrelated dinosaur");
+        helper.assertTrue(first.isRemoved()
+                        && DinosaurOwnership.activeIds(player).equals(List.of(reserveId, second.getUUID()))
+                        && DinosaurOwnership.records(player).stream().anyMatch(record -> record.id().equals(first.getUUID())),
+                "Replacing one occupied slot lost its outgoing depot record or damaged the roster");
+        second.discard();
+        FieldDodoEntity loadedReserve = DinosaurOwnership.findLoaded(helper.getLevel().getServer(), reserveId);
+        if (loadedReserve != null) loadedReserve.discard();
+        player.discard();
+        helper.succeed();
+    }
+
+    private static void depotDeleteIsServerAuthoritative(GameTestHelper helper) {
+        BlockPos tableRelative = new BlockPos(2, 1, 2);
+        for (int x = 0; x <= 8; x++) for (int z = 0; z <= 5; z++) {
+            helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+        }
+        helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
+        ServerPlayer player = isolatedPlayer(helper);
+        player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
+        player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
+        BlockPos table = helper.absolutePos(tableRelative);
+        CommandTableBlock.claimExisting(player, table);
+
+        FieldDodoEntity active = helper.spawn(ModEntities.FIELD_DODO.get(), new BlockPos(4, 1, 2));
+        FieldDodoEntity reserve = helper.spawn(ModEntities.VELOCIRAPTOR.get(), new BlockPos(6, 1, 2));
+        helper.assertTrue(DinosaurOwnership.addToActiveIfRoom(player, active, table)
+                        && DinosaurOwnership.addToActiveIfRoom(player, reserve, table),
+                "The depot deletion test could not create its crew");
+        UUID activeId = active.getUUID();
+        UUID reserveId = reserve.getUUID();
+        helper.assertTrue(DinosaurOwnership.storeActive(player, reserveId).success(),
+                "The deletion test could not store its reserve dinosaur");
+        helper.assertTrue(!DinosaurOwnership.deleteFromDepot(player, activeId).success(),
+                "The server allowed an active dinosaur to be deleted through a depot action");
+        helper.assertTrue(DinosaurOwnership.deleteFromDepot(player, reserveId).success(),
+                "The server rejected deletion of a stored dinosaur");
+        helper.assertTrue(DinosaurOwnership.records(player).stream().noneMatch(record -> record.id().equals(reserveId))
+                        && DinosaurOwnership.activeIds(player).equals(List.of(activeId))
+                        && active.isAlive() && !active.isRemoved(),
+                "Deleting a stored dinosaur changed another crew member or left stale ownership state");
+        active.discard();
+        player.discard();
+        helper.succeed();
+    }
+
+    private static void incubatorTimerSurvivesReload(GameTestHelper helper) {
+        BlockPos tableRelative = new BlockPos(2, 1, 2);
+        BlockPos incubatorRelative = new BlockPos(4, 1, 2);
+        helper.setBlock(tableRelative.below(), Blocks.STONE);
+        helper.setBlock(incubatorRelative.below(), Blocks.STONE);
+        helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
+        helper.setBlock(incubatorRelative, ModBlocks.PREMIUM_EGG_INCUBATOR.get());
+        forceTicking(helper, tableRelative, incubatorRelative);
+        ServerPlayer player = isolatedPlayer(helper);
+        player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
+        player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
+        BlockPos tablePos = helper.absolutePos(tableRelative);
+        BlockPos incubatorPos = helper.absolutePos(incubatorRelative);
+        CommandTableBlock.claimExisting(player, tablePos);
+        CommandTableBlockEntity table = helper.getBlockEntity(tableRelative, CommandTableBlockEntity.class);
+        PremiumEggIncubatorBlockEntity original = helper.getBlockEntity(
+                incubatorRelative, PremiumEggIncubatorBlockEntity.class);
+        helper.assertTrue(original.insertEgg(player, ModItems.SMALL_DINOSAUR_EGG.get().getDefaultInstance()).success(),
+                "The reload test could not insert an egg");
+        helper.assertTrue(table.toggleEnergyConsumer(helper.getLevel(), incubatorPos),
+                "The reload test could not connect its incubator");
+        table.receiveGeneratedEnergy(20.0F);
+        CommandTableBlockEntity.serverTick(helper.getLevel(), tablePos, helper.getBlockState(tableRelative), table);
+        PremiumEggIncubatorBlockEntity.serverTick(
+                helper.getLevel(), incubatorPos, helper.getBlockState(incubatorRelative), original);
+        int savedProgress = original.getProgress();
+        helper.assertTrue(savedProgress > 0, "The incubator did not begin before its simulated reload");
+
+        CompoundTag saved = original.saveWithFullMetadata(helper.getLevel().registryAccess());
+        helper.getLevel().removeBlockEntity(incubatorPos);
+        BlockEntity loaded = BlockEntity.loadStatic(
+                incubatorPos, helper.getBlockState(incubatorRelative), saved, helper.getLevel().registryAccess());
+        helper.assertTrue(loaded instanceof PremiumEggIncubatorBlockEntity,
+                "The saved incubator block entity could not be reconstructed");
+        PremiumEggIncubatorBlockEntity restored = (PremiumEggIncubatorBlockEntity)loaded;
+        helper.getLevel().setBlockEntity(restored);
+        helper.assertTrue(restored.hasEgg() && restored.getProgress() == savedProgress,
+                "Reloading the incubator lost its egg or timer progress");
+        table.receiveGeneratedEnergy(4.0F);
+        CommandTableBlockEntity.serverTick(helper.getLevel(), tablePos, helper.getBlockState(tableRelative), table);
+        PremiumEggIncubatorBlockEntity.serverTick(
+                helper.getLevel(), incubatorPos, helper.getBlockState(incubatorRelative), restored);
+        helper.assertTrue(restored.getProgress() > savedProgress,
+                "The incubator timer stopped after its block entity reloaded");
+
+        CompoundTag completedTag = restored.saveWithFullMetadata(helper.getLevel().registryAccess());
+        completedTag.putInt("Progress", restored.getRequiredTicks());
+        helper.getLevel().removeBlockEntity(incubatorPos);
+        BlockEntity completedLoaded = BlockEntity.loadStatic(
+                incubatorPos, helper.getBlockState(incubatorRelative), completedTag, helper.getLevel().registryAccess());
+        helper.assertTrue(completedLoaded instanceof PremiumEggIncubatorBlockEntity,
+                "The completed incubator state could not be reconstructed");
+        PremiumEggIncubatorBlockEntity completed = (PremiumEggIncubatorBlockEntity)completedLoaded;
+        helper.getLevel().setBlockEntity(completed);
+        helper.assertTrue(!table.toggleEnergyConsumer(helper.getLevel(), incubatorPos),
+                "The completed incubator could not be disconnected for its zero-energy hatch check");
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(!completed.hasEgg(),
+                        "A completed egg reloaded at 100% but never hatched without another energy tick"))
+                .thenExecute(player::discard)
+                .thenSucceed();
+    }
+
+    private static void spinosaurusDescendsToWaterWork(GameTestHelper helper) {
+        BlockPos tableRelative = new BlockPos(2, 11, 5);
+        BlockPos spinoRelative = new BlockPos(5, 11, 5);
+        BlockPos turbineRelative = new BlockPos(12, 2, 5);
+        for (int x = 0; x <= 7; x++) for (int z = 0; z <= 10; z++) {
+            helper.setBlock(new BlockPos(x, 10, z), Blocks.STONE);
+        }
+        for (int x = 8; x <= 18; x++) for (int z = 0; z <= 10; z++) {
+            helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+            for (int y = 1; y <= 6; y++) helper.setBlock(new BlockPos(x, y, z), Blocks.WATER);
+        }
+        helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
+        BlockState turbineState = ModBlocks.WATER_TURBINE.get().defaultBlockState()
+                .setValue(TurbineBlock.FACING, Direction.NORTH)
+                .setValue(TurbineBlock.WATERLOGGED, true);
+        helper.setBlock(turbineRelative, turbineState);
+        BlockPos turbinePos = helper.absolutePos(turbineRelative);
+        ((TurbineBlock)ModBlocks.WATER_TURBINE.get()).assemble(
+                helper.getLevel(), turbinePos, helper.getBlockState(turbineRelative));
+        forceTicking(helper, tableRelative, spinoRelative, turbineRelative);
+
+        ServerPlayer player = isolatedPlayer(helper);
+        player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
+        player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
+        BlockPos tablePos = helper.absolutePos(tableRelative);
+        CommandTableBlock.claimExisting(player, tablePos);
+        FieldDodoEntity spinosaurus = helper.spawn(ModEntities.SPINOSAURUS.get(), spinoRelative);
+        spinosaurus.setInvulnerable(true);
+        helper.assertTrue(DinosaurOwnership.addToActiveIfRoom(player, spinosaurus, tablePos),
+                "The elevated water-work test could not activate its Spinosaurus");
+        spinosaurus.assignWork(
+                2, tablePos, List.of(), List.of(turbinePos), List.of(), null, List.of(),
+                List.of(), List.of(), Map.of(turbinePos, 3),
+                0, 3, 1, 0, 0, 0, 0, 1, true, true);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(spinosaurus.isInWater(),
+                        "The Spinosaurus stayed on the elevated base instead of entering water for its turbine"))
+                .thenWaitUntil(() -> {
+                    TurbineBlockEntity turbine = helper.getBlockEntity(turbineRelative, TurbineBlockEntity.class);
+                    helper.assertTrue(turbine.getGenerationPulseCount() > 0,
+                            "The Spinosaurus reached the pool but never began its underwater turbine job; position="
+                                    + spinosaurus.position() + ", movement=" + spinosaurus.getDeltaMovement()
+                                    + ", workEnabled=" + spinosaurus.isWorkEnabled()
+                                    + ", job=" + spinosaurus.getWorkJobIndex()
+                                    + ", action=" + spinosaurus.getWorkAction()
+                                    + ", progress=" + spinosaurus.getWorkActionProgress()
+                                    + ", hunger=" + spinosaurus.getHunger()
+                                    + ", turbineValid=" + turbine.hasValidEnvironment());
+                })
+                .thenExecute(() -> {
+                    spinosaurus.discard();
+                    player.discard();
+                })
+                .thenSucceed();
     }
 
     private static void nightShiftDrainsMood(GameTestHelper helper) {

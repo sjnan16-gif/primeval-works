@@ -8,6 +8,7 @@ import com.primevalworks.client.model.entity.DinosaurPreviewBounds;
 import com.primevalworks.network.payload.BaseUpgradesPayload;
 import com.primevalworks.network.payload.BaseEnergyPayload;
 import com.primevalworks.network.payload.CommandTableActionPayload;
+import com.primevalworks.network.payload.DeleteDepotDinosaurPayload;
 import com.primevalworks.network.payload.DinosaurRosterPayload;
 import com.primevalworks.network.payload.PurchaseBaseUpgradePayload;
 import com.primevalworks.network.payload.RequestBaseUpgradesPayload;
@@ -19,6 +20,7 @@ import com.primevalworks.registry.ModEntities;
 import com.primevalworks.world.base.BaseUpgrade;
 import com.primevalworks.world.entity.DinosaurSpecies;
 import com.primevalworks.world.entity.FieldDodoEntity;
+import com.primevalworks.world.ownership.DinosaurOwnership;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -167,6 +169,8 @@ public final class CommandTableScreen extends Screen {
     private float draggedPitch;
     private UUID recallMenuDinosaur;
     private long recallMenuOpenedNanos;
+    private UUID deleteMenuDinosaur;
+    private long deleteMenuOpenedNanos;
     private boolean draggingTree;
     private long openedNanos = Util.getNanos();
     private long lastRenderNanos = openedNanos;
@@ -228,6 +232,11 @@ public final class CommandTableScreen extends Screen {
         if (active.recallMenuDinosaur != null
                 && active.activeEntries.stream().noneMatch(entry -> entry.id().equals(active.recallMenuDinosaur))) {
             active.recallMenuDinosaur = null;
+        }
+        if (active.deleteMenuDinosaur != null
+                && payload.entries().stream().noneMatch(entry -> !entry.active()
+                && entry.id().equals(active.deleteMenuDinosaur))) {
+            active.deleteMenuDinosaur = null;
         }
         active.rebuildActiveDinos();
         active.activePage = Math.min(active.activePage, active.activePageCount() - 1);
@@ -343,6 +352,7 @@ public final class CommandTableScreen extends Screen {
             drawDepot(graphics, layout, motion, screenMouseX, screenMouseY, mouseX, mouseY, time);
         }
         drawRecallMenu(graphics, layout, mouseX, mouseY, time);
+        drawDeleteMenu(graphics, layout, mouseX, mouseY, time);
     }
 
     private void drawTreeBackdrop(GuiGraphicsExtractor graphics, Rect viewport, int mouseX, int mouseY, float time) {
@@ -541,6 +551,68 @@ public final class CommandTableScreen extends Screen {
         return new Rect(x, slot.y - height - Math.max(2, Math.round(2 * layout.scale)), width, height);
     }
 
+    private void drawDeleteMenu(GuiGraphicsExtractor graphics, Layout layout, int mouseX, int mouseY, float time) {
+        DinosaurRosterPayload.Entry entry = deleteMenuEntry();
+        Rect button = deleteMenuButton(layout);
+        if (entry == null || button == null) return;
+        float progress = Mth.clamp((renderNowNanos - deleteMenuOpenedNanos) / 220_000_000.0F, 0.0F, 1.0F);
+        float pop = 0.78F + spring(progress, 7.4F, 11.8F) * 0.22F;
+        boolean hovered = button.contains(mouseX, mouseY);
+        withMotion(graphics, button, 0.0F, (1.0F - progress) * 2.0F, pop, () -> {
+            graphics.fill(button.x + 2, button.y + 3, button.right() + 2, button.bottom() + 3, 0x62000000);
+            blit(graphics, SPACE, button);
+            graphics.fill(button.x + 2, button.y + 2, button.right() - 2, button.bottom() - 2,
+                    hovered ? 0x42E16A62 : 0x20E16A62);
+            if (hovered) drawSlotEdgeGlow(graphics, button, time, 0.72F);
+            thickButtonText(graphics, "DELETE", inset(button, 3), hovered ? RED : INK);
+        });
+        if (hovered) {
+            graphics.requestCursor(CursorTypes.POINTING_HAND);
+            graphics.setTooltipForNextFrame(Component.literal(
+                    "Permanently remove " + entry.name() + ". This cannot be undone."), mouseX, mouseY);
+        }
+    }
+
+    private DinosaurRosterPayload.Entry deleteMenuEntry() {
+        if (deleteMenuDinosaur == null) return null;
+        return java.util.stream.Stream.concat(depotEntries.stream(), recoveryEntries.stream())
+                .filter(entry -> entry.id().equals(deleteMenuDinosaur))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private Rect deleteMenuButton(Layout layout) {
+        DinosaurRosterPayload.Entry entry = deleteMenuEntry();
+        if (entry == null) return null;
+        Rect slot = null;
+        List<DinosaurRosterPayload.Entry> depot = visibleDepotEntries();
+        for (int index = 0; index < depot.size(); index++) {
+            if (depot.get(index).id().equals(entry.id())) {
+                slot = depotSlot(layout, index);
+                break;
+            }
+        }
+        if (slot == null) {
+            List<DinosaurRosterPayload.Entry> recovery = visibleRecoveryEntries();
+            for (int index = 0; index < recovery.size(); index++) {
+                if (recovery.get(index).id().equals(entry.id())) {
+                    slot = depotRecoverySlot(layout, index);
+                    break;
+                }
+            }
+        }
+        if (slot == null) return null;
+        int width = Math.max(42, Math.round(46 * layout.scale));
+        int height = Math.max(12, Math.round(14 * layout.scale));
+        int x = Mth.clamp(slot.centerX() - width / 2, layout.depot.x + 2, layout.depot.right() - width - 2);
+        int gap = Math.max(2, Math.round(2 * layout.scale));
+        int preferredY = slot.y - height - gap;
+        int minimumY = layout.depot.y + Math.max(17, Math.round(17 * layout.scale));
+        int y = preferredY >= minimumY ? preferredY : slot.bottom() + gap;
+        y = Mth.clamp(y, minimumY, layout.depot.bottom() - height - 2);
+        return new Rect(x, y, width, height);
+    }
+
     private void drawDepot(GuiGraphicsExtractor graphics, Layout layout, UiMotion motion,
                            int screenMouseX, int screenMouseY, int mouseX, int mouseY, float time) {
         Rect panel = layout.depot;
@@ -716,8 +788,8 @@ public final class CommandTableScreen extends Screen {
     private List<DinosaurRosterPayload.Entry> visibleDepotEntries() {
         List<DinosaurRosterPayload.Entry> sorted = new ArrayList<>(depotEntries);
         sorted.sort(depotSort.comparator());
-        int start = Math.min(sorted.size(), depotPage * 12);
-        int end = Math.min(sorted.size(), start + 12);
+        int start = Math.min(sorted.size(), depotPage * DinosaurOwnership.DEPOT_PAGE_SIZE);
+        int end = Math.min(sorted.size(), start + DinosaurOwnership.DEPOT_PAGE_SIZE);
         return List.copyOf(sorted.subList(start, end));
     }
 
@@ -730,7 +802,8 @@ public final class CommandTableScreen extends Screen {
     }
 
     private int depotPageCount() {
-        int livingPages = (depotEntries.size() + 11) / 12;
+        int livingPages = (depotEntries.size() + DinosaurOwnership.DEPOT_PAGE_SIZE - 1)
+                / DinosaurOwnership.DEPOT_PAGE_SIZE;
         int recoveryPages = (recoveryEntries.size() + 3) / 4;
         return Math.max(1, Math.max(livingPages, recoveryPages));
     }
@@ -917,8 +990,20 @@ public final class CommandTableScreen extends Screen {
         double uiMouseX = motion.inverseX((float)event.x());
         double uiMouseY = motion.inverseY((float)event.y());
         if (event.button() == 1) {
-            return openRecallMenuAt(layout, uiMouseX, uiMouseY)
+            return openDeleteMenuAt(layout, uiMouseX, uiMouseY)
+                    || openRecallMenuAt(layout, uiMouseX, uiMouseY)
                     || super.mouseClicked(event, doubleClick);
+        }
+        Rect deleteButton = deleteMenuButton(layout);
+        if (deleteButton != null && deleteButton.contains(uiMouseX, uiMouseY)) {
+            PrimevalUiSounds.denied();
+            DinosaurRosterPayload.Entry entry = deleteMenuEntry();
+            if (entry != null) {
+                ClientPacketDistributor.sendToServer(new DeleteDepotDinosaurPayload(tablePos, entry.id()));
+                notice = "Permanently removing " + entry.name() + "...";
+            }
+            deleteMenuDinosaur = null;
+            return true;
         }
         Rect recallButton = recallMenuButton(layout);
         if (recallButton != null && recallButton.contains(uiMouseX, uiMouseY)) {
@@ -932,6 +1017,7 @@ public final class CommandTableScreen extends Screen {
             return true;
         }
         recallMenuDinosaur = null;
+        deleteMenuDinosaur = null;
         Rect rosterPage = global(layout, ROSTER_PAGE);
         if (rosterPage.contains(uiMouseX, uiMouseY)) {
             PrimevalUiSounds.click();
@@ -1040,6 +1126,36 @@ public final class CommandTableScreen extends Screen {
         }
         if (recallMenuDinosaur != null) {
             recallMenuDinosaur = null;
+            PrimevalUiSounds.click(0.82F);
+            return true;
+        }
+        return false;
+    }
+
+    private boolean openDeleteMenuAt(Layout layout, double mouseX, double mouseY) {
+        if (!depotOpen || depotProgress <= 0.82F) return false;
+        List<DinosaurRosterPayload.Entry> visible = visibleDepotEntries();
+        for (int index = 0; index < visible.size(); index++) {
+            if (!depotSlot(layout, index).contains(mouseX, mouseY)) continue;
+            PrimevalUiSounds.click(0.90F);
+            deleteMenuDinosaur = visible.get(index).id();
+            deleteMenuOpenedNanos = Util.getNanos();
+            recallMenuDinosaur = null;
+            notice = "Press Delete to permanently remove " + visible.get(index).name() + ".";
+            return true;
+        }
+        List<DinosaurRosterPayload.Entry> recovering = visibleRecoveryEntries();
+        for (int index = 0; index < recovering.size(); index++) {
+            if (!depotRecoverySlot(layout, index).contains(mouseX, mouseY)) continue;
+            PrimevalUiSounds.click(0.90F);
+            deleteMenuDinosaur = recovering.get(index).id();
+            deleteMenuOpenedNanos = Util.getNanos();
+            recallMenuDinosaur = null;
+            notice = "Press Delete to permanently remove " + recovering.get(index).name() + ".";
+            return true;
+        }
+        if (deleteMenuDinosaur != null) {
+            deleteMenuDinosaur = null;
             PrimevalUiSounds.click(0.82F);
             return true;
         }
@@ -1197,11 +1313,16 @@ public final class CommandTableScreen extends Screen {
             recallMenuDinosaur = null;
             return true;
         }
+        if (event.key() == InputConstants.KEY_ESCAPE && deleteMenuDinosaur != null) {
+            deleteMenuDinosaur = null;
+            return true;
+        }
         if (event.key() == InputConstants.KEY_ESCAPE && depotOpen) {
             depotOpen = false;
             depotTransitionNanos = Util.getNanos();
             draggedDinosaur = null;
             draggedFromActive = false;
+            deleteMenuDinosaur = null;
             notice = "Dinosaur depot tucked away.";
             return true;
         }

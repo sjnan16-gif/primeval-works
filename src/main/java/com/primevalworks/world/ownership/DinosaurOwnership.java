@@ -41,8 +41,9 @@ import java.util.UUID;
 public final class DinosaurOwnership {
     public static final int ACTIVE_LIMIT = 14;
     public static final int STARTING_ACTIVE_LIMIT = 7;
-    public static final int DEPOT_PAGE_SIZE = 16;
-    private static final int MAX_OWNED = 128;
+    public static final int DEPOT_PAGE_SIZE = 12;
+    public static final int MAX_DEPOT_PAGES = 25;
+    public static final int MAX_OWNED = DEPOT_PAGE_SIZE * MAX_DEPOT_PAGES;
     private static final String OWNED_COUNT = "PrimevalOwnedDinosaurCount";
     private static final String OWNED_PREFIX = "PrimevalOwnedDinosaur";
     private static final String OWNERSHIP_SCHEMA = "PrimevalOwnershipSchema";
@@ -60,6 +61,10 @@ public final class DinosaurOwnership {
         List<OwnedDinosaur> records = new ArrayList<>(records(player));
         upsert(records, capture(dinosaur));
         writeRecords(player.getPersistentData(), records);
+    }
+
+    public static boolean hasDepotCapacity(ServerPlayer player) {
+        return records(player).size() < MAX_OWNED;
     }
 
     /** Keeps the portable depot snapshot aligned with a live, server-owned dinosaur. */
@@ -298,7 +303,6 @@ public final class DinosaurOwnership {
             targetSlot = Math.min(targetSlot, active.size());
             active.add(targetSlot, incomingId);
             writeActive(player.getPersistentData(), active);
-            repositionLoadedCrew(player, tablePos, active);
             return new SwapResult(true, incoming.name() + " moved to base slot " + (targetSlot + 1) + ".");
         }
         UUID outgoingId = targetSlot < active.size() ? active.get(targetSlot) : null;
@@ -307,23 +311,33 @@ public final class DinosaurOwnership {
             if (outgoingRecord != null && outgoingRecord.isOnExpedition(player.level().getGameTime())) {
                 return new SwapResult(false, outgoingRecord.name() + " cannot leave the crew until the expedition returns.");
             }
+        }
+
+        FieldDodoEntity incomingEntity = findOrLoad(player.level().getServer(), incoming);
+        if (incomingEntity == null) incomingEntity = spawn(player.level(), incoming, slotPosition(tablePos, targetSlot));
+        if (incomingEntity == null) return new SwapResult(false, "There is no safe room beside the Command Table.");
+
+        // Prepare the incoming authority before touching the current slot. If spawning fails,
+        // the outgoing dinosaur and active roster remain completely unchanged.
+        if (outgoingId != null) {
+            OwnedDinosaur outgoingRecord = find(records, outgoingId).orElse(null);
             FieldDodoEntity outgoing = outgoingRecord == null
                     ? null
                     : findOrLoad(player.level().getServer(), outgoingRecord);
             if (outgoing != null) {
                 returnCarriedCargo(outgoing);
                 outgoing.setCommandMode(DinosaurCommandMode.HOME);
-                upsert(records, capture(outgoing));
+                upsert(records, normalizeDepotSnapshot(capture(outgoing)));
+                outgoing.unlinkFromCommandTable();
                 outgoing.discard();
+            } else if (outgoingRecord != null) {
+                upsert(records, normalizeDepotSnapshot(outgoingRecord));
             }
             active.set(targetSlot, incomingId);
         } else {
             active.add(incomingId);
         }
 
-        FieldDodoEntity incomingEntity = findOrLoad(player.level().getServer(), incoming);
-        if (incomingEntity == null) incomingEntity = spawn(player.level(), incoming, slotPosition(tablePos, targetSlot));
-        if (incomingEntity == null) return new SwapResult(false, "There is no safe room beside the Command Table.");
         incomingEntity.setDinosaurOwner(player.getUUID());
         if (incomingEntity.getCommandMode() == DinosaurCommandMode.FOLLOW
                 && followerCount(player) >= followerLimit(player)) {
@@ -331,9 +345,9 @@ public final class DinosaurOwnership {
         }
         incomingEntity.linkToCommandTable(tablePos);
         moveToSlot(incomingEntity, tablePos, targetSlot);
+        upsert(records, capture(incomingEntity));
         writeRecords(player.getPersistentData(), records);
         writeActive(player.getPersistentData(), active);
-        repositionLoadedCrew(player, tablePos, active);
         return new SwapResult(true, incoming.name() + " joined the active base crew.");
     }
 
@@ -374,8 +388,36 @@ public final class DinosaurOwnership {
         writeActive(player.getPersistentData(), active);
         String name = storeWorldAuthority(player, records, dinosaurId);
         writeRecords(player.getPersistentData(), records);
-        CommandTableBlock.getClaimedTable(player).ifPresent(table -> repositionLoadedCrew(player, table.pos(), active));
         return new SwapResult(true, name + " returned to the depot.");
+    }
+
+    public static SwapResult deleteFromDepot(ServerPlayer player, UUID dinosaurId) {
+        List<UUID> active = new ArrayList<>(activeIds(player));
+        if (active.contains(dinosaurId)) {
+            return new SwapResult(false, "Store this dinosaur before deleting it.");
+        }
+
+        List<OwnedDinosaur> records = new ArrayList<>(refresh(player));
+        OwnedDinosaur record = find(records, dinosaurId).orElse(null);
+        if (record == null) return new SwapResult(false, "That dinosaur is no longer in your depot.");
+        if (record.isOnExpedition(player.level().getGameTime())) {
+            return new SwapResult(false, record.name() + " cannot be deleted while away on an expedition.");
+        }
+
+        List<FieldDodoEntity> copies = findLoadedCopies(player.level().getServer(), dinosaurId).stream()
+                .filter(dinosaur -> dinosaur.isOwnedBy(player.getUUID()))
+                .toList();
+        if (!copies.isEmpty()) returnCarriedCargo(copies.getFirst());
+        for (int index = 0; index < copies.size(); index++) {
+            FieldDodoEntity copy = copies.get(index);
+            if (index > 0) copy.takeCarriedStackForStorage();
+            copy.unlinkFromCommandTable();
+            copy.discard();
+        }
+
+        records.removeIf(candidate -> candidate.id().equals(dinosaurId));
+        writeRecords(player.getPersistentData(), records);
+        return new SwapResult(true, record.name() + " was permanently removed from the depot.");
     }
 
     private static String storeWorldAuthority(ServerPlayer player, List<OwnedDinosaur> records, UUID dinosaurId) {
@@ -769,13 +811,6 @@ public final class DinosaurOwnership {
         dinosaur.teleportTo(position.getX() + 0.5D, position.getY(), position.getZ() + 0.5D);
         dinosaur.setDeltaMovement(Vec3.ZERO);
         dinosaur.resetFallDistance();
-    }
-
-    private static void repositionLoadedCrew(ServerPlayer player, BlockPos tablePos, List<UUID> active) {
-        for (int slot = 0; slot < active.size(); slot++) {
-            FieldDodoEntity dinosaur = findLoaded(player.level().getServer(), active.get(slot));
-            if (dinosaur != null) moveToSlot(dinosaur, tablePos, slot);
-        }
     }
 
     private static BlockPos slotPosition(BlockPos tablePos, int slot) {

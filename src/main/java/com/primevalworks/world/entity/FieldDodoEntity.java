@@ -474,6 +474,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     private BlockPos foodTargetPos;
     private int foodSearchCooldown;
     private BlockPos navigationTarget;
+    private @Nullable BlockPos spinosaurusAquaticWorkTarget;
     private double lastNavigationDistance = Double.MAX_VALUE;
     private Vec3 lastNavigationSamplePosition;
     private int stalledNavigationTicks;
@@ -4435,9 +4436,12 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                 return;
             }
         }
-        if (getSpecies() == DinosaurSpecies.SPINOSAURUS && isWaterTurbineTarget(pos) && isInWater()) {
-            tickSpinosaurusAquaticWorkMovement(pos);
-            return;
+        if (getSpecies() == DinosaurSpecies.SPINOSAURUS && isWaterTurbineTarget(pos)) {
+            if (isInWater()) {
+                tickSpinosaurusAquaticWorkMovement(pos);
+                return;
+            }
+            if (tickSpinosaurusWaterEntryMovement(pos)) return;
         }
         if (!pos.equals(navigationTarget)) {
             navigation.stop();
@@ -4505,19 +4509,151 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         return level().isLoaded(pos) && level().getBlockState(pos).is(ModBlocks.WATER_TURBINE.get());
     }
 
+    private boolean tickSpinosaurusWaterEntryMovement(BlockPos target) {
+        spinosaurusAquaticWorkTarget = null;
+        BlockPos entry = findSpinosaurusWaterEntry(target);
+        if (entry == null) return false;
+        if (!target.equals(navigationTarget)) {
+            navigation.stop();
+            navigationTarget = target.immutable();
+            lastNavigationDistance = position().distanceTo(entry.getCenter());
+            lastNavigationSamplePosition = position();
+            stalledNavigationTicks = 0;
+            recoveryWaypointTicks = 0;
+        }
+
+        Vec3 entryCenter = entry.getCenter();
+        double distance = position().distanceTo(entryCenter);
+        double targetDistanceSquared = distanceToSqr(target.getCenter());
+        if (tickCount % 20 == 0) {
+            double displacementSquared = lastNavigationSamplePosition == null
+                    ? 0.0D : position().distanceToSqr(lastNavigationSamplePosition);
+            if (!DinosaurFollowRules.madeMeaningfulProgress(
+                    lastNavigationDistance, distance, displacementSquared, navigation.isStuck())) {
+                stalledNavigationTicks = Math.min(220, stalledNavigationTicks + 20);
+            } else {
+                stalledNavigationTicks = Math.max(0, stalledNavigationTicks - 20);
+            }
+            lastNavigationDistance = distance;
+            lastNavigationSamplePosition = position();
+        }
+
+        // A high platform can produce no vanilla path to water even though the drop is safe.
+        // Walk to a collision-free water edge, then let normal gravity carry the Spinosaurus in.
+        Vec3 horizontal = entryCenter.subtract(position()).multiply(1.0D, 0.0D, 1.0D);
+        boolean waterBelow = entry.getY() + 0.5D < getY();
+        if (waterBelow && horizontal.horizontalDistanceSqr() > 0.01D) {
+            Vec3 advance = horizontal.normalize().scale(Math.min(horizontal.horizontalDistance(), 8.0D));
+            AABB lane = getBoundingBox().expandTowards(advance.x, 0.0D, advance.z)
+                    .inflate(0.04D, 0.0D, 0.04D);
+            if (level().noCollision(this, lane)) {
+                navigation.stop();
+                getMoveControl().setWantedPosition(entryCenter.x, getY(), entryCenter.z,
+                        Math.max(1.08D, movementSpeedForWork()));
+                float desiredYaw = (float)(Mth.atan2(horizontal.z, horizontal.x) * Mth.RAD_TO_DEG) - 90.0F;
+                setYRot(Mth.approachDegrees(getYRot(), desiredYaw,
+                        getSpecies().turnDegreesPerTick() * 1.35F));
+                if (horizontal.horizontalDistanceSqr() <= 12.25D) {
+                    Vec3 edgeVelocity = horizontal.normalize().scale(0.18D * getMutationStatMultiplier());
+                    Vec3 current = getDeltaMovement();
+                    setDeltaMovement(Mth.lerp(0.22D, current.x, edgeVelocity.x), current.y,
+                            Mth.lerp(0.22D, current.z, edgeVelocity.z));
+                }
+                if (stalledNavigationTicks >= 100 && targetDistanceSquared > 16.0D
+                        && trySafeNavigationTeleport(target)) {
+                    stalledNavigationTicks = 0;
+                }
+                return true;
+            }
+        }
+
+        if (stalledNavigationTicks >= 100 && targetDistanceSquared > 16.0D
+                && trySafeNavigationTeleport(target)) {
+            stalledNavigationTicks = 0;
+            return true;
+        }
+        if (navigation.isDone() || navigation.isStuck() || tickCount % 12 == 0) {
+            boolean started = navigation.moveTo(entryCenter.x, entry.getY(), entryCenter.z,
+                    movementSpeedForWork());
+            if (!started) stalledNavigationTicks = Math.min(220, stalledNavigationTicks + 10);
+        }
+        return true;
+    }
+
+    private @Nullable BlockPos findSpinosaurusWaterEntry(BlockPos target) {
+        BlockPos best = null;
+        double bestDistance = Double.MAX_VALUE;
+        int topY = Math.min(level().getMaxY() - 2, Math.max(target.getY() + 8, Mth.floor(getY()) + 1));
+        int bottomY = Math.max(level().getMinY() + 1, target.getY() - 3);
+        for (int radius = 2; radius <= 7; radius++) {
+            for (int x = -radius; x <= radius; x++) {
+                for (int z = -radius; z <= radius; z++) {
+                    if (Math.max(Math.abs(x), Math.abs(z)) != radius) continue;
+                    for (int y = topY; y >= bottomY; y--) {
+                        BlockPos candidate = target.offset(x, y - target.getY(), z);
+                        if (!level().getFluidState(candidate).is(FluidTags.WATER)
+                                || !isSafeTeleportDestination(candidate, true)) continue;
+                        double distance = candidate.getCenter().distanceToSqr(position());
+                        if (distance < bestDistance) {
+                            best = candidate.immutable();
+                            bestDistance = distance;
+                        }
+                        break;
+                    }
+                }
+            }
+            if (best != null) return best;
+        }
+        return null;
+    }
+
     private void tickSpinosaurusAquaticWorkMovement(BlockPos target) {
-        Vec3 approach = workApproachPoint(target);
+        Vec3 approach = spinosaurusAquaticWorkPoint(target);
         Vec3 offset = approach.subtract(position());
         navigation.stop();
         getMoveControl().setWait();
         navigationTarget = target.immutable();
+        double distance = offset.length();
+        if (!target.equals(spinosaurusAquaticWorkTarget)) {
+            spinosaurusAquaticWorkTarget = target.immutable();
+            lastNavigationDistance = distance;
+            lastNavigationSamplePosition = position();
+            stalledNavigationTicks = 0;
+        } else if (tickCount % 20 == 0) {
+            double displacementSquared = lastNavigationSamplePosition == null
+                    ? 0.0D : position().distanceToSqr(lastNavigationSamplePosition);
+            if (!DinosaurFollowRules.madeMeaningfulProgress(
+                    lastNavigationDistance, distance, displacementSquared, false)) {
+                stalledNavigationTicks = Math.min(220, stalledNavigationTicks + 20);
+            } else {
+                stalledNavigationTicks = Math.max(0, stalledNavigationTicks - 20);
+            }
+            lastNavigationDistance = distance;
+            lastNavigationSamplePosition = position();
+        }
+        if (stalledNavigationTicks >= 80) {
+            BlockPos safeWorkPoint = BlockPos.containing(approach);
+            if (isSafeTeleportDestination(safeWorkPoint, true)) {
+                teleportTo(approach.x, safeWorkPoint.getY(), approach.z);
+                setDeltaMovement(Vec3.ZERO);
+                resetFallDistance();
+                stalledNavigationTicks = 0;
+                lastNavigationDistance = 0.0D;
+                lastNavigationSamplePosition = position();
+                return;
+            }
+        }
         if (offset.lengthSqr() > 0.02D) {
             double speed = Mth.clamp(offset.length() * 0.055D, 0.20D, 0.43D)
                     * getMutationStatMultiplier();
             Vec3 desired = offset.normalize().scale(speed);
             desired = new Vec3(desired.x, Mth.clamp(desired.y, -0.20D, 0.20D), desired.z);
             Vec3 movement = getDeltaMovement().lerp(desired, 0.24D);
-            setDeltaMovement(movement);
+            move(MoverType.SELF, movement);
+            if (horizontalCollision) movement = new Vec3(movement.x * 0.30D, movement.y, movement.z * 0.30D);
+            if (verticalCollision) movement = new Vec3(movement.x, 0.0D, movement.z);
+            setDeltaMovement(movement.scale(0.35D));
+            resetFallDistance();
             float desiredYaw = (float)(Mth.atan2(offset.z, offset.x) * Mth.RAD_TO_DEG) - 90.0F;
             setYRot(Mth.approachDegrees(getYRot(), desiredYaw,
                     getSpecies().turnDegreesPerTick() * 1.45F));
@@ -4526,6 +4662,36 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             entityData.set(SPINO_SWIMMING, true);
             entityData.set(SPINO_SWIM_SPEED, (float)movement.length());
         }
+    }
+
+    private Vec3 spinosaurusAquaticWorkPoint(BlockPos target) {
+        double horizontalReach = Math.max(2.1D, workInteractionDistance() + getBbWidth() * 0.35D);
+        int minimumRadius = Math.max(2, Mth.ceil(getBbWidth() * 0.5D + 0.85D));
+        int maximumRadius = Math.max(minimumRadius, Mth.floor(horizontalReach - 0.35D));
+        int preferredY = Mth.floor(target.getY() + 1.35D - getBbHeight() * 0.38D);
+        BlockPos best = null;
+        double bestDistance = Double.MAX_VALUE;
+        for (int radius = minimumRadius; radius <= maximumRadius; radius++) {
+            for (int x = -radius; x <= radius; x++) {
+                for (int z = -radius; z <= radius; z++) {
+                    if (Math.max(Math.abs(x), Math.abs(z)) != radius) continue;
+                    for (int yOffset : new int[]{0, 1, -1, 2, -2}) {
+                        BlockPos candidate = new BlockPos(
+                                target.getX() + x, preferredY + yOffset, target.getZ() + z);
+                        if (!level().getFluidState(candidate).is(FluidTags.WATER)
+                                || !isSafeTeleportDestination(candidate, true)) continue;
+                        double distance = candidate.getCenter().distanceToSqr(position());
+                        if (distance < bestDistance) {
+                            best = candidate.immutable();
+                            bestDistance = distance;
+                        }
+                        break;
+                    }
+                }
+            }
+            if (best != null) break;
+        }
+        return best == null ? workApproachPoint(target) : best.getCenter();
     }
 
     private void markRaptorTransportRoute() {
@@ -5824,8 +5990,18 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             return stayPosition != null && distanceToSqr(stayPosition.getCenter()) > 1.0D;
         }
         return commandTablePos != null && (getWorkAction() != 0
+                || hasActiveSpinosaurusWaterWorkIntent()
                 || !navigation.isDone()
                 || distanceToSqr(commandTablePos.getCenter()) > baseRadius() * baseRadius());
+    }
+
+    private boolean hasActiveSpinosaurusWaterWorkIntent() {
+        return getSpecies() == DinosaurSpecies.SPINOSAURUS
+                && commandMode == DinosaurCommandMode.HOME
+                && workEnabled
+                && workJobIndex == 2
+                && scheduleAllowsWork()
+                && workWorkstationPositions.stream().anyMatch(this::isWaterTurbineTarget);
     }
 
     private void resetPteranodonGroundState() {

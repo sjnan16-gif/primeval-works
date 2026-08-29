@@ -34,6 +34,11 @@ public final class DinosaurHatching {
         if (!genome.species().isPlayable()) {
             return HatchResult.failure(Component.literal("That dinosaur is not part of this build."));
         }
+        if (!DinosaurOwnership.hasDepotCapacity(player)) {
+            return HatchResult.failure(Component.literal(
+                    "Your dinosaur depot is full. Make room before hatching this egg."
+            ));
+        }
         CommandTableBlock.ClaimedTable table = CommandTableBlock.getClaimedTable(player).orElse(null);
         if (table == null) {
             FieldDodoEntity dinosaur = createHatchling(player.level(), player.blockPosition(), player.getUUID(), genome);
@@ -63,6 +68,11 @@ public final class DinosaurHatching {
         if (ownerPlayer == null) {
             return HatchResult.failure(Component.literal(
                     "Incubation is complete. The owner needs to return before hatching can finish."
+            ));
+        }
+        if (!DinosaurOwnership.hasDepotCapacity(ownerPlayer)) {
+            return HatchResult.failure(Component.literal(
+                    "Your dinosaur depot is full. Make room before hatching this egg."
             ));
         }
         FieldDodoEntity dinosaur = createHatchling(level, tablePos, owner, genome);

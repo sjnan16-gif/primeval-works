@@ -22,7 +22,7 @@ import java.util.Set;
 import java.util.UUID;
 
 public record DinosaurRosterPayload(BlockPos tablePos, List<Entry> entries) implements CustomPacketPayload {
-    private static final int MAX_ENTRIES = 128;
+    private static final int MAX_ENTRIES = DinosaurOwnership.MAX_OWNED;
     public static final Type<DinosaurRosterPayload> TYPE = new Type<>(
             Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "dinosaur_roster")
     );

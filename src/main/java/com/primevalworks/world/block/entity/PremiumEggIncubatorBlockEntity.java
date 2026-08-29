@@ -54,9 +54,12 @@ public final class PremiumEggIncubatorBlockEntity extends BlockEntity implements
         if (incubator.egg.isEmpty() || incubator.requiredTicks <= 0 || incubator.commandTablePos == null || incubator.owner == null) {
             return;
         }
-        if (!BaseEnergyRules.isPowered(level, incubator.commandTablePos, pos)) return;
         if (incubator.progress < incubator.requiredTicks) {
+            if (!BaseEnergyRules.isPowered(level, incubator.commandTablePos, pos)) return;
             incubator.progress++;
+            // Mark every elapsed tick for disk persistence. Client packets remain throttled,
+            // but quitting between visual updates can no longer roll the timer back.
+            incubator.setChanged();
             if (incubator.progress % 20 == 0) {
                 incubator.sync();
                 if (incubator.progress % 80 == 0 && level instanceof ServerLevel serverLevel) {
@@ -69,6 +72,8 @@ public final class PremiumEggIncubatorBlockEntity extends BlockEntity implements
             }
             return;
         }
+        // A completed egg no longer requests energy. Resolve the hatch before any power
+        // check so a save/rejoin at exactly 100% cannot strand the timer forever.
         if (!(level instanceof ServerLevel serverLevel) || level.getGameTime() % 20L != 0L) {
             return;
         }
