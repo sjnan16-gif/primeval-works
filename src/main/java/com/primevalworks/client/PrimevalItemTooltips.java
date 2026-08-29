@@ -43,7 +43,7 @@ public final class PrimevalItemTooltips {
             case "premium_egg_incubator" -> "Improves incubated dinosaurs.";
             case "pteranodon_saddle" -> "Enables Pteranodon flight.";
             case "spinosaurus_saddle" -> "Enables Spinosaurus riding.";
-            case "primordial_sword" -> "A balanced ancient blade with a much wider fully charged sweep.";
+            case "primordial_sword" -> "Netherite damage. A fully charged sweep strikes a wide area around your target.";
             case "magic_shard_fragment" -> "Refined into a Magic Shard.";
             case "magic_shard" -> "Concentrated primordial magic.";
             case "hardwood" -> "Strong crafting timber.";

@@ -60,7 +60,7 @@ Home, Stay, and Follow are saved companion commands. You begin with one follower
 
 Work is physical. A dinosaur must reach the correct block and spend time performing the action. Specialty, level, birth quality, mood, mutations, cargo weight, and species passives all affect the result.
 
-Dinosaurs do not stand inside a machine to work it. Their usable distance accounts for their real size, while pathfinding chooses a nearby stance with enough room for the model and animation. If a route becomes blocked, the worker retries and searches for a better approach instead of silently deleting the order.
+Dinosaurs do not stand inside a machine to work it. Their usable distance accounts for their real size, while pathfinding chooses a nearby stance with enough room for the model and animation. Followers keep a stable route across uneven ground and water instead of constantly choosing a new direction. If navigation genuinely fails, they retry the route, attempt a clear nearby approach, then safely return near their destination as a final fallback.
 
 Cargo transfers are simulated before they are committed. Interrupted routes return the carried stack to the base whenever possible. Depot changes, recovery, expeditions, recalls, chunk reloads, and logout all reconcile the same saved state, preventing the same companion or item from legitimately occupying two lifecycle states at once.
 

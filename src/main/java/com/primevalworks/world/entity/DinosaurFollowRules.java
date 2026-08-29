@@ -1,14 +1,13 @@
 package com.primevalworks.world.entity;
 
 public final class DinosaurFollowRules {
-    public static final double EMERGENCY_TELEPORT_DISTANCE = 100.0D;
+    public static final int LOCAL_RECOVERY_TICKS = 50;
+    public static final int TELEPORT_RECOVERY_TICKS = 140;
+    public static final int FAR_TELEPORT_RECOVERY_TICKS = 80;
     private static final double RUN_DISTANCE = 8.0D;
+    private static final double FAR_RECOVERY_DISTANCE = 32.0D;
 
     private DinosaurFollowRules() {
-    }
-
-    public static boolean shouldEmergencyTeleport(double distanceSquared) {
-        return distanceSquared >= EMERGENCY_TELEPORT_DISTANCE * EMERGENCY_TELEPORT_DISTANCE;
     }
 
     public static boolean shouldRun(double distanceSquared) {
@@ -21,7 +20,28 @@ public final class DinosaurFollowRules {
 
     public static float movementTurnScale(float yawErrorDegrees, float bodyErrorDegrees) {
         float worstError = Math.max(Math.abs(yawErrorDegrees), Math.abs(bodyErrorDegrees));
-        return clamp(1.0F - worstError / 220.0F, 0.32F, 1.0F);
+        return clamp(1.0F - worstError / 300.0F, 0.56F, 1.0F);
+    }
+
+    public static boolean madeMeaningfulProgress(
+            double previousDistance,
+            double currentDistance,
+            double displacementSquared,
+            boolean navigationStuck
+    ) {
+        if (navigationStuck) return false;
+        return previousDistance - currentDistance >= 0.12D || displacementSquared >= 0.035D;
+    }
+
+    public static boolean shouldTryLocalRecovery(int stalledTicks) {
+        return stalledTicks >= LOCAL_RECOVERY_TICKS;
+    }
+
+    public static boolean shouldTeleportAfterStall(int stalledTicks, double distanceSquared) {
+        int threshold = distanceSquared >= FAR_RECOVERY_DISTANCE * FAR_RECOVERY_DISTANCE
+                ? FAR_TELEPORT_RECOVERY_TICKS
+                : TELEPORT_RECOVERY_TICKS;
+        return distanceSquared > RUN_DISTANCE * RUN_DISTANCE && stalledTicks >= threshold;
     }
 
     public static float locomotionAnimationSpeed(float smoothedMovement, boolean running) {

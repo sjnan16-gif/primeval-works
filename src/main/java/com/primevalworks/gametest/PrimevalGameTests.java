@@ -214,6 +214,12 @@ public final class PrimevalGameTests {
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> SPINOSAURUS_FOLLOWER_CATCHES_ON_LAND =
             TEST_FUNCTIONS.register("spinosaurus_follower_catches_on_land",
                     () -> PrimevalGameTests::spinosaurusFollowerCatchesOnLand);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> GROUND_FOLLOWER_CROSSES_WATER =
+            TEST_FUNCTIONS.register("ground_follower_crosses_water",
+                    () -> PrimevalGameTests::groundFollowerCrossesWater);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> STUCK_FOLLOWER_RECOVERS_SAFELY =
+            TEST_FUNCTIONS.register("stuck_follower_recovers_safely",
+                    () -> PrimevalGameTests::stuckFollowerRecoversSafely);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> PASSIVE_WORKER_HOLDS_FIELD_ANCHOR =
             TEST_FUNCTIONS.register("passive_worker_holds_field_anchor",
                     () -> PrimevalGameTests::passiveWorkerHoldsFieldAnchor);
@@ -509,6 +515,16 @@ public final class PrimevalGameTests {
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "spinosaurus_follower_catches_on_land"),
                 new FunctionGameTestInstance(SPINOSAURUS_FOLLOWER_CATCHES_ON_LAND.getKey(),
                         isolatedTestData(event, "spinosaurus_follow_land"))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "ground_follower_crosses_water"),
+                new FunctionGameTestInstance(GROUND_FOLLOWER_CROSSES_WATER.getKey(),
+                        isolatedTestData(event, "ground_follow_water", 800))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "stuck_follower_recovers_safely"),
+                new FunctionGameTestInstance(STUCK_FOLLOWER_RECOVERS_SAFELY.getKey(),
+                        isolatedTestData(event, "stuck_follow_recovery", 800))
         );
         event.registerTest(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "passive_worker_holds_field_anchor"),
@@ -851,6 +867,77 @@ public final class PrimevalGameTests {
                                 + spinosaurus.position() + ", pathDone=" + spinosaurus.getNavigation().isDone()))
                 .thenExecute(() -> {
                     spinosaurus.discard();
+                    player.discard();
+                })
+                .thenSucceed();
+    }
+
+    private static void groundFollowerCrossesWater(GameTestHelper helper) {
+        helper.getLevel().clockManager().setTotalTicks(
+                helper.getLevel().dimensionType().defaultClock().orElseThrow(), 1_000L);
+        BlockPos dinosaurRelative = new BlockPos(2, 1, 4);
+        BlockPos ownerRelative = new BlockPos(16, 1, 4);
+        forceTicking(helper, dinosaurRelative, ownerRelative);
+        for (int x = 0; x <= 18; x++) {
+            for (int z = 0; z <= 8; z++) {
+                helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+                if ((z == 0 || z == 8) && x >= 5 && x <= 12) {
+                    helper.setBlock(new BlockPos(x, 1, z), Blocks.STONE);
+                    helper.setBlock(new BlockPos(x, 2, z), Blocks.STONE);
+                }
+                if (x >= 7 && x <= 10 && z > 0 && z < 8) {
+                    helper.setBlock(new BlockPos(x, 1, z), Blocks.WATER);
+                }
+            }
+        }
+        ServerPlayer player = isolatedPlayer(helper);
+        Vec3 ownerPosition = helper.absolutePos(ownerRelative).getCenter();
+        player.snapTo(ownerPosition.x, ownerPosition.y, ownerPosition.z, 90.0F, 0.0F);
+        FieldDodoEntity dodo = helper.spawn(ModEntities.FIELD_DODO.get(), dinosaurRelative);
+        dodo.setDinosaurOwner(player.getUUID());
+        dodo.setCommandMode(DinosaurCommandMode.FOLLOW);
+        double farBankX = helper.absolutePos(new BlockPos(11, 1, 4)).getX();
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(dodo.isInWater(),
+                        "The ground follower refused the required water route"))
+                .thenWaitUntil(() -> helper.assertTrue(dodo.getX() >= farBankX,
+                        "The ground follower entered the water but did not cross it"))
+                .thenExecute(() -> {
+                    dodo.discard();
+                    player.discard();
+                })
+                .thenSucceed();
+    }
+
+    private static void stuckFollowerRecoversSafely(GameTestHelper helper) {
+        helper.getLevel().clockManager().setTotalTicks(
+                helper.getLevel().dimensionType().defaultClock().orElseThrow(), 1_000L);
+        BlockPos dinosaurRelative = new BlockPos(3, 1, 4);
+        BlockPos ownerRelative = new BlockPos(18, 1, 4);
+        forceTicking(helper, dinosaurRelative, ownerRelative);
+        for (int x = 0; x <= 24; x++) for (int z = 0; z <= 8; z++) {
+            helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+        }
+        for (int x = 2; x <= 4; x++) for (int z = 3; z <= 5; z++) {
+            if (x == 3 && z == 4) continue;
+            for (int y = 1; y <= 3; y++) helper.setBlock(new BlockPos(x, y, z), Blocks.STONE);
+        }
+        ServerPlayer player = isolatedPlayer(helper);
+        Vec3 ownerPosition = helper.absolutePos(ownerRelative).getCenter();
+        player.snapTo(ownerPosition.x, ownerPosition.y, ownerPosition.z, 90.0F, 0.0F);
+        FieldDodoEntity dodo = helper.spawn(ModEntities.FIELD_DODO.get(), dinosaurRelative);
+        dodo.setDinosaurOwner(player.getUUID());
+        dodo.setCommandMode(DinosaurCommandMode.FOLLOW);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(dodo.distanceToSqr(player) < 64.0D,
+                        "The enclosed follower never used its safe stuck recovery"))
+                .thenExecute(() -> {
+                    helper.assertTrue(dodo.getCommandMode() == DinosaurCommandMode.FOLLOW
+                                    && !dodo.isInWall() && dodo.isAlive(),
+                            "Follower recovery damaged the dinosaur or lost its command");
+                    dodo.discard();
                     player.discard();
                 })
                 .thenSucceed();
