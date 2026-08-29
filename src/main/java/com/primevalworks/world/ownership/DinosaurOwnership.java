@@ -67,7 +67,7 @@ public final class DinosaurOwnership {
         if (!(dinosaur.level() instanceof ServerLevel level) || dinosaur.isRemoved()) return;
         UUID ownerId = dinosaur.getDinosaurOwner().orElse(null);
         if (ownerId == null) return;
-        ServerPlayer owner = level.getServer().getPlayerList().getPlayer(ownerId);
+        ServerPlayer owner = findOnlinePlayer(level.getServer(), ownerId);
         if (owner == null) return;
         List<OwnedDinosaur> records = new ArrayList<>(records(owner));
         upsert(records, capture(dinosaur));
@@ -99,7 +99,7 @@ public final class DinosaurOwnership {
         if (!(dinosaur.level() instanceof ServerLevel level)) return false;
         UUID ownerId = dinosaur.getDinosaurOwner().orElse(null);
         if (ownerId == null) return false;
-        ServerPlayer owner = level.getServer().getPlayerList().getPlayer(ownerId);
+        ServerPlayer owner = findOnlinePlayer(level.getServer(), ownerId);
         if (owner == null) return false;
 
         dinosaur.prepareForRecoverySnapshot();
@@ -621,12 +621,21 @@ public final class DinosaurOwnership {
         if (!(dinosaur.level() instanceof ServerLevel level)) return true;
         UUID ownerId = dinosaur.getDinosaurOwner().orElse(null);
         if (ownerId == null) return true;
-        ServerPlayer owner = level.getServer().getPlayerList().getPlayer(ownerId);
+        ServerPlayer owner = findOnlinePlayer(level.getServer(), ownerId);
         if (owner == null || activeIds(owner).contains(dinosaur.getUUID())) return true;
         // Before the first table, a hatchling may wait physically beside its owner. Once a
         // table exists, every non-active record is depot/expedition/recovery state and must
         // never retain a second world authority when its old chunk loads later.
         return CommandTableBlock.getClaimedTable(owner).isEmpty();
+    }
+
+    public static @Nullable ServerPlayer findOnlinePlayer(MinecraftServer server, UUID playerId) {
+        for (ServerLevel level : server.getAllLevels()) {
+            for (ServerPlayer player : level.players()) {
+                if (player.getUUID().equals(playerId)) return player;
+            }
+        }
+        return server.getPlayerList().getPlayer(playerId);
     }
 
     private static @Nullable FieldDodoEntity findOrLoad(MinecraftServer server, OwnedDinosaur record) {

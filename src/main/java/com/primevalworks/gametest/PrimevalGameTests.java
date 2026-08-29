@@ -624,6 +624,13 @@ public final class PrimevalGameTests {
         }
     }
 
+    @SuppressWarnings("removal")
+    private static ServerPlayer isolatedPlayer(GameTestHelper helper) {
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.setUUID(UUID.randomUUID());
+        return player;
+    }
+
     private static void contentRegistration(GameTestHelper helper) {
         Identifier retiredTurretId = Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "magic_turret");
         helper.assertTrue(BuiltInRegistries.BLOCK.get(retiredTurretId).map(Holder::value).orElse(null)
@@ -696,7 +703,7 @@ public final class PrimevalGameTests {
         }
         helper.assertTrue(DinosaurEggSize.BIG.contains(DinosaurSpecies.STEGOSAURUS),
                 "Stegosaurus must hatch from a big dinosaur egg");
-        ServerPlayer saddleTester = helper.makeMockServerPlayerInLevel();
+        ServerPlayer saddleTester = isolatedPlayer(helper);
         FieldDodoEntity spinosaurus = helper.spawn(ModEntities.SPINOSAURUS.get(), new BlockPos(3, 1, 3));
         DinosaurOwnership.register(saddleTester, spinosaurus);
         saddleTester.getAbilities().instabuild = true;
@@ -772,8 +779,7 @@ public final class PrimevalGameTests {
                 }
             }
         }
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
-        player.setUUID(UUID.randomUUID());
+        ServerPlayer player = isolatedPlayer(helper);
         Vec3 ownerPosition = helper.absolutePos(ownerRelative).getCenter();
         player.snapTo(ownerPosition.x, ownerPosition.y, ownerPosition.z, 90.0F, 0.0F);
         player.setNoGravity(true);
@@ -800,8 +806,7 @@ public final class PrimevalGameTests {
         for (int x = 0; x <= 7; x++) for (int z = 0; z <= 7; z++) {
             helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
         }
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
-        player.setUUID(UUID.randomUUID());
+        ServerPlayer player = isolatedPlayer(helper);
         Vec3 ownerPosition = helper.absolutePos(ownerRelative).getCenter();
         player.snapTo(ownerPosition.x, ownerPosition.y, ownerPosition.z, 90.0F, 0.0F);
         FieldDodoEntity pteranodon = helper.spawn(ModEntities.PTERANODON.get(), dinosaurRelative);
@@ -829,8 +834,7 @@ public final class PrimevalGameTests {
         for (int x = 0; x <= 22; x++) for (int z = 0; z <= 6; z++) {
             helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
         }
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
-        player.setUUID(UUID.randomUUID());
+        ServerPlayer player = isolatedPlayer(helper);
         Vec3 ownerPosition = helper.absolutePos(ownerRelative).getCenter();
         player.snapTo(ownerPosition.x, ownerPosition.y, ownerPosition.z, 90.0F, 0.0F);
         FieldDodoEntity spinosaurus = helper.spawn(ModEntities.SPINOSAURUS.get(), dinosaurRelative);
@@ -863,8 +867,7 @@ public final class PrimevalGameTests {
             helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
             for (int y = 1; y <= 3; y++) helper.setBlock(new BlockPos(x, y, z), Blocks.AIR);
         }
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
-        player.setUUID(UUID.randomUUID());
+        ServerPlayer player = isolatedPlayer(helper);
         Vec3 assignmentPosition = helper.absolutePos(new BlockPos(3, 1, 3)).getCenter();
         player.snapTo(assignmentPosition.x, assignmentPosition.y, assignmentPosition.z, 90.0F, 0.0F);
         FieldDodoEntity dodo = helper.spawn(ModEntities.FIELD_DODO.get(), dinosaurRelative);
@@ -929,7 +932,7 @@ public final class PrimevalGameTests {
         }
         helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
         helper.setBlock(turbineRelative, ModBlocks.WIND_TURBINE.get());
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = isolatedPlayer(helper);
         FieldDodoEntity worker = helper.spawn(ModEntities.PARASAUROLOPHUS.get(), workerRelative);
         DinosaurOwnership.register(player, worker);
         BlockPos table = helper.absolutePos(tableRelative);
@@ -1003,7 +1006,7 @@ public final class PrimevalGameTests {
 
     private static void fossilRestoresAlbinoAppearance(GameTestHelper helper) {
         helper.setBlock(new BlockPos(2, 0, 2), Blocks.STONE);
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = isolatedPlayer(helper);
         player.getAbilities().instabuild = false;
         FieldDodoEntity dinosaur = helper.spawn(ModEntities.TYRANNOSAURUS.get(), new BlockPos(2, 1, 2));
         DinosaurOwnership.register(player, dinosaur);
@@ -1032,7 +1035,7 @@ public final class PrimevalGameTests {
         helper.setBlock(new BlockPos(1, 0, 1), Blocks.STONE);
         helper.setBlock(new BlockPos(3, 0, 1), Blocks.STONE);
         helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = isolatedPlayer(helper);
         player.getAbilities().instabuild = false;
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
@@ -1299,7 +1302,7 @@ public final class PrimevalGameTests {
     }
 
     private static void rosterHealthMigratesAttributes(GameTestHelper helper) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = isolatedPlayer(helper);
         CompoundTag data = player.getPersistentData();
         String prefix = "PrimevalOwnedDinosaur0";
         data.putInt("PrimevalOwnershipSchema", 3);
@@ -1460,7 +1463,9 @@ public final class PrimevalGameTests {
         for (int x = 2; x <= 7; x++) helper.setBlock(new BlockPos(x, 0, 3), Blocks.STONE);
         helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
 
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = isolatedPlayer(helper);
+        // Parallel GameTests otherwise share the default mock-player identity and can
+        // cross-wire ownership records while this test is simulating a reload.
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
         BlockPos tablePos = helper.absolutePos(tableRelative);
@@ -1502,7 +1507,14 @@ public final class PrimevalGameTests {
                     DinosaurOwnership.SwapResult swap = DinosaurOwnership.swapIntoActive(
                             player, tablePos, reserveId, 0);
                     helper.assertTrue(!swap.success(),
-                            "A depot dinosaur replaced an expedition dinosaur after reload");
+                            "A depot dinosaur replaced an expedition dinosaur after reload: "
+                                    + swap.message() + "; active=" + DinosaurOwnership.activeIds(player)
+                                    + "; entityAway=" + reloaded.isOnExpedition()
+                                    + "; recordAway=" + DinosaurOwnership.records(player).stream()
+                                    .filter(record -> record.id().equals(awayId))
+                                    .findFirst()
+                                    .map(record -> record.isOnExpedition(helper.getLevel().getGameTime()))
+                                    .orElse(false));
                     helper.assertTrue(DinosaurOwnership.activeIds(player).equals(List.of(awayId)),
                             "The failed swap changed the reserved expedition slot");
                     helper.assertTrue(reloaded.isOnExpedition() && reloaded.isInvisible()
@@ -1682,7 +1694,7 @@ public final class PrimevalGameTests {
         for (int x = 0; x <= 5; x++) for (int z = 0; z <= 4; z++) {
             helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
         }
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = isolatedPlayer(helper);
         player.getAbilities().instabuild = false;
         FieldDodoEntity first = helper.spawn(ModEntities.PTERANODON.get(), new BlockPos(2, 1, 2));
         FieldDodoEntity second = helper.spawn(ModEntities.PTERANODON.get(), new BlockPos(4, 1, 2));
@@ -1734,7 +1746,7 @@ public final class PrimevalGameTests {
         helper.setBlock(new BlockPos(2, 0, 2), Blocks.STONE);
         helper.setBlock(boxRelative, ModBlocks.FOOD_BOX.get());
         FoodBoxBlockEntity foodBox = helper.getBlockEntity(boxRelative, FoodBoxBlockEntity.class);
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = isolatedPlayer(helper);
         player.getInventory().setItem(0, new ItemStack(Items.SWEET_BERRIES, 32));
         player.getInventory().setItem(1, new ItemStack(Items.STONE));
 
@@ -1999,7 +2011,7 @@ public final class PrimevalGameTests {
         helper.setBlock(new BlockPos(4, 0, 2), Blocks.STONE);
         helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
         helper.setBlock(incubatorRelative, ModBlocks.PREMIUM_EGG_INCUBATOR.get());
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = isolatedPlayer(helper);
         player.getAbilities().instabuild = false;
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
@@ -2047,7 +2059,7 @@ public final class PrimevalGameTests {
         BlockPos table = helper.absolutePos(tableRelative);
         BlockPos turbine = helper.absolutePos(turbineRelative);
 
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = isolatedPlayer(helper);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
         CommandTableBlock.claimExisting(player, table);
@@ -2078,7 +2090,7 @@ public final class PrimevalGameTests {
         helper.setBlock(new BlockPos(4, 0, 2), Blocks.STONE);
         helper.setBlock(new BlockPos(5, 0, 2), Blocks.STONE);
         helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = isolatedPlayer(helper);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
         CommandTableBlock.claimExisting(player, helper.absolutePos(tableRelative));
@@ -2159,7 +2171,7 @@ public final class PrimevalGameTests {
             helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
         }
         helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = isolatedPlayer(helper);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
         BlockPos table = helper.absolutePos(tableRelative);
@@ -2208,7 +2220,7 @@ public final class PrimevalGameTests {
             }
         }
         helper.setBlock(new BlockPos(3, 0, 3), Blocks.STONE);
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = isolatedPlayer(helper);
         FieldDodoEntity pteranodon = helper.spawn(ModEntities.PTERANODON.get(), dinosaurRelative);
         DinosaurOwnership.register(player, pteranodon);
         player.snapTo(pteranodon.getX(), pteranodon.getY(), pteranodon.getZ() + 1.0D, 180.0F, 0.0F);
@@ -2309,7 +2321,7 @@ public final class PrimevalGameTests {
         helper.setBlock(new BlockPos(2, 0, 2), Blocks.STONE);
         helper.setBlock(new BlockPos(4, 0, 2), Blocks.STONE);
         helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = isolatedPlayer(helper);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
         CommandTableBlock.claimExisting(player, helper.absolutePos(tableRelative));
@@ -2385,7 +2397,7 @@ public final class PrimevalGameTests {
         helper.setBlock(new BlockPos(2, 0, 2), Blocks.STONE);
         helper.setBlock(new BlockPos(4, 0, 2), Blocks.STONE);
         helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = isolatedPlayer(helper);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
         BlockPos table = helper.absolutePos(tableRelative);
@@ -2662,7 +2674,7 @@ public final class PrimevalGameTests {
         helper.setBlock(new BlockPos(2, 0, 2), Blocks.STONE);
         helper.setBlock(tablePos, ModBlocks.COMMAND_TABLE.get());
         CommandTableBlockEntity table = helper.getBlockEntity(tablePos, CommandTableBlockEntity.class);
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = isolatedPlayer(helper);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
         player.getAbilities().instabuild = false;
@@ -3062,7 +3074,7 @@ public final class PrimevalGameTests {
             helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
         }
         helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = isolatedPlayer(helper);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
         BlockPos table = helper.absolutePos(tableRelative);
@@ -3119,7 +3131,7 @@ public final class PrimevalGameTests {
             helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
         }
         helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = isolatedPlayer(helper);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
         BlockPos table = helper.absolutePos(tableRelative);
@@ -3411,7 +3423,7 @@ public final class PrimevalGameTests {
         ).forEach(FieldDodoEntity::discard);
         helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
         helper.setBlock(incubatorRelative, ModBlocks.PREMIUM_EGG_INCUBATOR.get());
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = isolatedPlayer(helper);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
         CommandTableBlock.claimExisting(player, helper.absolutePos(tableRelative));
@@ -3476,7 +3488,7 @@ public final class PrimevalGameTests {
         ).forEach(FieldDodoEntity::discard);
         helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
         helper.setBlock(eggRelative, ModBlocks.SMALL_DINOSAUR_EGG.get());
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = isolatedPlayer(helper);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
         CommandTableBlock.claimExisting(player, helper.absolutePos(tableRelative));
@@ -3547,7 +3559,7 @@ public final class PrimevalGameTests {
         }
         BlockPos tableRelative = new BlockPos(4, 1, 4);
         forceTicking(helper, tableRelative);
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = isolatedPlayer(helper);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
         BlockPos playerPos = helper.absolutePos(tableRelative);
@@ -3679,7 +3691,7 @@ public final class PrimevalGameTests {
     }
 
     private static void whistleSettingsSurviveReopen(GameTestHelper helper) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = isolatedPlayer(helper);
         int slot = 4;
         player.getInventory().setItem(slot, new ItemStack(ModItems.DINO_WHISTLE.get()));
         ConfigureDinoWhistlePayload payload = new ConfigureDinoWhistlePayload(
@@ -3715,7 +3727,7 @@ public final class PrimevalGameTests {
         helper.setBlock(targetRelative, Blocks.IRON_ORE);
         helper.setBlock(connectedRelative, Blocks.IRON_ORE);
         helper.setBlock(differentRelative, Blocks.STONE);
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = isolatedPlayer(helper);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
         player.snapTo(helper.absolutePos(new BlockPos(2, 1, 3)).getCenter().x,
@@ -3789,7 +3801,7 @@ public final class PrimevalGameTests {
         helper.setBlock(stoneRelative, Blocks.STONE);
         helper.setBlock(dirtRelative, Blocks.DIRT);
         helper.setBlock(woodRelative, Blocks.OAK_PLANKS);
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = isolatedPlayer(helper);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
         player.snapTo(helper.absolutePos(new BlockPos(2, 1, 3)).getCenter().x,
@@ -3835,7 +3847,7 @@ public final class PrimevalGameTests {
         helper.setBlock(cropRelative.below(), Blocks.FARMLAND);
         helper.getLevel().setBlock(helper.absolutePos(cropRelative),
                 Blocks.WHEAT.defaultBlockState().setValue(CropBlock.AGE, 7), Block.UPDATE_ALL);
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = isolatedPlayer(helper);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
         player.snapTo(helper.absolutePos(new BlockPos(2, 1, 3)).getCenter().x,
@@ -3884,7 +3896,7 @@ public final class PrimevalGameTests {
             for (int z = 0; z <= 6; z++) helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
         }
         helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = isolatedPlayer(helper);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
         player.snapTo(helper.absolutePos(new BlockPos(2, 1, 3)).getCenter().x,
@@ -3926,7 +3938,7 @@ public final class PrimevalGameTests {
         }
         helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
         helper.setBlock(targetRelative, Blocks.IRON_ORE);
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = isolatedPlayer(helper);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
         player.snapTo(helper.absolutePos(new BlockPos(2, 1, 3)).getCenter().x,
@@ -3999,7 +4011,7 @@ public final class PrimevalGameTests {
         }
         helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
         helper.setBlock(targetRelative, Blocks.IRON_ORE);
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = isolatedPlayer(helper);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
         BlockPos table = helper.absolutePos(tableRelative);
@@ -4046,7 +4058,7 @@ public final class PrimevalGameTests {
         }
         helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
         helper.setBlock(targetRelative, Blocks.IRON_ORE);
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = isolatedPlayer(helper);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
         BlockPos table = helper.absolutePos(tableRelative);
@@ -4095,8 +4107,7 @@ public final class PrimevalGameTests {
         }
         helper.setBlock(new BlockPos(4, 1, 2), Blocks.IRON_ORE);
 
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
-        player.setUUID(UUID.randomUUID());
+        ServerPlayer player = isolatedPlayer(helper);
         Vec3 ownerPosition = helper.absolutePos(ownerRelative).getCenter();
         player.snapTo(ownerPosition.x, ownerPosition.y, ownerPosition.z, 90.0F, 0.0F);
 
@@ -4152,10 +4163,11 @@ public final class PrimevalGameTests {
             helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
             for (int y = 1; y <= 3; y++) helper.setBlock(new BlockPos(x, y, z), Blocks.AIR);
         }
-        helper.setBlock(quarryRelative, Blocks.IRON_ORE);
+        // The GameTest server runs structures in parallel. A unique drop keeps this
+        // 64-block collector from following raw iron spawned by a neighboring quarry test.
+        helper.setBlock(quarryRelative, Blocks.GOLD_ORE);
 
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
-        player.setUUID(UUID.randomUUID());
+        ServerPlayer player = isolatedPlayer(helper);
         Vec3 ownerPosition = helper.absolutePos(ownerRelative).getCenter();
         player.snapTo(ownerPosition.x, ownerPosition.y, ownerPosition.z, 90.0F, 0.0F);
 
@@ -4176,15 +4188,29 @@ public final class PrimevalGameTests {
                 DinoWhistleSettings.FieldMode.COLLECT,
                 DinoWhistleSettings.Pattern.AREA,
                 64,
-                "minecraft:raw_iron"));
+                "minecraft:raw_gold"));
 
         helper.startSequence()
                 .thenWaitUntil(() -> helper.assertTrue(
                         helper.getBlockState(quarryRelative).isAir(),
                         "The quarry specialist never produced the handoff drop"))
                 .thenWaitUntil(() -> helper.assertTrue(
-                        player.getInventory().countItem(Items.RAW_IRON) > 0,
-                        "Collect ignored a quarry drop inside the configured 64-block field"))
+                        player.getInventory().countItem(Items.RAW_GOLD) > 0,
+                        "Collect ignored a quarry drop inside the configured 64-block field; collector="
+                                + collector.position()
+                                + ", movement=" + collector.getDeltaMovement()
+                                + ", alive=" + collector.isAlive()
+                                + ", removed=" + collector.isRemoved()
+                                + ", command=" + collector.getCommandMode()
+                                + ", fieldWork=" + collector.hasFieldWork()
+                                + ", carried=" + collector.getCarriedStack()
+                                + ", navigationDone=" + collector.getNavigation().isDone()
+                                + ", navigationStuck=" + collector.getNavigation().isStuck()
+                                + ", looseItems=" + helper.getLevel().getEntitiesOfClass(
+                                        ItemEntity.class,
+                                        new AABB(helper.absolutePos(collectorRelative)).inflate(70.0D),
+                                        item -> item.isAlive() && !item.getItem().isEmpty())
+                                        .stream().map(item -> item.getItem() + "@" + item.position()).toList()))
                 .thenExecute(() -> helper.assertTrue(
                         collector.hasFieldWork() && collector.isFieldWorkContinuous(),
                         "Collect stopped after completing one quarry handoff"))
@@ -4197,8 +4223,7 @@ public final class PrimevalGameTests {
     }
 
     private static void primordialSwordHasWideSweep(GameTestHelper helper) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
-        player.setUUID(UUID.randomUUID());
+        ServerPlayer player = isolatedPlayer(helper);
         FieldDodoEntity target = helper.spawn(ModEntities.FIELD_DODO.get(), new BlockPos(3, 1, 3));
         ItemStack sword = new ItemStack(ModItems.PRIMORDIAL_SWORD.get());
         player.setItemInHand(InteractionHand.MAIN_HAND, sword);

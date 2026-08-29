@@ -3152,8 +3152,13 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         fieldWorkRescanCooldown = 0;
         if (!item.getUUID().equals(fieldCollectionTargetId)) fieldCollectionApproachTicks = 0;
         fieldCollectionTargetId = item.getUUID();
-        double itemDistance = distanceToSqr(item);
-        if (itemDistance > 3.0D) {
+        double deltaX = item.getX() - getX();
+        double deltaZ = item.getZ() - getZ();
+        double horizontalDistance = deltaX * deltaX + deltaZ * deltaZ;
+        double verticalReach = Math.max(3.25D, getBbHeight() + 1.25D);
+        boolean withinPickupReach = horizontalDistance <= 3.0D
+                && Math.abs(item.getY() - getY()) <= verticalReach;
+        if (!withinPickupReach) {
             if (++fieldCollectionApproachTicks > 400) {
                 fieldCollectionRetryAfter.put(item.getUUID(), gameTime + 200L);
                 fieldCollectionTargetId = null;
@@ -3163,7 +3168,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
                 return;
             }
             markRaptorTransportRoute();
-            if (itemDistance <= 64.0D && Math.abs(item.getY() - getY()) <= maxUpStep() + 1.0D) {
+            if (distanceToSqr(item) <= 64.0D && Math.abs(item.getY() - getY()) <= maxUpStep() + 1.0D) {
                 cancelWorkAction();
                 navigation.stop();
                 navigationTarget = null;

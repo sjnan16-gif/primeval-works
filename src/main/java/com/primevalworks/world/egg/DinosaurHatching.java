@@ -59,7 +59,7 @@ public final class DinosaurHatching {
         if (!level.getBlockState(tablePos).is(ModBlocks.COMMAND_TABLE.get())) {
             return HatchResult.failure(Component.translatable("message.primevalworks.egg.base_missing"));
         }
-        ServerPlayer ownerPlayer = level.getServer().getPlayerList().getPlayer(owner);
+        ServerPlayer ownerPlayer = DinosaurOwnership.findOnlinePlayer(level.getServer(), owner);
         if (ownerPlayer == null) {
             return HatchResult.failure(Component.literal(
                     "Incubation is complete. The owner needs to return before hatching can finish."
