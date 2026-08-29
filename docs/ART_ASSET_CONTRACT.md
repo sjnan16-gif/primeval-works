@@ -363,6 +363,7 @@ Current authored machine exceptions are frozen to their delivered exports:
 
 - Wind Turbine source: `art/blocks/wind_turbine/wind_turbine.bbmodel`; runtime geometry `geometry.wind_turbine`; static bone `bb_main`; rotor bone `spinnything`; looping clip `spin`; 128x128 base and upgraded atlases with identical UVs.
 - Processor source: `art/blocks/processor/processor.bbmodel`; one static 16x16x16 cube using the authored 64x64 per-face UV atlas. It stays a vanilla block model because it has no moving part.
+- Food Box sources: `art/blocks/food_box/food_box_empty.bbmodel` and `food_box_full.bbmodel`. Both stay ordinary vanilla block models; empty uses its authored 128x128 atlas and six-element open-crate geometry, full uses its authored 64x64 atlas and filled single-cube geometry. Runtime inventory state selects the server-synchronized `full=false/true` blockstate, while the item form always presents the empty model.
 
 Zero-thickness planes are valid for sails, wings, teeth, fins, and machine panels, but the two authored sides occupy the same plane. Every Gecko dinosaur and animated machine therefore renders through an alpha-cutout, back-face-culled pass. Do not switch one species or machine back to a non-culling/translucent base pass; the coincident front and back textures will blend or flicker.
 
@@ -376,6 +377,8 @@ animation.<block_id>.working
 Additional one-shots such as `open`, `close`, `complete`, `fire`, or `hatch` are approved per block. Animated machines need an explicit still item presentation. When the silhouette depends on authored Gecko geometry, the item may render that exact geometry without registering a controller; it must not inherit the world's active animation state.
 
 ## Item and GUI art
+
+- The Dino Whistle uses the exact supplied 16x16 sprite stored at `art/items/dino_whistle/dino_whistle.png`; it is not represented by a Goat Horn model.
 
 - Ordinary material icons: 16×16 unless detail truly requires 32×32.
 - Relic weapons: 32×32 source art, still readable at Minecraft inventory size.

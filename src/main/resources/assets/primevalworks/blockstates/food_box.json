@@ -1,1 +1,6 @@
-{ "variants": { "": { "model": "primevalworks:block/food_box" } } }
+{
+  "variants": {
+    "full=false": { "model": "primevalworks:block/food_box" },
+    "full=true": { "model": "primevalworks:block/food_box_full" }
+  }
+}

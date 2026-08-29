@@ -20,6 +20,7 @@ import com.primevalworks.world.block.entity.AncientFurnaceBlockEntity;
 import com.primevalworks.world.block.entity.DartTurretBlockEntity;
 import com.primevalworks.world.block.entity.LaserTurretBlockEntity;
 import com.primevalworks.world.block.CommandTableBlock;
+import com.primevalworks.world.block.FoodBoxBlock;
 import com.primevalworks.world.block.BeamLineOfSight;
 import com.primevalworks.world.block.PoweredObserverBlock;
 import com.primevalworks.world.block.TurbineBlock;
@@ -1716,6 +1717,11 @@ public final class PrimevalGameTests {
                 "The Food Box menu did not store the transferred food");
         helper.assertTrue(player.getInventory().getItem(0).isEmpty(),
                 "The transferred food remained duplicated in the player inventory");
+        helper.assertTrue(helper.getBlockState(boxRelative).getValue(FoodBoxBlock.FULL),
+                "The Food Box did not switch to its authored full model after receiving food");
+        foodBox.removeItem(0, 32);
+        helper.assertTrue(!helper.getBlockState(boxRelative).getValue(FoodBoxBlock.FULL),
+                "The Food Box did not return to its authored empty model after its last food was removed");
         menu.removed(player);
         helper.succeed();
     }
