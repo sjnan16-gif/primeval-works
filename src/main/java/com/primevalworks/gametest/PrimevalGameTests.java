@@ -2034,8 +2034,10 @@ public final class PrimevalGameTests {
     private static void storeAllReturnsActiveDinosaurs(GameTestHelper helper) {
         BlockPos tableRelative = new BlockPos(2, 1, 2);
         BlockPos dinosaurRelative = new BlockPos(4, 1, 2);
+        BlockPos unloadedRelative = new BlockPos(5, 1, 2);
         helper.setBlock(new BlockPos(2, 0, 2), Blocks.STONE);
         helper.setBlock(new BlockPos(4, 0, 2), Blocks.STONE);
+        helper.setBlock(new BlockPos(5, 0, 2), Blocks.STONE);
         helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
@@ -2067,9 +2069,16 @@ public final class PrimevalGameTests {
                 "The Store All assignment did not reach the dinosaur; value="
                         + dinosaur.getWorkJobIndex());
         UUID dinosaurId = dinosaur.getUUID();
+        FieldDodoEntity temporarilyUnloaded = helper.spawn(ModEntities.STEGOSAURUS.get(), unloadedRelative);
+        DinosaurOwnership.register(player, temporarilyUnloaded);
+        helper.assertTrue(DinosaurOwnership.addToActiveIfRoom(
+                        player, temporarilyUnloaded, helper.absolutePos(tableRelative)),
+                "The second dinosaur could not enter the active crew");
+        UUID unloadedId = temporarilyUnloaded.getUUID();
+        temporarilyUnloaded.discard();
 
-        helper.assertTrue(DinosaurOwnership.storeAllActive(player) == 1,
-                "Store All did not return the active dinosaur");
+        helper.assertTrue(DinosaurOwnership.storeAllActive(player) == 2,
+                "Store All did not commit both loaded and temporarily unresolved dinosaurs");
         helper.assertTrue(DinosaurOwnership.activeIds(player).isEmpty(),
                 "Store All left an occupied active slot");
         DinosaurOwnership.activateForTable(player, helper.absolutePos(tableRelative), false);
@@ -2085,7 +2094,24 @@ public final class PrimevalGameTests {
                 "Store All erased the dinosaur's assigned specialty");
         helper.assertTrue(stored.snapshot().getIntOr("PrimevalDinosaurExperience", -1) == 17,
                 "Store All erased level progress");
-        helper.succeed();
+        helper.runAfterDelay(2, () -> {
+            FieldDodoEntity staleChunkCopy = ModEntities.STEGOSAURUS.get().create(
+                    helper.getLevel(), EntitySpawnReason.LOAD);
+            helper.assertTrue(staleChunkCopy != null, "Could not construct the delayed chunk copy");
+            staleChunkCopy.setUUID(unloadedId);
+            staleChunkCopy.setDinosaurOwner(player.getUUID());
+            BlockPos spawn = helper.absolutePos(unloadedRelative);
+            staleChunkCopy.setPos(spawn.getX() + 0.5D, spawn.getY(), spawn.getZ() + 0.5D);
+            helper.assertTrue(helper.getLevel().addFreshEntity(staleChunkCopy),
+                    "Could not load the delayed stored dinosaur copy");
+            helper.runAfterDelay(24, () -> {
+                helper.assertTrue(staleChunkCopy.isRemoved(),
+                        "A chunk-loaded depot dinosaur regained world authority after Store All");
+                helper.assertTrue(DinosaurOwnership.activeIds(player).isEmpty(),
+                        "The delayed world copy repopulated an active crew slot");
+                helper.succeed();
+            });
+        });
     }
 
     private static void individualDinosaurRecall(GameTestHelper helper) {

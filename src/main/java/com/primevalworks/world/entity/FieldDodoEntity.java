@@ -365,6 +365,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     private final AnimatableInstanceCache animationCache = GeckoLibUtil.createInstanceCache(this);
     private int workJobIndex;
     private @Nullable UUID dinosaurOwner;
+    private boolean worldAuthorityChecked;
     private int dinosaurLevel = 1;
     private int dinosaurExperience;
     private BlockPos commandTablePos;
@@ -2268,6 +2269,13 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
 
     @Override
     public void tick() {
+        if (!level().isClientSide()
+                && (!worldAuthorityChecked || Math.floorMod(tickCount + getId(), 20) == 0)
+                && !DinosaurOwnership.hasActiveWorldAuthority(this)) {
+            discard();
+            return;
+        }
+        worldAuthorityChecked = true;
         super.tick();
         // No-AI mobs skip aiStep. Defeat transfer deliberately freezes AI, so its
         // countdown belongs in the unconditional entity tick instead.

@@ -336,35 +336,27 @@ public final class DinosaurOwnership {
         if (active.isEmpty()) return 0;
 
         List<OwnedDinosaur> records = new ArrayList<>(refresh(player));
+        long now = player.level().getGameTime();
+        List<UUID> storing = active.stream()
+                .filter(id -> find(records, id).map(record -> !record.isOnExpedition(now)).orElse(false))
+                .toList();
+        List<UUID> remaining = active.stream().filter(id -> !storing.contains(id)).toList();
+
+        // The roster is the authority. Commit it first so a companion that reloads while
+        // this transaction is finishing cannot resume work as an active world entity.
+        writeActive(player.getPersistentData(), remaining);
         int storedCount = 0;
-        for (UUID dinosaurId : active) {
-            OwnedDinosaur record = find(records, dinosaurId).orElse(null);
-            if (record != null && record.isOnExpedition(player.level().getGameTime())) continue;
-            FieldDodoEntity dinosaur = record == null
-                    ? null
-                    : findOrLoad(player.level().getServer(), record);
-            if (dinosaur == null && record != null) {
-                dinosaur = spawn(player.level(), record, CommandTableBlock.getClaimedTable(player)
-                        .map(table -> table.pos().above()).orElse(player.blockPosition()));
-            }
-            if (dinosaur == null) continue;
-            returnCarriedCargo(dinosaur);
-            dinosaur.setCommandMode(DinosaurCommandMode.HOME);
-            upsert(records, capture(dinosaur));
-            dinosaur.unlinkFromCommandTable();
-            dinosaur.discard();
+        for (UUID dinosaurId : storing) {
+            storeWorldAuthority(player, records, dinosaurId);
             storedCount++;
         }
         writeRecords(player.getPersistentData(), records);
-        List<UUID> remaining = active.stream().filter(id -> find(records, id)
-                .map(record -> record.isOnExpedition(player.level().getGameTime())).orElse(false)).toList();
-        writeActive(player.getPersistentData(), remaining);
         return storedCount;
     }
 
     public static SwapResult storeActive(ServerPlayer player, UUID dinosaurId) {
         List<UUID> active = new ArrayList<>(activeIds(player));
-        if (!active.remove(dinosaurId)) {
+        if (!active.contains(dinosaurId)) {
             return new SwapResult(false, "That dinosaur is not part of the active crew.");
         }
         List<OwnedDinosaur> records = new ArrayList<>(refresh(player));
@@ -372,22 +364,51 @@ public final class DinosaurOwnership {
         if (record != null && record.isOnExpedition(player.level().getGameTime())) {
             return new SwapResult(false, record.name() + " cannot enter the depot until the expedition returns.");
         }
-        FieldDodoEntity dinosaur = record == null
-                ? null
-                : findOrLoad(player.level().getServer(), record);
-        String name = find(records, dinosaurId).map(OwnedDinosaur::name).orElse("Dinosaur");
-        if (dinosaur != null) {
-            returnCarriedCargo(dinosaur);
-            dinosaur.setCommandMode(DinosaurCommandMode.HOME);
-            upsert(records, capture(dinosaur));
-            name = dinosaur.getDisplayName().getString();
-            dinosaur.unlinkFromCommandTable();
-            dinosaur.discard();
-        }
-        writeRecords(player.getPersistentData(), records);
+        active.remove(dinosaurId);
         writeActive(player.getPersistentData(), active);
+        String name = storeWorldAuthority(player, records, dinosaurId);
+        writeRecords(player.getPersistentData(), records);
         CommandTableBlock.getClaimedTable(player).ifPresent(table -> repositionLoadedCrew(player, table.pos(), active));
         return new SwapResult(true, name + " returned to the depot.");
+    }
+
+    private static String storeWorldAuthority(ServerPlayer player, List<OwnedDinosaur> records, UUID dinosaurId) {
+        OwnedDinosaur record = find(records, dinosaurId).orElse(null);
+        String name = record == null ? "Dinosaur" : record.name();
+        List<FieldDodoEntity> copies = findLoadedCopies(player.level().getServer(), dinosaurId).stream()
+                .filter(dinosaur -> dinosaur.isOwnedBy(player.getUUID()))
+                .toList();
+        FieldDodoEntity authority = copies.isEmpty() ? null : copies.getFirst();
+        if (authority != null) {
+            returnCarriedCargo(authority);
+            authority.setCommandMode(DinosaurCommandMode.HOME);
+            upsert(records, normalizeDepotSnapshot(capture(authority)));
+            name = authority.getDisplayName().getString();
+        } else if (record != null) {
+            upsert(records, normalizeDepotSnapshot(record));
+        }
+        for (FieldDodoEntity copy : copies) {
+            if (copy != authority) copy.takeCarriedStackForStorage();
+            copy.unlinkFromCommandTable();
+            copy.discard();
+        }
+        return name;
+    }
+
+    private static OwnedDinosaur normalizeDepotSnapshot(OwnedDinosaur record) {
+        CompoundTag snapshot = record.snapshot();
+        snapshot.putInt("PrimevalCommandMode", DinosaurCommandMode.HOME.ordinal());
+        snapshot.remove("PrimevalStayPosition");
+        snapshot.putInt("PrimevalWorkerCooldown", 0);
+        snapshot.putInt("PrimevalWorkAction", 0);
+        snapshot.putInt("PrimevalWorkActionProgress", 0);
+        snapshot.putInt("PrimevalWorkActionDuration", 0);
+        snapshot.remove("PrimevalWorkActionPos");
+        return new OwnedDinosaur(
+                record.id(), record.species(), record.name(), record.level(), record.hunger(), record.mood(),
+                record.health(), record.maxHealth(), record.geneticQuality(), record.mutationMask(),
+                record.hueVariant(), record.recoveryUntilTick(), snapshot
+        );
     }
 
     public static int recallActive(ServerPlayer player, BlockPos tablePos) {
@@ -573,14 +594,32 @@ public final class DinosaurOwnership {
     }
 
     public static @Nullable FieldDodoEntity findLoaded(MinecraftServer server, UUID dinosaurId) {
+        List<FieldDodoEntity> copies = findLoadedCopies(server, dinosaurId);
+        return copies.isEmpty() ? null : copies.getFirst();
+    }
+
+    private static List<FieldDodoEntity> findLoadedCopies(MinecraftServer server, UUID dinosaurId) {
+        List<FieldDodoEntity> copies = new ArrayList<>();
         for (ServerLevel level : server.getAllLevels()) {
             Entity entity = level.getEntity(dinosaurId);
             if (entity instanceof FieldDodoEntity dinosaur && dinosaur.isAlive()) {
                 dinosaur.reconcilePersistentTimedState();
-                return dinosaur;
+                if (!dinosaur.isRemoved()) copies.add(dinosaur);
             }
         }
-        return null;
+        return List.copyOf(copies);
+    }
+
+    public static boolean hasActiveWorldAuthority(FieldDodoEntity dinosaur) {
+        if (!(dinosaur.level() instanceof ServerLevel level)) return true;
+        UUID ownerId = dinosaur.getDinosaurOwner().orElse(null);
+        if (ownerId == null) return true;
+        ServerPlayer owner = level.getServer().getPlayerList().getPlayer(ownerId);
+        if (owner == null || activeIds(owner).contains(dinosaur.getUUID())) return true;
+        // Before the first table, a hatchling may wait physically beside its owner. Once a
+        // table exists, every non-active record is depot/expedition/recovery state and must
+        // never retain a second world authority when its old chunk loads later.
+        return CommandTableBlock.getClaimedTable(owner).isEmpty();
     }
 
     private static @Nullable FieldDodoEntity findOrLoad(MinecraftServer server, OwnedDinosaur record) {
