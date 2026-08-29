@@ -1608,6 +1608,7 @@ public final class PrimevalGameTests {
                 .thenWaitUntil(() -> helper.assertTrue(away.isOnExpedition(),
                         "The Pteranodon never entered its expedition state"))
                 .thenExecute(() -> {
+                    DinosaurOwnership.syncRecord(away);
                     DinosaurOwnership.OwnedDinosaur saved = DinosaurOwnership.records(player).stream()
                             .filter(record -> record.id().equals(awayId)).findFirst().orElseThrow();
                     away.discard();
