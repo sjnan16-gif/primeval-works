@@ -114,8 +114,19 @@ final class AuthoredProgressionAssetsTest {
         assertFalse(swordPresentation.contains("\"parent\""));
         assertTrue(swordPresentation.contains("thirdperson_righthand"));
         assertTrue(swordPresentation.contains("\"translation\": [0, -5, 1.25]"));
+        assertTrue(swordPresentation.contains("firstperson_righthand"));
+        assertTrue(swordPresentation.contains("firstperson_lefthand"));
+        assertTrue(swordPresentation.contains("\"translation\": [0, -1.5, 0]"));
+        assertTrue(swordPresentation.contains("\"scale\": [0.90625, 1, 1]"));
         assertFalse(swordPresentation.contains("\"rotation\""));
-        assertFalse(swordPresentation.contains("\"scale\""));
+
+        String hardwoodRecipe = Files.readString(Path.of(
+                "src/main/resources/data/primevalworks/recipe/hardwood.json"));
+        assertTrue(hardwoodRecipe.contains("minecraft:crafting_shaped"));
+        assertTrue(hardwoodRecipe.contains("#minecraft:logs"));
+        assertTrue(hardwoodRecipe.contains("#minecraft:coals"));
+        assertTrue(hardwoodRecipe.contains("\"pattern\": [\"LLL\", \"LCL\", \"LLL\"]"));
+        assertTrue(hardwoodRecipe.contains("\"count\": 4"));
 
         String language = Files.readString(ASSETS.resolve("lang/en_us.json"));
         for (String egg : new String[]{"small_dinosaur_egg", "big_dinosaur_egg", "large_dinosaur_egg"}) {

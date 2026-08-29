@@ -9,6 +9,7 @@ import com.primevalworks.client.effect.DinoWhistleClient;
 import com.primevalworks.client.model.entity.DinosaurVisualProfile;
 import com.primevalworks.client.render.entity.FieldDodoRenderer;
 import com.primevalworks.client.render.WorksiteIndicatorRenderer;
+import com.primevalworks.client.render.IrisPipelineCompat;
 import com.primevalworks.client.render.block.PremiumEggIncubatorRenderer;
 import com.primevalworks.client.render.block.DinosaurEggRenderer;
 import com.primevalworks.client.render.block.TurbineRenderer;
@@ -74,8 +75,7 @@ public final class PrimevalWorksClient {
         DinosaurAnimationEvents.installUnmountedSpinosaurusGaitSpeed(
                 () -> PrimevalConfig.CLIENT.unmountedSpinosaurusGaitSpeed.get());
         modBus.addListener(EntityRenderersEvent.RegisterRenderers.class, PrimevalWorksClient::registerRenderers);
-        modBus.addListener(RegisterRenderPipelinesEvent.class,
-                event -> event.registerPipeline(WorksitePlannerScreen.XRAY_HIGHLIGHT_PIPELINE));
+        modBus.addListener(RegisterRenderPipelinesEvent.class, PrimevalWorksClient::registerRenderPipelines);
         modBus.addListener(RegisterMenuScreensEvent.class, event -> {
             event.register(ModMenus.FOOD_BOX.get(), FoodBoxScreen::new);
             event.register(ModMenus.PROCESSOR.get(), ProcessorScreen::new);
@@ -104,6 +104,11 @@ public final class PrimevalWorksClient {
         NeoForge.EVENT_BUS.addListener(ViewportEvent.ComputeFov.class, PteranodonFlightFeedback::applyFov);
         NeoForge.EVENT_BUS.addListener(RenderGuiEvent.Post.class, PteranodonFlightFeedback::renderFlightHud);
         NeoForge.EVENT_BUS.addListener(RenderGuiEvent.Post.class, DinosaurHatchReveal::render);
+    }
+
+    private static void registerRenderPipelines(RegisterRenderPipelinesEvent event) {
+        event.registerPipeline(WorksitePlannerScreen.XRAY_HIGHLIGHT_PIPELINE);
+        IrisPipelineCompat.registerLines(WorksitePlannerScreen.XRAY_HIGHLIGHT_PIPELINE);
     }
 
     private static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {

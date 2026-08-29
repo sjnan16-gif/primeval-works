@@ -1,6 +1,10 @@
 {
-  "type": "minecraft:crafting_shapeless",
-  "category": "misc",
-  "ingredients": ["#minecraft:logs"],
-  "result": {"count": 2, "id": "primevalworks:hardwood"}
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "key": {
+    "C": "#minecraft:coals",
+    "L": "#minecraft:logs"
+  },
+  "pattern": ["LLL", "LCL", "LLL"],
+  "result": {"count": 4, "id": "primevalworks:hardwood"}
 }

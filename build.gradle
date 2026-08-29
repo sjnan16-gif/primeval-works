@@ -141,6 +141,70 @@ tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
 
+def releaseJarTask = tasks.named('jar', Jar)
+def verifyReleaseJar = tasks.register('verifyReleaseJar') {
+    group = 'verification'
+    description = 'Checks that the distributable jar exactly contains every compiled class and processed resource.'
+    dependsOn releaseJarTask
+    inputs.files(sourceSets.main.output)
+    inputs.file(releaseJarTask.flatMap { it.archiveFile })
+
+    doLast {
+        File archive = releaseJarTask.get().archiveFile.get().asFile
+        Map<String, File> expected = new LinkedHashMap<>()
+        sourceSets.main.output.classesDirs.files.each { File root ->
+            if (!root.isDirectory()) return
+            root.eachFileRecurse(groovy.io.FileType.FILES) { File file ->
+                expected[root.toPath().relativize(file.toPath()).toString().replace('\\', '/')] = file
+            }
+        }
+        File resources = sourceSets.main.output.resourcesDir
+        if (resources != null && resources.isDirectory()) {
+            resources.eachFileRecurse(groovy.io.FileType.FILES) { File file ->
+                expected[resources.toPath().relativize(file.toPath()).toString().replace('\\', '/')] = file
+            }
+        }
+
+        Set<String> entries = new LinkedHashSet<>()
+        List<String> mismatched = []
+        new java.util.zip.ZipFile(archive).withCloseable { zip ->
+            zip.entries().each { entry -> entries.add(entry.name) }
+            expected.each { String path, File source ->
+                def entry = zip.getEntry(path)
+                if (entry != null && !java.util.Arrays.equals(
+                        java.nio.file.Files.readAllBytes(source.toPath()),
+                        zip.getInputStream(entry).withCloseable { it.readAllBytes() })) {
+                    mismatched.add(path)
+                }
+            }
+        }
+
+        List<String> missing = expected.keySet().findAll { !entries.contains(it) }.toList()
+        List<String> required = [
+                'META-INF/neoforge.mods.toml',
+                'primevalworks.mixins.json',
+                'com/primevalworks/client/PrimevalWorksClient.class',
+                'com/primevalworks/client/render/IrisPipelineCompat.class',
+                'com/primevalworks/client/screen/WorksitePlannerScreen.class',
+                'com/primevalworks/client/screen/EnergyNetworkScreen.class',
+                'com/primevalworks/client/effect/DinoWhistleClient.class',
+                'assets/primevalworks/models/item/primordial_sword_3d.json',
+                'data/primevalworks/recipe/hardwood.json'
+        ].findAll { !entries.contains(it) }
+        List<String> forbidden = entries.findAll {
+            it.endsWith('.bbmodel') || it.startsWith('run-') || it.contains('/run-')
+        }.toList()
+        if (!missing.isEmpty() || !mismatched.isEmpty() || !required.isEmpty() || !forbidden.isEmpty()) {
+            throw new GradleException("Release jar verification failed. Missing=${missing + required}, mismatched=${mismatched}, forbidden=${forbidden}")
+        }
+        logger.lifecycle("Verified ${expected.size()} compiled classes and resources inside ${archive.name}")
+    }
+}
+
+tasks.named('check').configure {
+    dependsOn verifyReleaseJar
+}
+
 idea {
     module {
         downloadSources = true
