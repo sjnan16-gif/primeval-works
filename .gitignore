@@ -43,5 +43,6 @@ run-client.err.log
 run-*-current.txt
 run-*-latest.txt
 run-client-smoke.txt
+run-*.txt
 *.log
 .*-pid

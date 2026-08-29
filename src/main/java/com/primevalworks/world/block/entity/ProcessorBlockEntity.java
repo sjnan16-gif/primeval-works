@@ -114,8 +114,6 @@ public final class ProcessorBlockEntity extends BaseContainerBlockEntity
                 changed = true;
             }
 
-            // Active fuel is paused instead of wasted while power is missing or the output
-            // is blocked. A fresh piece of fuel is only consumed for a recipe that can run.
             if (powered && outputHasRoom) {
                 if (processor.burnTime <= 0 && processor.consumeFuel(level)) {
                     changed = true;

@@ -66,11 +66,11 @@ final class WorkSpecialtyRulesTest {
 
     @Test
     void energyOutputScalesFromOnePointFiveToElevenPerSecond() {
-        assertEquals(1.5F, WorkSpecialtyRules.energyPerSecond(0));
-        assertEquals(2.0F, WorkSpecialtyRules.energyPerSecond(1));
-        assertEquals(4.5F, WorkSpecialtyRules.energyPerSecond(2));
-        assertEquals(7.5F, WorkSpecialtyRules.energyPerSecond(3));
-        assertEquals(11.0F, WorkSpecialtyRules.energyPerSecond(4));
+        assertEquals(1.275F, WorkSpecialtyRules.energyPerSecond(0), 0.0001F);
+        assertEquals(1.7F, WorkSpecialtyRules.energyPerSecond(1), 0.0001F);
+        assertEquals(3.825F, WorkSpecialtyRules.energyPerSecond(2), 0.0001F);
+        assertEquals(6.375F, WorkSpecialtyRules.energyPerSecond(3), 0.0001F);
+        assertEquals(9.35F, WorkSpecialtyRules.energyPerSecond(4), 0.0001F);
         assertTrue(WorkSpecialtyRules.energyPerSecond(4, 100) > WorkSpecialtyRules.energyPerSecond(4, 1));
     }
 

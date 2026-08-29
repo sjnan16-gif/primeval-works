@@ -55,8 +55,6 @@ public final class PremiumEggIncubatorBlockEntity extends BlockEntity {
         }
         if (incubator.progress < incubator.requiredTicks) {
             incubator.progress++;
-            // Mark every elapsed tick for disk persistence. Client packets remain throttled,
-            // but quitting between visual updates can no longer roll the timer back.
             incubator.setChanged();
             if (incubator.progress % 20 == 0) {
                 incubator.sync();
@@ -70,8 +68,6 @@ public final class PremiumEggIncubatorBlockEntity extends BlockEntity {
             }
             return;
         }
-        // A completed egg no longer requests energy. Resolve the hatch before any power
-        // check so a save/rejoin at exactly 100% cannot strand the timer forever.
         if (!(level instanceof ServerLevel serverLevel) || level.getGameTime() % 20L != 0L) {
             return;
         }

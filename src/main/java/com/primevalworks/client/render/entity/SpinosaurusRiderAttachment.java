@@ -7,7 +7,6 @@ import com.primevalworks.world.entity.FieldDodoEntity;
 import java.util.HashMap;
 import java.util.Map;
 
-/** Shares the authored Spinosaurus seat socket between rider and first-person camera rendering. */
 public final class SpinosaurusRiderAttachment {
     private static final Map<Integer, Sample> SAMPLES = new HashMap<>();
 

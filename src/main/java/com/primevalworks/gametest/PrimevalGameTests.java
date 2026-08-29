@@ -1584,8 +1584,6 @@ public final class PrimevalGameTests {
         helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
 
         ServerPlayer player = isolatedPlayer(helper);
-        // Parallel GameTests otherwise share the default mock-player identity and can
-        // cross-wire ownership records while this test is simulating a reload.
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
         BlockPos tablePos = helper.absolutePos(tableRelative);
@@ -1829,36 +1827,43 @@ public final class PrimevalGameTests {
         helper.assertTrue(player.getMainHandItem().getCount() == 1,
                 "Priming a dinosaur did not consume exactly one Nesting Treat");
         player.interactOn(second, InteractionHand.MAIN_HAND, Vec3.ZERO);
-
-        ItemStack bredEgg = ItemStack.EMPTY;
-        for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
-            ItemStack candidate = player.getInventory().getItem(slot);
-            if (DinosaurEggGenome.read(candidate).isPresent()) {
-                bredEgg = candidate;
-                break;
-            }
-        }
-        DinosaurEggGenome genome = DinosaurEggGenome.read(bredEgg)
-                .orElseThrow(() -> new AssertionError("Breeding did not create a genetic dinosaur egg"));
-        helper.assertTrue(genome.species() == DinosaurSpecies.PTERANODON,
-                "The bred egg did not preserve its parents' species");
-        helper.assertTrue(genome.origin() == DinosaurEggGenome.Origin.BRED,
-                "The bred egg lost its breeding origin data");
-        helper.assertTrue(genome.quality() >= 4 && genome.quality() <= 100,
-                "The bred egg received an invalid quality bonus");
-        helper.assertTrue((genome.mutationMask() & ~(DinosaurMutationRules.HUGE | DinosaurMutationRules.ALBINO)) == 0,
-                "The bred egg stored an unsupported mutation");
-        helper.assertTrue(first.getBreedingCooldownRemaining() > 0L
-                        && second.getBreedingCooldownRemaining() > 0L,
-                "Successful breeding did not start both parent cooldowns");
-        helper.assertTrue(DinosaurMutationRules.rollBred(
-                        DinosaurMutationRules.HUGE, DinosaurMutationRules.HUGE, 0.87F, 1.0F)
-                        == DinosaurMutationRules.HUGE,
-                "Two matching parent mutations did not use their intended inheritance chance");
-        first.discard();
-        second.discard();
-        player.discard();
-        helper.succeed();
+        helper.assertTrue(first.isBreedingWith(second.getUUID()) && second.isBreedingWith(first.getUUID()),
+                "The two treated dinosaurs did not enter courtship");
+        Vec3 eggCenter = first.position().add(second.position()).scale(0.5D);
+        ItemEntity[] bredEgg = new ItemEntity[1];
+        helper.startSequence()
+                .thenWaitUntil(() -> {
+                    bredEgg[0] = helper.getLevel().getEntitiesOfClass(
+                                    ItemEntity.class, new AABB(eggCenter, eggCenter).inflate(4.0D), ItemEntity::isAlive)
+                            .stream().filter(item -> DinosaurEggGenome.read(item.getItem()).isPresent())
+                            .findFirst().orElse(null);
+                    helper.assertTrue(bredEgg[0] != null,
+                            "Breeding never laid a genetic dinosaur egg on the ground");
+                })
+                .thenExecute(() -> {
+                    DinosaurEggGenome genome = DinosaurEggGenome.read(bredEgg[0].getItem())
+                            .orElseThrow(() -> new AssertionError("The laid egg lost its genome"));
+                    helper.assertTrue(genome.species() == DinosaurSpecies.PTERANODON,
+                            "The bred egg did not preserve its parents' species");
+                    helper.assertTrue(genome.origin() == DinosaurEggGenome.Origin.BRED,
+                            "The bred egg lost its breeding origin data");
+                    helper.assertTrue(genome.quality() >= 4 && genome.quality() <= 100,
+                            "The bred egg received an invalid quality bonus");
+                    helper.assertTrue((genome.mutationMask()
+                                    & ~(DinosaurMutationRules.HUGE | DinosaurMutationRules.ALBINO)) == 0,
+                            "The bred egg stored an unsupported mutation");
+                    helper.assertTrue(first.getBreedingCooldownRemaining() > 0L
+                                    && second.getBreedingCooldownRemaining() > 0L,
+                            "Successful breeding did not start both parent cooldowns");
+                    helper.assertTrue(DinosaurMutationRules.rollBred(
+                                    DinosaurMutationRules.HUGE, DinosaurMutationRules.HUGE, 0.87F, 1.0F)
+                                    == DinosaurMutationRules.HUGE,
+                            "Two matching parent mutations did not use their intended inheritance chance");
+                    first.discard();
+                    second.discard();
+                    player.discard();
+                })
+                .thenSucceed();
     }
 
     private static void foodBoxAcceptsAllDinosaurFood(GameTestHelper helper) {
@@ -3135,7 +3140,7 @@ public final class PrimevalGameTests {
                     helper.assertBlockEntityData(
                             tableRelative,
                             CommandTableBlockEntity.class,
-                            tableEntity -> tableEntity.storedEnergy() > 20.0F
+                            tableEntity -> tableEntity.storedEnergy() > 15.0F
                                     && tableEntity.generationPerSecond() > 0.0F,
                             () -> net.minecraft.network.chat.Component.literal(
                                     "The turbine's work never reached the base energy reserve"
@@ -3380,8 +3385,6 @@ public final class PrimevalGameTests {
         BlockPos zombieRelative = new BlockPos(15, 1, 7);
         forceTicking(helper, dinosaurRelative, zombieRelative);
         FieldDodoEntity dinosaur = helper.spawn(ModEntities.TYRANNOSAURUS.get(), dinosaurRelative);
-        // Keep the spacing contract deterministic. Huge mutation reach/scale has its
-        // own coverage and should not randomly widen this normal T-Rex scenario.
         dinosaur.setMutationMaskForTesting(0);
         var zombie = helper.spawn(EntityType.HUSK, zombieRelative);
         zombie.setNoAi(true);
@@ -4293,8 +4296,6 @@ public final class PrimevalGameTests {
             helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
             for (int y = 1; y <= 3; y++) helper.setBlock(new BlockPos(x, y, z), Blocks.AIR);
         }
-        // The GameTest server runs structures in parallel. A unique drop keeps this
-        // 64-block collector from following raw iron spawned by a neighboring quarry test.
         helper.setBlock(quarryRelative, Blocks.GOLD_ORE);
 
         ServerPlayer player = isolatedPlayer(helper);

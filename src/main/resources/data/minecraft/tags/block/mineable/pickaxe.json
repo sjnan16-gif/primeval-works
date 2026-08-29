@@ -1,0 +1,19 @@
+{
+  "replace": false,
+  "values": [
+    "primevalworks:command_table",
+    "primevalworks:command_table_extension",
+    "primevalworks:wind_turbine",
+    "primevalworks:upgraded_wind_turbine",
+    "primevalworks:water_turbine",
+    "primevalworks:turbine_part",
+    "primevalworks:laser_observer",
+    "primevalworks:dart_turret",
+    "primevalworks:processor",
+    "primevalworks:ancient_furnace",
+    "primevalworks:ancient_spell_stone",
+    "primevalworks:laser_turret",
+    "primevalworks:spinosaurus_head",
+    "primevalworks:premium_egg_incubator"
+  ]
+}

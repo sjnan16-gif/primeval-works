@@ -10,6 +10,8 @@ import com.primevalworks.world.block.entity.CommandTableBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -130,9 +132,6 @@ public final class BaseEnergyRules {
         CommandTableBlockEntity bound = tablePos == null ? null : CommandTableBlock.tableEntity(level, tablePos);
         if (bound != null && bound.isEnergyConsumerEnabled(consumerPos)) return bound;
 
-        // Bindings are only a runtime index; the Command Table's saved consumer set is
-        // authoritative. Rebuild a missing entry after chunk load instead of leaving a
-        // connected machine silently unpowered for the rest of the session.
         Set<BlockPos> loadedTables;
         synchronized (LOADED_TABLES) {
             loadedTables = Set.copyOf(LOADED_TABLES.getOrDefault(level, Set.of()));
@@ -163,7 +162,6 @@ public final class BaseEnergyRules {
         }
     }
 
-    /** Returns the one loaded base that owns this position, using the same nearest-table rule as machines. */
     public static CommandTableBlockEntity nearestLoadedTable(net.minecraft.world.level.Level level, BlockPos pos) {
         Set<BlockPos> loadedTables;
         synchronized (LOADED_TABLES) {
@@ -187,7 +185,6 @@ public final class BaseEnergyRules {
         return nearest;
     }
 
-    /** Uses the small persisted consumer index instead of scanning thousands of world blocks on every mob spawn. */
     public static boolean hasPoweredBlockNearby(net.minecraft.world.level.Level level, BlockPos center,
                                                 Block wanted, int radius) {
         double radiusSquared = (double)radius * radius;
@@ -230,10 +227,20 @@ public final class BaseEnergyRules {
 
     public static Component unavailableMessage(ServerPlayer player, BlockPos consumerPos) {
         CommandTableBlockEntity table = ownedTableFor(player, consumerPos);
-        if (table == null) return Component.literal("This block needs a Command Table in range.");
+        if (table == null) return Component.literal("This block requires energy. Place a Command Table in range.");
         if (!table.isEnergyConsumerEnabled(consumerPos)) {
-            return Component.literal("This block needs energy. Connect it from the Command Table's Energy Map.");
+            return Component.literal("This block requires energy. Connect it from the Command Table's Energy Map.");
         }
-        return Component.literal("This block is connected, but the base has no stored energy.");
+        return Component.literal("This block requires energy. The base is connected but has no stored energy.");
+    }
+
+    public static InteractionResult showEnergyStatus(net.minecraft.world.level.Level level, BlockPos pos, Player player) {
+        if (level.isClientSide()) return InteractionResult.SUCCESS;
+        if (player instanceof ServerPlayer serverPlayer) {
+            serverPlayer.sendOverlayMessage(isPowered(level, pos)
+                    ? Component.literal("This block is receiving energy.")
+                    : unavailableMessage(serverPlayer, pos));
+        }
+        return InteractionResult.SUCCESS;
     }
 }

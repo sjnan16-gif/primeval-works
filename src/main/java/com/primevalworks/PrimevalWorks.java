@@ -11,7 +11,6 @@ import com.primevalworks.registry.ModEntities;
 import com.primevalworks.registry.ModItems;
 import com.primevalworks.registry.ModMenus;
 import com.primevalworks.world.block.CommandTableBlock;
-import com.primevalworks.world.entity.DinosaurThreatTargeting;
 import com.primevalworks.world.entity.FieldDodoEntity;
 import com.primevalworks.world.ownership.DinosaurOwnership;
 import com.primevalworks.client.PrimevalItemTooltips;
@@ -23,7 +22,6 @@ import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.MobSpawnEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
@@ -89,7 +87,6 @@ public final class PrimevalWorks {
                 dinosaur.recoverFromIncomingLethalDamage();
             }
         });
-        NeoForge.EVENT_BUS.addListener(EntityJoinLevelEvent.class, DinosaurThreatTargeting::onEntityJoin);
         NeoForge.EVENT_BUS.addListener(BlockEvent.NeighborNotifyEvent.class,
                 com.primevalworks.world.block.PoweredObserverBlock::onDistantBlockUpdate);
         NeoForge.EVENT_BUS.addListener(MobSpawnEvent.PositionCheck.class, event -> {

@@ -23,7 +23,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** A bounded, loaded-chunk-only view of storage connected to one Command Table. */
 public final class BaseInventoryIndex {
     public static final int MAX_CONTAINERS = 512;
     public static final int MAX_DISTINCT_ITEMS_PER_CONTAINER = 128;
@@ -157,11 +156,6 @@ public final class BaseInventoryIndex {
         );
     }
 
-    /**
-     * Reports whether an empty container can become an automation source later. This is
-     * deliberately separate from its current contents: players must be able to wire a
-     * furnace or Processor output before the first item has finished.
-     */
     private static boolean canSupplyItems(Container container) {
         if (container instanceof FoodBoxBlockEntity) return false;
         if (container instanceof AutomationConfigurableContainer configurable) {
@@ -178,7 +172,6 @@ public final class BaseInventoryIndex {
         return false;
     }
 
-    /** Same idea as {@link #canSupplyItems(Container)}, but for future insert routes. */
     private static boolean canReceiveItems(Container container) {
         if (container instanceof AutomationConfigurableContainer configurable) {
             for (int slot = 0; slot < container.getContainerSize(); slot++) {
@@ -194,8 +187,6 @@ public final class BaseInventoryIndex {
     }
 
     private static boolean acceptsRepresentativeItem(Container container, int slot) {
-        // Empty ordinary storage slots accept any item. Sided/machine inventories are reported
-        // conservatively and still get exact per-item checks from occupied slots.
         return !(container instanceof WorldlyContainer) && container.canPlaceItem(slot, ItemStack.EMPTY);
     }
 

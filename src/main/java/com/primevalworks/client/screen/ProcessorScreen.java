@@ -101,7 +101,6 @@ public final class ProcessorScreen extends AbstractContainerScreen<ProcessorMenu
     }
 
     private void drawProcessorArt(GuiGraphicsExtractor graphics) {
-        // The authored lava is drawn separately so it can represent process progress.
         blitRegion(graphics, 0, 0, TEXTURE_WIDTH, FIRE_SOURCE_Y);
         blitRegion(graphics, 0, FIRE_SOURCE_Y, FIRE_SOURCE_X, FIRE_HEIGHT);
         blitRegion(graphics, FIRE_SOURCE_X + FIRE_WIDTH, FIRE_SOURCE_Y,

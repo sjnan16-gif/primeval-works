@@ -423,6 +423,10 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     private long expeditionEndTick;
     private boolean breedingPrimed;
     private long breedingCooldownUntilTick;
+    private @Nullable UUID breedingPartnerId;
+    private @Nullable UUID breedingOwnerId;
+    private int breedingCourtshipTicks;
+    private int breedingPartnerMissingTicks;
     private long incapacitatedUntilTick;
     private boolean pendingOwnerRecovery;
     private int runAnimationHoldTicks;
@@ -1045,7 +1049,6 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         return (getMutationMask() & MUTATION_ALBINO) != 0;
     }
 
-    /** The fossil treatment changes appearance only; the rare mutation and its stats remain. */
     public boolean usesAlbinoAppearance() {
         return hasAlbinoMutation() && !entityData.get(ORIGINAL_PIGMENT_RESTORED);
     }
@@ -1068,8 +1071,6 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         entityData.set(ORIGINAL_PIGMENT_RESTORED, false);
         applyGeneticAttributes(false);
         setHealth(Mth.clamp(getMaxHealth() * healthRatio, 1.0F, getMaxHealth()));
-        // Commands and jam testing use this setter too. Flush immediately so opening the
-        // depot in the same tick cannot render the older portable snapshot.
         DinosaurOwnership.syncRecord(this);
     }
 
@@ -1164,7 +1165,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
 
     @Override
     public void die(DamageSource source) {
-        breedingPrimed = false;
+        clearBreedingCourtship();
         if (!level().isClientSide()
                 && source.getDirectEntity() instanceof ServerPlayer killer
                 && (getDinosaurOwner().isEmpty() || isOwnedBy(killer.getUUID()))) {
@@ -1187,7 +1188,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     @Override
     public void kill(ServerLevel level) {
         if (getDinosaurOwner().isPresent() && !permanentPlayerKill) {
-            breedingPrimed = false;
+            clearBreedingCourtship();
             if (commandTablePos != null) {
                 recoverFromDefeat();
             } else if (!DinosaurOwnership.returnToReserveAfterDefeat(this)) {
@@ -1204,7 +1205,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     }
 
     public void recoverFromIncomingLethalDamage() {
-        breedingPrimed = false;
+        clearBreedingCourtship();
         recoverFromDefeat();
     }
 
@@ -1223,10 +1224,6 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             hurtTime = 0;
             deathTime = 0;
             setDeltaMovement(Vec3.ZERO);
-            // Keep the entity tickable while the visual transfer runs. The
-            // defeat branch in aiStep freezes every behaviour without using
-            // vanilla's NoAI flag, whose tick semantics differ between entity
-            // types and can strand the companion in-world forever.
             setNoAi(false);
             setInvulnerable(true);
             setNoGravity(true);
@@ -1270,7 +1267,6 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         setInvulnerable(true);
     }
 
-    /** Removes transfer-only flags before ownership captures the durable recovery snapshot. */
     public void prepareForRecoverySnapshot() {
         pendingOwnerRecovery = false;
         entityData.set(DEFEAT_TRANSFER_TIME, 0);
@@ -1327,7 +1323,6 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
 
     @Override
     protected void playStepSound(BlockPos pos, BlockState state) {
-        // Heavy contacts are emitted by authored animation markers so playback speed cannot desync them.
     }
 
     @Override
@@ -1342,8 +1337,6 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
         boolean hurt = super.hurtServer(level, source, amount);
         if (hurt && source.getEntity() instanceof Player && getDinosaurOwner().isPresent() && isAlive()) {
-            // A stray owner swing may interrupt navigation for a tick, but it must
-            // never turn an owned worker hostile or permanently strand its order.
             setTarget(null);
             setAggressive(false);
             workerCooldown = 0;
@@ -1678,7 +1671,6 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         assignFieldWork(settings, blockPosition(), null);
     }
 
-    /** Toggles one passive Whistle duty without changing the dinosaur's Follow command. */
     public boolean togglePassiveFieldWork(DinoWhistleSettings settings) {
         if (level().isClientSide() || !settings.mode().isPassive()
                 || !DinoFieldWorkRules.supports(getSpecies(), settings.mode())) return false;
@@ -1769,9 +1761,6 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     public void linkToCommandTable(BlockPos tablePos) {
         boolean sameBase = commandTablePos != null && commandTablePos.equals(tablePos);
         setCommandTableLink(tablePos);
-        // Roster refreshes, relogs, recalls and depot restores all re-link an active
-        // dinosaur. Re-linking to the same base must not erase its saved order.
-        // A genuinely different base cannot safely reuse world positions from the old one.
         if (!sameBase) {
             workEnabled = false;
             cancelWorkAction();
@@ -1852,6 +1841,38 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
 
     public void setBreedingPrimed(boolean breedingPrimed) {
         this.breedingPrimed = breedingPrimed;
+        if (!breedingPrimed) {
+            breedingPartnerId = null;
+            breedingOwnerId = null;
+            breedingCourtshipTicks = 0;
+            breedingPartnerMissingTicks = 0;
+        }
+    }
+
+    public boolean isBreedingWith(UUID partnerId) {
+        return breedingPartnerId != null && breedingPartnerId.equals(partnerId);
+    }
+
+    public void startBreedingCourtship(FieldDodoEntity partner, ServerPlayer owner) {
+        breedingPrimed = true;
+        breedingPartnerId = partner.getUUID();
+        breedingOwnerId = owner.getUUID();
+        breedingCourtshipTicks = 0;
+        breedingPartnerMissingTicks = 0;
+        entityData.set(DINOSAUR_SLEEPING, false);
+        setTarget(null);
+        cancelWorkAction();
+        navigation.stop();
+        DinosaurOwnership.syncRecord(this);
+    }
+
+    public void clearBreedingCourtship() {
+        breedingPrimed = false;
+        breedingPartnerId = null;
+        breedingOwnerId = null;
+        breedingCourtshipTicks = 0;
+        breedingPartnerMissingTicks = 0;
+        navigation.stop();
     }
 
     public long getBreedingCooldownRemaining() {
@@ -1859,8 +1880,8 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     }
 
     public void beginBreedingCooldown(long durationTicks) {
+        clearBreedingCourtship();
         breedingCooldownUntilTick = level().getGameTime() + Math.max(0L, durationTicks);
-        breedingPrimed = false;
     }
 
     public boolean isIncapacitated() {
@@ -2063,6 +2084,9 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         output.putBoolean("PrimevalPendingOwnerRecovery", pendingOwnerRecovery);
         output.putBoolean("PrimevalBreedingPrimed", breedingPrimed);
         output.putLong("PrimevalBreedingCooldownUntil", breedingCooldownUntilTick);
+        if (breedingPartnerId != null) output.putString("PrimevalBreedingPartner", breedingPartnerId.toString());
+        if (breedingOwnerId != null) output.putString("PrimevalBreedingOwner", breedingOwnerId.toString());
+        output.putInt("PrimevalBreedingCourtshipTicks", breedingCourtshipTicks);
         if (!getCarriedStack().isEmpty()) {
             output.store("PrimevalCarriedStack", ItemStack.CODEC, getCarriedStack());
         }
@@ -2207,10 +2231,6 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         int defeatTransferTime = Mth.clamp(input.getIntOr("PrimevalDefeatTransferTime", 0),
                 0, DEFEAT_TRANSFER_TICKS);
         entityData.set(DEFEAT_TRANSFER_TIME, defeatTransferTime);
-        // Autonomous transport flight is intentionally derived from the current route,
-        // never restored as a half-finished physics state. Vanilla persists NoGravity;
-        // clearing it here prevents a Pteranodon from hovering motionless for a tick (or
-        // forever when its old target vanished) after a chunk/server reload.
         if (getSpecies() == DinosaurSpecies.PTERANODON) {
             autonomousTransportFlight = false;
             autonomousTransportTarget = null;
@@ -2232,6 +2252,14 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         pendingOwnerRecovery = input.getBooleanOr("PrimevalPendingOwnerRecovery", false);
         breedingPrimed = input.getBooleanOr("PrimevalBreedingPrimed", false);
         breedingCooldownUntilTick = Math.max(0L, input.getLongOr("PrimevalBreedingCooldownUntil", 0L));
+        breedingPartnerId = readSavedUuid(input, "PrimevalBreedingPartner");
+        breedingOwnerId = readSavedUuid(input, "PrimevalBreedingOwner");
+        breedingCourtshipTicks = Math.max(0, input.getIntOr("PrimevalBreedingCourtshipTicks", 0));
+        if (!breedingPrimed || breedingPartnerId == null || breedingOwnerId == null) {
+            breedingPartnerId = null;
+            breedingOwnerId = null;
+            breedingCourtshipTicks = 0;
+        }
         noPhysics = onExpedition;
         if (onExpedition) setNoGravity(true);
         setInvisible(onExpedition);
@@ -2257,6 +2285,15 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     private static void writePositionList(ValueOutput output, String key, List<BlockPos> positions) {
         var saved = output.list(key, BlockPos.CODEC);
         positions.forEach(saved::add);
+    }
+
+    private static @Nullable UUID readSavedUuid(ValueInput input, String key) {
+        String value = input.getStringOr(key, "");
+        try {
+            return value.isBlank() ? null : UUID.fromString(value);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
     }
 
     private static void readPositionList(ValueInput input, String key, List<BlockPos> positions, BlockPos legacy) {
@@ -2331,6 +2368,10 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             updateCombatSprinting();
             tickRaptorMomentum();
             tickBlinking();
+            if (tickBreedingCourtship()) {
+                cancelWorkAction();
+                return;
+            }
             if (entityData.get(ATTACK_ANIMATION_TICKS) > 0) {
                 entityData.set(ATTACK_ANIMATION_TICKS, entityData.get(ATTACK_ANIMATION_TICKS) - 1);
             }
@@ -2367,8 +2408,6 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         }
         worldAuthorityChecked = true;
         super.tick();
-        // No-AI mobs skip aiStep. Defeat transfer deliberately freezes AI, so its
-        // countdown belongs in the unconditional entity tick instead.
         if (!level().isClientSide() && isDefeatTransferActive()) {
             tickDefeatTransfer();
         }
@@ -2822,6 +2861,11 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     }
 
     private void runAssignedWork() {
+        if (breedingPartnerId != null) {
+            cancelWorkAction();
+            navigation.stop();
+            return;
+        }
         requestCappedHungerDrain();
         if (isVehicle()) {
             cancelWorkAction();
@@ -2885,6 +2929,44 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             case 4 -> startExpedition();
             default -> cancelWorkAction();
         }
+    }
+
+    private boolean tickBreedingCourtship() {
+        if (breedingPartnerId == null || !(level() instanceof ServerLevel serverLevel)) return false;
+        Entity found = serverLevel.getEntity(breedingPartnerId);
+        if (!(found instanceof FieldDodoEntity partner)
+                || !partner.isAlive()
+                || partner.getSpecies() != getSpecies()
+                || !partner.isBreedingWith(getUUID())) {
+            if (++breedingPartnerMissingTicks > 200) clearBreedingCourtship();
+            return true;
+        }
+        breedingPartnerMissingTicks = 0;
+        setTarget(null);
+        entityData.set(DINOSAUR_SLEEPING, false);
+        double desiredDistance = (getBbWidth() + partner.getBbWidth()) * 0.5D + 0.7D;
+        double dx = partner.getX() - getX();
+        double dz = partner.getZ() - getZ();
+        double horizontalDistance = Math.sqrt(dx * dx + dz * dz);
+        getLookControl().setLookAt(partner, 22.0F, 22.0F);
+        if (horizontalDistance > desiredDistance) {
+            breedingCourtshipTicks = 0;
+            navigation.moveTo(partner, 1.05D);
+            return true;
+        }
+        navigation.stop();
+        setDeltaMovement(getDeltaMovement().multiply(0.25D, 1.0D, 0.25D));
+        breedingCourtshipTicks++;
+        if (breedingCourtshipTicks % 10 == 0) {
+            DinosaurBreeding.showHearts(serverLevel, this, 2);
+        }
+        if (getUUID().compareTo(partner.getUUID()) < 0
+                && breedingCourtshipTicks >= 50
+                && breedingOwnerId != null) {
+            ServerPlayer owner = serverLevel.getServer().getPlayerList().getPlayer(breedingOwnerId);
+            DinosaurBreeding.completeCourtship(owner, breedingOwnerId, this, partner);
+        }
+        return true;
     }
 
     private boolean assignedWorkTargetsInsideBase(int radius) {
@@ -3949,7 +4031,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             workerCooldown = 20;
             return;
         }
-        breedingPrimed = false;
+        clearBreedingCourtship();
         onExpedition = true;
         long duration = WorkSpecialtyRules.expeditionDurationTicks(
                 expeditionTier, getSpecialtyStars(4), getMutationStatMultiplier());
@@ -3995,8 +4077,6 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             incapacitatedUntilTick = level().getGameTime() + (60L + expeditionTier * 30L) * 20L;
         }
         feed(-Math.max(4, 5 + expeditionTier * 2));
-        // Expeditions are deliberate one-shot assignments. Repeating here used to
-        // relaunch a returned dinosaur after a reload while the UI said it was home.
         workEnabled = false;
         workerCooldown = 0;
         DinosaurOwnership.syncRecord(this);
@@ -4422,9 +4502,6 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     }
 
     private double workInteractionDistance() {
-        // The minimum includes the collision gap around a full block. Smaller
-        // companions otherwise stop against a chest just outside interaction
-        // range and can hold cargo forever.
         return Math.max(2.35D, getSpecies().workReach() * getScale());
     }
 
@@ -4567,8 +4644,6 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             lastNavigationSamplePosition = position();
         }
 
-        // A high platform can produce no vanilla path to water even though the drop is safe.
-        // Walk to a collision-free water edge, then let normal gravity carry the Spinosaurus in.
         Vec3 horizontal = entryCenter.subtract(position()).multiply(1.0D, 0.0D, 1.0D);
         boolean waterBelow = entry.getY() + 0.5D < getY();
         if (waterBelow && horizontal.horizontalDistanceSqr() > 0.01D) {
@@ -5303,7 +5378,6 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         }
         boolean staminaAvailable = !isPteranodonExhausted()
                 && (flightActive || getPteranodonStamina() >= PTERO_MIN_TAKEOFF_STAMINA);
-        // Stamina gates powered flight, never ordinary ground movement.
         float rawForward = !flightActive || staminaAvailable ? Math.max(0.0F, (float)riddenInput.z) : 0.0F;
         pteranodonThrottle = Mth.approach(pteranodonThrottle, rawForward,
                 rawForward > pteranodonThrottle ? 0.20F : 0.12F);

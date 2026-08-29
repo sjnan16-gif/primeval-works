@@ -18,9 +18,11 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.UUID;
 
 public final class DinosaurBreeding {
     public static final long BREEDING_COOLDOWN_TICKS = 12_000L;
@@ -80,40 +82,67 @@ public final class DinosaurBreeding {
         }
 
         held.consume(1, player);
-        OffspringGenome offspring = createOffspring(target, partner, target.getRandom());
-        ItemStack egg = new ItemStack(DinosaurEggSize.forSpecies(target.getSpecies()).item());
+        target.startBreedingCourtship(partner, player);
+        partner.startBreedingCourtship(target, player);
+        DinosaurOwnership.syncRecord(target);
+        DinosaurOwnership.syncRecord(partner);
+        ServerLevel level = (ServerLevel)target.level();
+        showHearts(level, target, 5);
+        showHearts(level, partner, 5);
+        player.sendOverlayMessage(Component.translatable(
+                "message.primevalworks.breeding.courting"));
+        return InteractionResult.SUCCESS;
+    }
+
+    public static void completeCourtship(
+            @Nullable ServerPlayer player,
+            UUID ownerId,
+            FieldDodoEntity first,
+            FieldDodoEntity second
+    ) {
+        if (!first.isAlive() || !second.isAlive()
+                || first.getSpecies() != second.getSpecies()
+                || !first.isOwnedBy(ownerId)
+                || !second.isOwnedBy(ownerId)
+                || !first.isBreedingWith(second.getUUID())
+                || !second.isBreedingWith(first.getUUID())) return;
+        OffspringGenome offspring = createOffspring(first, second, first.getRandom());
+        ItemStack egg = new ItemStack(DinosaurEggSize.forSpecies(first.getSpecies()).item());
         new DinosaurEggGenome(
-                target.getSpecies(),
+                first.getSpecies(),
                 DinosaurEggGenome.Origin.BRED,
                 offspring.quality,
                 offspring.mutationMask,
                 offspring.hueVariant
         ).writeTo(egg);
-        if (!player.addItem(egg)) {
-            ItemEntity dropped = new ItemEntity(
-                    (ServerLevel)target.level(), target.getX(), target.getY() + 0.5D, target.getZ(), egg);
-            dropped.setDefaultPickUpDelay();
-            target.level().addFreshEntity(dropped);
-        }
-
+        ServerLevel level = (ServerLevel)first.level();
+        ItemEntity dropped = new ItemEntity(
+                level,
+                (first.getX() + second.getX()) * 0.5D,
+                Math.min(first.getY(), second.getY()) + 0.2D,
+                (first.getZ() + second.getZ()) * 0.5D,
+                egg
+        );
+        dropped.setPickUpDelay(80);
+        level.addFreshEntity(dropped);
         long cooldown = Math.max(0L, Math.round(BREEDING_COOLDOWN_TICKS
                 * PrimevalTuning.server().breedingCooldown()));
-        target.beginBreedingCooldown(cooldown);
-        partner.beginBreedingCooldown(cooldown);
-        target.feed(-8);
-        partner.feed(-8);
-        DinosaurOwnership.syncRecord(target);
-        DinosaurOwnership.syncRecord(partner);
-        ServerLevel level = (ServerLevel)target.level();
-        showHearts(level, target, 12);
-        showHearts(level, partner, 12);
-        PrimevalAdvancements.awardBreed(player);
-        player.sendOverlayMessage(Component.translatable(
-                "message.primevalworks.breeding.success",
-                Component.translatable("entity.primevalworks." + target.getSpecies().registryName()),
-                offspring.quality
-        ));
-        return InteractionResult.SUCCESS;
+        first.beginBreedingCooldown(cooldown);
+        second.beginBreedingCooldown(cooldown);
+        first.feed(-8);
+        second.feed(-8);
+        DinosaurOwnership.syncRecord(first);
+        DinosaurOwnership.syncRecord(second);
+        showHearts(level, first, 12);
+        showHearts(level, second, 12);
+        if (player != null) {
+            PrimevalAdvancements.awardBreed(player);
+            player.sendOverlayMessage(Component.translatable(
+                    "message.primevalworks.breeding.success",
+                    Component.translatable("entity.primevalworks." + first.getSpecies().registryName()),
+                    offspring.quality
+            ));
+        }
     }
 
     public static OffspringGenome createOffspring(
@@ -159,7 +188,7 @@ public final class DinosaurBreeding {
         return null;
     }
 
-    private static void showHearts(ServerLevel level, FieldDodoEntity dinosaur, int count) {
+    public static void showHearts(ServerLevel level, FieldDodoEntity dinosaur, int count) {
         level.sendParticles(
                 ParticleTypes.HEART,
                 dinosaur.getX(), dinosaur.getY() + dinosaur.getBbHeight() * 0.72D, dinosaur.getZ(),

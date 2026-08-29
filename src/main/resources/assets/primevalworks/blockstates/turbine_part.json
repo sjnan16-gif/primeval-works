@@ -1,5 +1,5 @@
 {
   "multipart": [
-    { "apply": { "model": "minecraft:block/air" } }
+    { "apply": { "model": "primevalworks:block/turbine_part" } }
   ]
 }

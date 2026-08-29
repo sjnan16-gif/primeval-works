@@ -2,7 +2,6 @@ package com.primevalworks.world.entity;
 
 import com.primevalworks.config.PrimevalTuning;
 
-/** Birth-only dinosaur mutation rolls shared by wild, bred, and incubated eggs. */
 public final class DinosaurMutationRules {
     public static final int HUGE = 1;
     public static final int ALBINO = 2;
@@ -59,7 +58,6 @@ public final class DinosaurMutationRules {
         return mask;
     }
 
-    /** Mutations lean toward a better birth, without replacing quality as its own roll. */
     public static int qualityBonus(int mutationMask, float roll) {
         int count = Integer.bitCount(mutationMask & (HUGE | ALBINO));
         if (count == 0) return 0;

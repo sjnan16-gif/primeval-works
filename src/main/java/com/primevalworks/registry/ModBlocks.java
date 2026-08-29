@@ -33,6 +33,7 @@ public final class ModBlocks {
              properties -> new CommandTableBlock(properties
                      .mapColor(MapColor.COLOR_BROWN)
                      .strength(50.0F, 1200.0F)
+                     .requiresCorrectToolForDrops()
                      .noOcclusion()
                      .sound(SoundType.STONE))
     );
@@ -40,7 +41,8 @@ public final class ModBlocks {
             "command_table_extension",
             properties -> new CommandTableExtensionBlock(properties
                     .mapColor(MapColor.COLOR_BROWN)
-                    .strength(3.5F)
+                    .strength(50.0F, 1200.0F)
+                    .requiresCorrectToolForDrops()
                     .noCollision()
                     .noOcclusion()
                     .sound(SoundType.WOOD))
@@ -49,46 +51,46 @@ public final class ModBlocks {
             "food_box",
             properties -> new FoodBoxBlock(properties
                     .mapColor(MapColor.COLOR_BROWN)
-                    .strength(2.5F)
+                    .strength(2.0F)
                     .sound(SoundType.WOOD))
     );
     public static final DeferredBlock<Block> WIND_TURBINE = BLOCKS.registerBlock(
             "wind_turbine",
-            properties -> new TurbineBlock(properties.mapColor(MapColor.METAL).strength(4.0F)
+            properties -> new TurbineBlock(properties.mapColor(MapColor.METAL).strength(3.0F)
                     .noOcclusion().sound(SoundType.METAL))
     );
     public static final DeferredBlock<Block> UPGRADED_WIND_TURBINE = BLOCKS.registerBlock(
             "upgraded_wind_turbine",
-            properties -> new TurbineBlock(properties.mapColor(MapColor.METAL).strength(5.0F)
+            properties -> new TurbineBlock(properties.mapColor(MapColor.METAL).strength(4.0F)
                     .noOcclusion().sound(SoundType.METAL))
     );
     public static final DeferredBlock<Block> WATER_TURBINE = BLOCKS.registerBlock(
             "water_turbine",
-            properties -> new TurbineBlock(properties.mapColor(MapColor.COLOR_BROWN).strength(4.0F)
+            properties -> new TurbineBlock(properties.mapColor(MapColor.COLOR_BROWN).strength(3.0F)
                     .noOcclusion().sound(SoundType.WOOD))
     );
     public static final DeferredBlock<Block> TURBINE_PART = BLOCKS.registerBlock(
             "turbine_part",
-            properties -> new TurbinePartBlock(properties.mapColor(MapColor.NONE).strength(4.0F)
+            properties -> new TurbinePartBlock(properties.mapColor(MapColor.NONE).strength(3.0F)
                     .noOcclusion().noLootTable().sound(SoundType.METAL))
     );
     public static final DeferredBlock<Block> LASER_OBSERVER = BLOCKS.registerBlock(
             "laser_observer",
-            properties -> new PoweredObserverBlock(properties.mapColor(MapColor.METAL).strength(3.5F)
+            properties -> new PoweredObserverBlock(properties.mapColor(MapColor.METAL).strength(2.5F)
                     .noOcclusion().sound(SoundType.METAL))
     );
     public static final DeferredBlock<Block> ANCIENT_BARREL = BLOCKS.registerBlock(
             "ancient_barrel",
             properties -> new AncientBarrelBlock(properties.mapColor(MapColor.COLOR_BROWN)
-                    .strength(4.0F).sound(SoundType.WOOD))
+                    .strength(2.5F).sound(SoundType.WOOD))
     );
     public static final DeferredBlock<Block> DART_TURRET = BLOCKS.registerBlock(
             "dart_turret",
-            properties -> new DartTurretBlock(properties.mapColor(MapColor.METAL).strength(4.5F)
+            properties -> new DartTurretBlock(properties.mapColor(MapColor.METAL).strength(3.5F)
                     .noOcclusion().sound(SoundType.METAL)));
     public static final DeferredBlock<Block> PROCESSOR = BLOCKS.registerBlock(
             "processor",
-            properties -> new ProcessorBlock(properties.mapColor(MapColor.METAL).strength(5.0F)
+            properties -> new ProcessorBlock(properties.mapColor(MapColor.METAL).strength(4.0F)
                     .noOcclusion()
                     .lightLevel(state -> state.getValue(ProcessorBlock.PROCESSING) ? 7 : 0)
                     .sound(SoundType.METAL))
@@ -97,26 +99,26 @@ public final class ModBlocks {
             "ancient_furnace",
             properties -> new AncientFurnaceBlock(properties
                     .mapColor(MapColor.METAL)
-                    .strength(5.0F)
+                    .strength(4.0F)
                     .lightLevel(state -> state.getValue(AncientFurnaceBlock.LIT) ? 13 : 0)
                     .sound(SoundType.METAL))
     );
     public static final DeferredBlock<Block> ANCIENT_SPELL_STONE = BLOCKS.registerBlock(
             "ancient_spell_stone",
-            properties -> new PoweredMachineBlock(properties.mapColor(MapColor.COLOR_PURPLE).strength(7.0F)
+            properties -> new PoweredMachineBlock(properties.mapColor(MapColor.COLOR_PURPLE).strength(5.0F)
                     .noOcclusion().lightLevel(state -> 8).sound(SoundType.AMETHYST))
     );
     public static final DeferredBlock<Block> LASER_TURRET = BLOCKS.registerBlock(
             "laser_turret",
-            properties -> new LaserTurretBlock(properties.mapColor(MapColor.METAL).strength(7.0F)
+            properties -> new LaserTurretBlock(properties.mapColor(MapColor.METAL).strength(5.0F)
                     .noOcclusion().lightLevel(state -> 7).sound(SoundType.METAL)));
     public static final DeferredBlock<Block> SPINOSAURUS_HEAD = BLOCKS.registerBlock(
             "spinosaurus_head",
-            properties -> new SpinosaurusHeadBlock(properties.mapColor(MapColor.COLOR_BROWN).strength(5.0F)
+            properties -> new SpinosaurusHeadBlock(properties.mapColor(MapColor.COLOR_BROWN).strength(2.0F)
                     .noOcclusion().sound(SoundType.BONE_BLOCK)));
     public static final DeferredBlock<Block> PREMIUM_EGG_INCUBATOR = BLOCKS.registerBlock(
             "premium_egg_incubator",
-            properties -> new PremiumEggIncubatorBlock(properties.mapColor(MapColor.QUARTZ).strength(5.0F)
+            properties -> new PremiumEggIncubatorBlock(properties.mapColor(MapColor.QUARTZ).strength(3.5F)
                     .noOcclusion().lightLevel(state -> 6).sound(SoundType.GLASS))
     );
     public static final DeferredBlock<PrimevalBerryBushBlock> BERRY_BUSH = BLOCKS.registerBlock(

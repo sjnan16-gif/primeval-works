@@ -344,8 +344,6 @@ public final class WorksitePlannerScreen extends Screen {
         refreshFilterItems();
         refreshBaseInventoryIndex();
         beginWorkstationScan();
-        // Workstations are sparse but the original tick-sliced volume scan made
-        // the first useful glow arrive seconds after the planner opened.
         scanWorkstationIndexStep(500_000);
         refreshSuitableBlocks();
         searchBox = new EditBox(font(), 0, 0, 80, 12, Component.literal("Search base items"));
@@ -456,10 +454,8 @@ public final class WorksitePlannerScreen extends Screen {
             savePending = false;
             feedback("The server did not accept that order. Check the message above, then try again.");
         }
-        scanWorkstationIndexStep(6_000);
+        scanWorkstationIndexStep(500_000);
         if (searchOpen && usesPlayerInventoryPicker()) {
-            // The fire picker mirrors the player's live inventory. This is a tiny local copy and
-            // deliberately never asks the server to rescan every storage block in the base.
             refreshPickerItems();
         } else if ((searchOpen || selection == Selection.SOURCE || selection == Selection.DESTINATION)
                 && ++searchIndexAge >= 40) {
@@ -833,7 +829,6 @@ public final class WorksitePlannerScreen extends Screen {
 
     @Override
     public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        // The planner is a world overlay. Vanilla's in-game screen gradient would dim the base beneath it.
     }
 
     private void updateTopDrawer(int mouseX, int mouseY) {
@@ -2455,7 +2450,6 @@ public final class WorksitePlannerScreen extends Screen {
         }
         Inventory inventory = minecraft.player.getInventory();
         List<BaseItemEntry> entries = new ArrayList<>(36);
-        // Match the vanilla inventory layout: three storage rows, then the hotbar.
         for (int slot = 9; slot < 36; slot++) {
             entries.add(inventoryEntry(inventory.getItem(slot)));
         }
@@ -2590,6 +2584,7 @@ public final class WorksitePlannerScreen extends Screen {
         workstationScanStarted = false;
         workstationScanComplete = false;
         beginWorkstationScan();
+        scanWorkstationIndexStep(500_000);
         refreshSuitableBlocks();
     }
 
@@ -2638,9 +2633,6 @@ public final class WorksitePlannerScreen extends Screen {
         boolean currentlyContainsSelection = container.items().stream().anyMatch(item -> item.extractableCount() > 0
                 && (selectedItem.isEmpty() || filterIdentifiersMatch(item.identifier(), selectedItem)));
         if (currentlyContainsSelection) return true;
-        // With no item filter, any future-capable source is useful. With a selected
-        // item, keep ordinary storage highlights honest while still allowing an empty
-        // machine output to be wired before its first cycle completes.
         return container.canSupplyItems() && (selectedItem.isEmpty() || !container.acceptsAnyItem());
     }
 

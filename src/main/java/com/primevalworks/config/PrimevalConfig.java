@@ -246,7 +246,7 @@ public final class PrimevalConfig {
                     "Scales Spinosaurus land-stamina recovery.");
             builder.pop();
 
-            builder.comment("Companion durability, hostile attention and base-defense strength.")
+            builder.comment("Companion durability and base-defense strength.")
                     .translation("config.primevalworks.server.combat")
                     .push("combat");
             dinosaurHealth = decimal(builder, "dinosaurHealth", 1.0D, 0.10D, 10.0D,
@@ -254,7 +254,7 @@ public final class PrimevalConfig {
             dinosaurDamage = decimal(builder, "dinosaurDamage", 1.0D, 0.0D, 10.0D,
                     "Scales melee damage for combat-capable dinosaurs.");
             hostileMobTargeting = bool(builder, "hostileMobTargeting", true,
-                    "Lets hostile mobs and combat-capable dinosaurs notice each other inside a base.");
+                    "Lets combat-capable dinosaurs proactively defend the base. Hostile mobs do not target dinosaurs by default.");
             turretDamage = decimal(builder, "turretDamage", 1.0D, 0.0D, 10.0D,
                     "Scales Dart and Laser Turret damage.");
             turretRange = decimal(builder, "turretRange", 1.0D, 0.25D, 4.0D,

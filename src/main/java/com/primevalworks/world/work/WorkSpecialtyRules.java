@@ -13,6 +13,7 @@ public final class WorkSpecialtyRules {
     public static final int CRAFTING_TICKS = 100;
     private static final int[] EFFICIENCY_PERCENT = {20, 20, 45, 65, 100};
     private static final float[] ENERGY_PER_SECOND = {1.5F, 2.0F, 4.5F, 7.5F, 11.0F};
+    private static final float ENERGY_BALANCE_MULTIPLIER = 0.85F;
     private static final int[][] EXPEDITION_RISKS = {
             {18, 15, 8, 4, 1},
             {35, 30, 18, 8, 3},
@@ -85,6 +86,7 @@ public final class WorkSpecialtyRules {
 
     public static float energyPerSecond(int stars) {
         return ENERGY_PER_SECOND[clampStars(stars)]
+                * ENERGY_BALANCE_MULTIPLIER
                 * (float)PrimevalTuning.server().energyGeneration();
     }
 

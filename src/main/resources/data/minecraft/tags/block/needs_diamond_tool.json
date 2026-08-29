@@ -1,0 +1,7 @@
+{
+  "replace": false,
+  "values": [
+    "primevalworks:command_table",
+    "primevalworks:command_table_extension"
+  ]
+}

@@ -28,7 +28,7 @@ The same dinosaur keeps the same identity everywhere. Moving it into the depot, 
 
 ## **THE COMMAND TABLE**
 
-The Command Table is the center of your base. It holds the active crew, depot, recovery area, energy reserve, assignments, expeditions, and upgrade tree.
+The Command Table is the center of your base. It holds the active crew, depot, recovery area, energy reserve, assignments, expeditions, and upgrade tree. It has obsidian level durability because losing the table would break the identity of the base. Ordinary machines use normal pickaxe or axe mining rules and are practical to move in Survival.
 
 A new base begins with seven active companion slots. Upgrades eventually open a second page for fourteen active dinosaurs. Other branches improve the base radius, work speed, needs, energy, expeditions, follower capacity, and related systems. Upgrade costs use real progression materials rather than an abstract point currency.
 
@@ -68,7 +68,7 @@ Cargo transfers are simulated before they are committed. Interrupted routes retu
 
 Primeval Works uses a base energy network without cables.
 
-Basic Wind Turbines produce a reduced output and can be upgraded in the Processor with a Pteranodon Wing Fragment. Water Turbines need their three bottom cells waterlogged. A valid Water Turbine supplies a small passive current equal to twenty percent of normal production, then adds its full worked output when an Energy dinosaur is assigned.
+Basic Wind Turbines produce a reduced output and can be upgraded in the Processor with a Pteranodon Wing Fragment. Water Turbines need their three bottom cells waterlogged. A valid Water Turbine supplies a small passive current equal to twenty percent of normal production, then adds its worked output when an Energy dinosaur is assigned. Generation is deliberately conservative so upgraded bases still need more than one well planned source.
 
 A worked Water Turbine can also turn its two nearest available submerged neighbors. The first linked turbine contributes fifty five percent output and the second contributes thirty five percent. That effect never chains into another set of turbines.
 
@@ -90,7 +90,7 @@ Both mounts support the Huge mutation without applying their rider offset twice.
 
 Dinosaurs have hunger, mood, health, level, diet, sleep, combat, and recovery. Their head begins a turn before the body follows. Compatible action animations keep locomotion in the legs. Idle dinosaurs look around, blink, and roam without abandoning the base.
 
-Large companions search for stable ground before sleeping. Heavy footsteps use the authored animation contacts. Combat damage lands at the matching attack moment. Hostile mobs can target the crew, while capable companions defend their base or their owner.
+Large companions search for stable ground before sleeping. Heavy footsteps use the authored animation contacts. Combat damage lands at the matching attack moment. Hostile mobs do not naturally choose companions as targets, while capable combat dinosaurs still defend their base or owner when a threat appears.
 
 An ordinary defeat sends an owned dinosaur to recovery. An intentional player kill is permanent and awards the matching materials. Recovery, expedition, depot, and active world states are kept separate.
 
@@ -98,7 +98,7 @@ An ordinary defeat sends an owned dinosaur to recovery. An intentional player ki
 
 Small, Big, and Large eggs use different weighted species pools. Larger eggs are rarer, and some species can appear in more than one size at different odds. Right clicking hatches the egg and awards a size weighted stack of Fossil Fragments. Silk Touch preserves the block for incubation.
 
-Nesting Treats allow two healthy dinosaurs of the same species to breed. Their egg averages and slightly improves the parents' quality, receives a small bonus to fresh mutation odds, and strongly favors a mutation carried by either parent.
+Nesting Treats allow two healthy dinosaurs of the same species to breed. Once both are fed, they walk together, produce hearts, and leave the new egg on the ground between them. The egg averages and slightly improves the parents' quality, receives a small bonus to fresh mutation odds, and strongly favors a mutation carried by either parent.
 
 Expeditions supply materials that do not belong in an ordinary recipe, including Hardwood, Silk, Sulfur, Fossil Fragments, Ancient Cores, Raw Ancient Metal, Magic Shard Fragments, and rare species trophies. Finished and compressed materials still need their proper machines. Expeditions never hand out processed metal, meat, or bones as a shortcut around the rest of the mod.
 
@@ -124,7 +124,7 @@ Primeval Works targets Minecraft 26.1.2, NeoForge 26.1.2.95, Java 25, and GeckoL
 
 The project uses one shared dinosaur implementation with species profiles, bounded world searches, safe inventory transactions, synchronized render state, and a shared authored interface toolkit.
 
-Release changes are checked with unit and resource contracts, NeoForge GameTests, an integrated client load, and a dedicated server startup. Current coverage includes ownership transitions, recovery, expedition reload, work persistence, transport transactions, machine processing, powered defenses, eggs, mutations, mounts, follower movement, Quarry, Lumber, Harvest, Collect, and energy assignment.
+Release changes are checked with unit and resource contracts, NeoForge GameTests, an integrated client load, and a dedicated server startup. The final archive is also compared byte for byte with every compiled class and processed resource, then rejected if development models, logs, source files, or workspace folders enter the JAR. Current coverage includes ownership transitions, recovery, expedition reload, work persistence, transport transactions, machine processing, powered defenses, breeding, eggs, mutations, mounts, follower movement, Quarry, Lumber, Harvest, Collect, mining tools, model particles, highlights, and energy assignment.
 
 ## **LICENSE**
 

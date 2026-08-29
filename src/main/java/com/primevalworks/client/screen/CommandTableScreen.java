@@ -402,8 +402,6 @@ public final class CommandTableScreen extends Screen {
                 graphics.fill(centerX, centerY - 3, centerX + 1, centerY + 4, emptyColor);
             } else if (!(draggedFromActive && draggedDinosaur != null
                     && draggedDinosaur.id().equals(entry.id()))) {
-                // The model may react inside its window, but its scissor never follows
-                // hover wobble/zoom outside the exact authored 23x23 interior.
                 FloatRect renderedPreview = inset(motion.transformSmooth(authoredPreview, 0.0F, 0.0F), 0.35F);
                 DinosaurVisualProfile visual = DinosaurVisualProfile.forType(dinosaur.getType());
                 float previewScale = commandTablePreviewScale(renderedPreview, visual) * (1.0F + dwell * 0.018F);
@@ -1367,8 +1365,6 @@ public final class CommandTableScreen extends Screen {
             return created;
         });
         if (preview != null) {
-            // Roster entries refresh while this screen is open. Reapply every synced
-            // field so cached depot models cannot retain an old mutation or pigment.
             preview.restoreOwnedPreviewState(entry.geneticQuality(), entry.mutationMask(), entry.hueVariant(),
                     entry.hunger(), entry.mood(), entry.health(), entry.level(), entry.originalPigmentRestored());
             preview.setCustomName(Component.literal(entry.name()));

@@ -1,6 +1,5 @@
 package com.primevalworks.client.model.entity;
 
-/** Authored model extents used only for fitting dinosaurs inside UI viewports. */
 public record DinosaurPreviewBounds(float width, float height, float depth) {
     public static DinosaurPreviewBounds forVisual(DinosaurVisualProfile visual) {
         return forAsset(visual.assetName(), visual.modelScale());

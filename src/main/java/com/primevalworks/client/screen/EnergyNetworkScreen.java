@@ -143,8 +143,6 @@ public final class EnergyNetworkScreen extends Screen {
         applyCameraTransform();
         minecraft.setCameraEntity(cameraAnchor);
         beginScan();
-        // Build the initial visual index before the first rendered frame. Later
-        // refreshes remain incremental, so entering the map has no delayed glow.
         scanStep(Integer.MAX_VALUE);
         requestEnergyState();
     }

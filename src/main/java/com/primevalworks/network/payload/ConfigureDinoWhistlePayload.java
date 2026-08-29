@@ -32,7 +32,6 @@ public record ConfigureDinoWhistlePayload(int inventorySlot, int mode, int patte
         context.enqueueWork(() -> apply(player, payload));
     }
 
-    /** Applies one complete settings snapshot to the exact physical Whistle slot. */
     public static boolean apply(ServerPlayer player, ConfigureDinoWhistlePayload payload) {
         ItemStack whistle = DinoWhistleItem.findInventoryWhistle(player, payload.inventorySlot);
         if (whistle.isEmpty()) return false;
@@ -44,7 +43,6 @@ public record ConfigureDinoWhistlePayload(int inventorySlot, int mode, int patte
                 DinoWhistleSettings.Pattern.byId(payload.pattern), payload.range, filter);
         if (updated.equals(DinoWhistleSettings.read(whistle))) return true;
 
-        // Replacing the slot guarantees component sync in both inventory and container views.
         ItemStack updatedWhistle = whistle.copy();
         updated.write(updatedWhistle);
         player.getInventory().setItem(payload.inventorySlot, updatedWhistle);

@@ -189,10 +189,22 @@ def verifyReleaseJar = tasks.register('verifyReleaseJar') {
                 'com/primevalworks/client/screen/EnergyNetworkScreen.class',
                 'com/primevalworks/client/effect/DinoWhistleClient.class',
                 'assets/primevalworks/models/item/primordial_sword_3d.json',
+                'assets/primevalworks/models/block/turbine_part.json',
+                'data/minecraft/tags/block/mineable/pickaxe.json',
+                'data/minecraft/tags/block/mineable/axe.json',
+                'data/minecraft/tags/block/needs_diamond_tool.json',
                 'data/primevalworks/recipe/hardwood.json'
         ].findAll { !entries.contains(it) }
         List<String> forbidden = entries.findAll {
-            it.endsWith('.bbmodel') || it.startsWith('run-') || it.contains('/run-')
+            it.endsWith('.bbmodel')
+                    || it.endsWith('.java')
+                    || it.endsWith('.log')
+                    || it.startsWith('run-')
+                    || it.contains('/run-')
+                    || it.startsWith('art/')
+                    || it.startsWith('docs/')
+                    || it.startsWith('.idea/')
+                    || it.startsWith('.git/')
         }.toList()
         if (!missing.isEmpty() || !mismatched.isEmpty() || !required.isEmpty() || !forbidden.isEmpty()) {
             throw new GradleException("Release jar verification failed. Missing=${missing + required}, mismatched=${mismatched}, forbidden=${forbidden}")

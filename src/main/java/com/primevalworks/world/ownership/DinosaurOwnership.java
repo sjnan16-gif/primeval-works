@@ -67,7 +67,6 @@ public final class DinosaurOwnership {
         return records(player).size() < MAX_OWNED;
     }
 
-    /** Keeps the portable depot snapshot aligned with a live, server-owned dinosaur. */
     public static void syncRecord(FieldDodoEntity dinosaur) {
         if (!(dinosaur.level() instanceof ServerLevel level) || dinosaur.isRemoved()) return;
         UUID ownerId = dinosaur.getDinosaurOwner().orElse(null);
@@ -79,7 +78,6 @@ public final class DinosaurOwnership {
         writeRecords(owner.getPersistentData(), records);
     }
 
-    /** Flushes every loaded companion before the player's persistent data is saved. */
     public static void syncLoaded(ServerPlayer player) {
         refresh(player);
     }
@@ -165,7 +163,6 @@ public final class DinosaurOwnership {
         activateForTable(player, player.level(), tablePos, spawnMissing, spawnMissing);
     }
 
-    /** Restores the saved active crew after login without filling empty slots from the depot. */
     public static void restoreActiveForTable(ServerPlayer player, BlockPos tablePos) {
         activateForTable(player, player.level(), tablePos, false, true);
     }
@@ -317,8 +314,6 @@ public final class DinosaurOwnership {
         if (incomingEntity == null) incomingEntity = spawn(player.level(), incoming, slotPosition(tablePos, targetSlot));
         if (incomingEntity == null) return new SwapResult(false, "There is no safe room beside the Command Table.");
 
-        // Prepare the incoming authority before touching the current slot. If spawning fails,
-        // the outgoing dinosaur and active roster remain completely unchanged.
         if (outgoingId != null) {
             OwnedDinosaur outgoingRecord = find(records, outgoingId).orElse(null);
             FieldDodoEntity outgoing = outgoingRecord == null
@@ -362,8 +357,6 @@ public final class DinosaurOwnership {
                 .toList();
         List<UUID> remaining = active.stream().filter(id -> !storing.contains(id)).toList();
 
-        // The roster is the authority. Commit it first so a companion that reloads while
-        // this transaction is finishing cannot resume work as an active world entity.
         writeActive(player.getPersistentData(), remaining);
         int storedCount = 0;
         for (UUID dinosaurId : storing) {
@@ -667,9 +660,6 @@ public final class DinosaurOwnership {
         if (ownerId == null) return true;
         ServerPlayer owner = findOnlinePlayer(level.getServer(), ownerId);
         if (owner == null || activeIds(owner).contains(dinosaur.getUUID())) return true;
-        // Before the first table, a hatchling may wait physically beside its owner. Once a
-        // table exists, every non-active record is depot/expedition/recovery state and must
-        // never retain a second world authority when its old chunk loads later.
         return CommandTableBlock.getClaimedTable(owner).isEmpty();
     }
 
@@ -698,9 +688,6 @@ public final class DinosaurOwnership {
             dinosaur.reconcilePersistentTimedState();
             return dinosaur;
         }
-        // A companion may cross a chunk border after its last portable snapshot. Loading only
-        // the old chunk made recall miss the real entity and could create a duplicate from the
-        // stale depot copy. Owned workers stay inside the linked base, so load that bounded area.
         BlockPos searchCenter = snapshot.contains("PrimevalCommandTable")
                 ? BlockPos.of(snapshot.getLongOr("PrimevalCommandTable", lastPosition.asLong()))
                 : lastPosition;
@@ -832,9 +819,6 @@ public final class DinosaurOwnership {
         );
         dinosaur.saveWithoutId(output);
         CompoundTag snapshot = output.buildResult();
-        // A depot record is portable state, not a frozen world transform. Loading old
-        // movement or identity data here caused recalled dinosaurs to jump, duplicate UUIDs,
-        // or resume a stale fall before the table could place them safely.
         for (String transientKey : List.of("UUID", "Pos", "Motion", "Rotation")) {
             snapshot.remove(transientKey);
         }

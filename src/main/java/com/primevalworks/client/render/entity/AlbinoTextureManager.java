@@ -106,9 +106,6 @@ public final class AlbinoTextureManager {
         boolean[][] eyes = new boolean[width][height];
         if (source.getPath().endsWith("_blink.png")) return eyes;
 
-        // Keep an explicit fallback for packs that omit the authored blink atlas.
-        // These are the pupil texels isolated by comparing the open and closed
-        // Spinosaurus textures, so chest and sail accents can never become eyes.
         if (source.getPath().endsWith("/spino.png")) {
             for (int x = 191; x <= 194; x++) mark(eyes, x, 183);
             for (int x = 220; x <= 223; x++) mark(eyes, x, 183);

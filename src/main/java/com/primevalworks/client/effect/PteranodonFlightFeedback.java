@@ -78,8 +78,6 @@ public final class PteranodonFlightFeedback {
         }
         Input input = event.getInput().keyPresses;
         boolean sprintingMount = input.forward() && input.shift();
-        // A land Spinosaurus steps over terrain; it never inherits the rider's
-        // vanilla jump. Shift+forward belongs to sprint, while Shift alone may dismount.
         event.getInput().keyPresses = new Input(
                 input.forward(), input.backward(), input.left(), input.right(), false,
                 sprintingMount ? false : input.shift(), input.sprint());

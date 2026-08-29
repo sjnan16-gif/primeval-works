@@ -64,8 +64,6 @@ public final class TurbineBlockEntity extends BlockEntity implements GeoBlockEnt
             return true;
         }
         if (TurbineBlock.isWindTurbine(getBlockState())) {
-            // The rotor occupies the first three blocks above its master. Checking those
-            // cells for air made every assembled wind turbine invalidate itself.
             return level.getBlockState(worldPosition.above(4)).isAir();
         }
         return false;

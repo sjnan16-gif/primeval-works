@@ -1,0 +1,70 @@
+package com.primevalworks.release;
+
+import org.junit.jupiter.api.Test;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+final class ReleasePolishContractTest {
+    private static final Path RESOURCES = Path.of("src/main/resources");
+    private static final Path SOURCE = Path.of("src/main/java/com/primevalworks");
+
+    @Test
+    void ordinaryMachinesHaveMiningToolsAndOnlyCommandTableNeedsDiamond() throws Exception {
+        String pickaxe = Files.readString(RESOURCES.resolve("data/minecraft/tags/block/mineable/pickaxe.json"));
+        String axe = Files.readString(RESOURCES.resolve("data/minecraft/tags/block/mineable/axe.json"));
+        String diamond = Files.readString(RESOURCES.resolve("data/minecraft/tags/block/needs_diamond_tool.json"));
+
+        for (String block : new String[]{"wind_turbine", "water_turbine", "processor", "ancient_furnace",
+                "laser_observer", "dart_turret", "laser_turret", "premium_egg_incubator"}) {
+            assertTrue(pickaxe.contains("primevalworks:" + block), block);
+        }
+        assertTrue(axe.contains("primevalworks:food_box"));
+        assertTrue(axe.contains("primevalworks:ancient_barrel"));
+        assertTrue(diamond.contains("primevalworks:command_table"));
+        assertTrue(diamond.contains("primevalworks:command_table_extension"));
+        assertFalse(diamond.contains("primevalworks:processor"));
+        assertFalse(diamond.contains("primevalworks:water_turbine"));
+    }
+
+    @Test
+    void invisibleWaterTurbinePartsUseARealParticleTexture() throws Exception {
+        String state = Files.readString(RESOURCES.resolve("assets/primevalworks/blockstates/turbine_part.json"));
+        String model = Files.readString(RESOURCES.resolve("assets/primevalworks/models/block/turbine_part.json"));
+
+        assertFalse(state.contains("minecraft:block/air"));
+        assertTrue(state.contains("primevalworks:block/turbine_part"));
+        assertTrue(model.contains("\"particle\""));
+        assertTrue(model.contains("minecraft:block/dark_oak_planks"));
+    }
+
+    @Test
+    void plannerRefreshesHighlightsImmediately() throws Exception {
+        String planner = Files.readString(SOURCE.resolve("client/screen/WorksitePlannerScreen.java"));
+
+        assertTrue(planner.contains("scanWorkstationIndexStep(500_000)"));
+        assertFalse(planner.contains("scanWorkstationIndexStep(6_000)"));
+    }
+
+    @Test
+    void hostilesDoNotInstallAutomaticDinosaurTargets() throws Exception {
+        String entrypoint = Files.readString(SOURCE.resolve("PrimevalWorks.java"));
+
+        assertFalse(Files.exists(SOURCE.resolve("world/entity/DinosaurThreatTargeting.java")));
+        assertFalse(entrypoint.contains("DinosaurThreatTargeting"));
+    }
+
+    @Test
+    void uiLessPoweredBlocksReportTheirEnergyState() throws Exception {
+        String observer = Files.readString(SOURCE.resolve("world/block/PoweredObserverBlock.java"));
+        String turret = Files.readString(SOURCE.resolve("world/block/LaserTurretBlock.java"));
+        String energy = Files.readString(SOURCE.resolve("world/base/BaseEnergyRules.java"));
+
+        assertTrue(observer.contains("showEnergyStatus"));
+        assertTrue(turret.contains("showEnergyStatus"));
+        assertTrue(energy.contains("This block requires energy"));
+    }
+}
