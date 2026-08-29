@@ -247,12 +247,18 @@ public final class DinosaurOwnership {
 
     public static boolean addToActiveIfRoom(ServerPlayer player, FieldDodoEntity dinosaur, BlockPos tablePos) {
         register(player, dinosaur);
+        if (records(player).stream().noneMatch(record -> record.id().equals(dinosaur.getUUID()))) return false;
         List<UUID> active = new ArrayList<>(activeIds(player));
-        if (active.contains(dinosaur.getUUID())) return true;
+        if (active.contains(dinosaur.getUUID())) {
+            dinosaur.linkToCommandTable(tablePos);
+            syncRecord(dinosaur);
+            return true;
+        }
         if (active.size() >= activeLimit(player, tablePos)) return false;
         active.add(dinosaur.getUUID());
         writeActive(player.getPersistentData(), active);
         dinosaur.linkToCommandTable(tablePos);
+        syncRecord(dinosaur);
         return true;
     }
 

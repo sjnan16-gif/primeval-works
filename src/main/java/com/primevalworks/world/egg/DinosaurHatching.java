@@ -59,10 +59,32 @@ public final class DinosaurHatching {
         if (!level.getBlockState(tablePos).is(ModBlocks.COMMAND_TABLE.get())) {
             return HatchResult.failure(Component.translatable("message.primevalworks.egg.base_missing"));
         }
+        ServerPlayer ownerPlayer = level.getServer().getPlayerList().getPlayer(owner);
+        if (ownerPlayer == null) {
+            return HatchResult.failure(Component.literal(
+                    "Incubation is complete. The owner needs to return before hatching can finish."
+            ));
+        }
         FieldDodoEntity dinosaur = createHatchling(level, tablePos, owner, genome);
         if (dinosaur == null) {
             return HatchResult.failure(Component.translatable("message.primevalworks.egg.no_room"));
         }
+
+        boolean active = DinosaurOwnership.addToActiveIfRoom(ownerPlayer, dinosaur, tablePos);
+        boolean saved = DinosaurOwnership.records(ownerPlayer).stream()
+                .anyMatch(record -> record.id().equals(dinosaur.getUUID()));
+        if (!saved) {
+            dinosaur.unlinkFromCommandTable();
+            dinosaur.discard();
+            return HatchResult.failure(Component.literal(
+                    "Your dinosaur depot is full. Make room before hatching this egg."
+            ));
+        }
+        if (!active) {
+            dinosaur.unlinkFromCommandTable();
+            dinosaur.discard();
+        }
+
         if (level.getBlockEntity(tablePos) instanceof CommandTableBlockEntity table) {
             table.addInsight(genome.incubated() ? 2 : 1);
         }
@@ -74,25 +96,12 @@ public final class DinosaurHatching {
                 dinosaur.getBbWidth() * 0.28D, dinosaur.getBbHeight() * 0.18D, dinosaur.getBbWidth() * 0.28D,
                 0.025D
         );
-        ServerPlayer ownerPlayer = level.getServer().getPlayerList().getPlayer(owner);
-        boolean active = false;
-        if (ownerPlayer != null) {
-            active = DinosaurOwnership.addToActiveIfRoom(ownerPlayer, dinosaur, tablePos);
-            if (!active) {
-                dinosaur.unlinkFromCommandTable();
-                dinosaur.discard();
-            }
-        } else {
-            dinosaur.linkToCommandTable(tablePos);
-        }
-        Component success = active || ownerPlayer == null
+        Component success = active
                 ? Component.translatable("message.primevalworks.egg.joined_base", dinosaur.getDisplayName())
                 : Component.literal(dinosaur.getDisplayName().getString() + " was safely moved into your dinosaur depot.");
-        if (ownerPlayer != null) {
-            ownerPlayer.sendOverlayMessage(success);
-            PrimevalAdvancements.awardHatch(ownerPlayer, dinosaur, genome.incubated());
-            HatchRevealPayload.send(ownerPlayer, dinosaur);
-        }
+        ownerPlayer.sendOverlayMessage(success);
+        PrimevalAdvancements.awardHatch(ownerPlayer, dinosaur, genome.incubated());
+        HatchRevealPayload.send(ownerPlayer, dinosaur);
         return HatchResult.success(dinosaur, success);
     }
 

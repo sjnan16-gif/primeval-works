@@ -130,6 +130,8 @@ public final class PrimevalGameTests {
             TEST_FUNCTIONS.register("incubator_improves_hatchling", () -> PrimevalGameTests::incubatorImprovesHatchling);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> WILD_EGG_HATCHES =
             TEST_FUNCTIONS.register("wild_egg_hatches", () -> PrimevalGameTests::wildEggHatches);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> OFFLINE_INCUBATOR_HATCH_WAITS =
+            TEST_FUNCTIONS.register("offline_incubator_hatch_waits", () -> PrimevalGameTests::offlineIncubatorHatchWaits);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> PRE_TABLE_HATCH_IS_OWNED =
             TEST_FUNCTIONS.register("pre_table_hatch_is_owned", () -> PrimevalGameTests::preTableHatchIsOwned);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> DODO_TRANSPORTS_BETWEEN_CHESTS =
@@ -328,6 +330,11 @@ public final class PrimevalGameTests {
         event.registerTest(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "wild_egg_hatches"),
                 new FunctionGameTestInstance(WILD_EGG_HATCHES.getKey(), isolatedTestData(event, "wild_egg"))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "offline_incubator_hatch_waits"),
+                new FunctionGameTestInstance(OFFLINE_INCUBATOR_HATCH_WAITS.getKey(),
+                        isolatedTestData(event, "offline_incubator_hatch"))
         );
         event.registerTest(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "pre_table_hatch_is_owned"),
@@ -3465,6 +3472,14 @@ public final class PrimevalGameTests {
         helper.assertTrue(DinosaurOwnership.records(player).stream()
                         .anyMatch(record -> record.id().equals(hatchlings.getFirst().getUUID())),
                 "The wild hatchling was not written to the persistent dinosaur depot");
+        UUID hatchlingId = hatchlings.getFirst().getUUID();
+        helper.assertTrue(DinosaurOwnership.activeIds(player).contains(hatchlingId),
+                "A table hatch with a free crew slot was not committed to the active roster");
+        DinosaurOwnership.activateForTable(player, helper.absolutePos(tableRelative), false);
+        FieldDodoEntity reconciled = DinosaurOwnership.findLoaded(helper.getLevel().getServer(), hatchlingId);
+        helper.assertTrue(DinosaurOwnership.activeIds(player).contains(hatchlingId)
+                        && reconciled != null && !reconciled.isRemoved(),
+                "Opening the Command Table moved a freshly hatched active dinosaur into the depot");
         List<ItemEntity> fragments = helper.getLevel().getEntitiesOfClass(
                         ItemEntity.class,
                         new net.minecraft.world.phys.AABB(absolute).inflate(2.0D),
@@ -3474,6 +3489,29 @@ public final class PrimevalGameTests {
                         && fragments.getFirst().getItem().getCount() >= 1
                         && fragments.getFirst().getItem().getCount() <= 3,
                 "A wild egg did not leave a single 1-3 Fossil Fragment reward stack");
+        helper.succeed();
+    }
+
+    private static void offlineIncubatorHatchWaits(GameTestHelper helper) {
+        BlockPos tableRelative = new BlockPos(2, 1, 2);
+        helper.setBlock(tableRelative.below(), Blocks.STONE);
+        helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
+        forceTicking(helper, tableRelative);
+        UUID offlineOwner = UUID.randomUUID();
+
+        DinosaurHatching.HatchResult result = DinosaurHatching.hatchAtTable(
+                helper.getLevel(),
+                helper.absolutePos(tableRelative),
+                offlineOwner,
+                DinosaurHatching.Genome.incubated(DinosaurSpecies.DODO, 72, 0, 0)
+        );
+        List<FieldDodoEntity> orphaned = helper.getLevel().getEntitiesOfClass(
+                FieldDodoEntity.class,
+                new net.minecraft.world.phys.AABB(helper.absolutePos(tableRelative)).inflate(12.0D),
+                dinosaur -> dinosaur.isOwnedBy(offlineOwner)
+        );
+        helper.assertTrue(!result.success() && orphaned.isEmpty(),
+                "An incubator created a live dinosaur while its owner had no roster authority online");
         helper.succeed();
     }
 
