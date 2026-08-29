@@ -63,6 +63,21 @@ public final class DinosaurOwnership {
         writeRecords(player.getPersistentData(), records);
     }
 
+    public static boolean storeNewHatchInDepot(ServerPlayer player, FieldDodoEntity dinosaur) {
+        dinosaur.setDinosaurOwner(player.getUUID());
+        List<OwnedDinosaur> records = new ArrayList<>(records(player));
+        if (records.stream().noneMatch(record -> record.id().equals(dinosaur.getUUID()))
+                && records.size() >= MAX_OWNED) {
+            return false;
+        }
+        upsert(records, normalizeDepotSnapshot(capture(dinosaur)));
+        writeRecords(player.getPersistentData(), records);
+        List<UUID> active = new ArrayList<>(activeIds(player));
+        active.remove(dinosaur.getUUID());
+        writeActive(player.getPersistentData(), active);
+        return records.stream().anyMatch(record -> record.id().equals(dinosaur.getUUID()));
+    }
+
     public static boolean hasDepotCapacity(ServerPlayer player) {
         return records(player).size() < MAX_OWNED;
     }
@@ -159,12 +174,12 @@ public final class DinosaurOwnership {
         for (FieldDodoEntity dinosaur : nearby) register(player, dinosaur);
     }
 
-    public static void activateForTable(ServerPlayer player, BlockPos tablePos, boolean spawnMissing) {
-        activateForTable(player, player.level(), tablePos, spawnMissing, spawnMissing);
+    public static void activateForTable(ServerPlayer player, BlockPos tablePos, boolean restoreMissingActive) {
+        activateForTable(player, player.level(), tablePos, restoreMissingActive);
     }
 
     public static void restoreActiveForTable(ServerPlayer player, BlockPos tablePos) {
-        activateForTable(player, player.level(), tablePos, false, true);
+        activateForTable(player, player.level(), tablePos, true);
     }
 
     public static void prepareActiveRestore(ServerPlayer player) {
@@ -175,11 +190,11 @@ public final class DinosaurOwnership {
     }
 
     public static void restoreActiveForTable(ServerPlayer player, CommandTableBlock.ClaimedTable table) {
-        activateForTable(player, table.level(), table.pos(), false, true);
+        activateForTable(player, table.level(), table.pos(), true);
     }
 
     private static void activateForTable(ServerPlayer player, ServerLevel tableLevel, BlockPos tablePos,
-                                         boolean fillEmptySlots, boolean restoreMissingActive) {
+                                         boolean restoreMissingActive) {
         adoptLinkedDinosaurs(player, tableLevel, tablePos);
         List<OwnedDinosaur> records = new ArrayList<>(refresh(player));
         Set<UUID> ownedIds = new HashSet<>();
@@ -199,12 +214,6 @@ public final class DinosaurOwnership {
                 upsert(records, capture(stored));
                 stored.unlinkFromCommandTable();
                 stored.discard();
-            }
-        }
-        if (fillEmptySlots) {
-            for (OwnedDinosaur record : records) {
-                if (active.size() >= activeLimit) break;
-                if (record.recoveryUntilTick() <= now && !active.contains(record.id())) active.add(record.id());
             }
         }
         writeActive(player.getPersistentData(), active);

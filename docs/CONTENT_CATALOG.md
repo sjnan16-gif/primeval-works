@@ -10,7 +10,7 @@ Wild generation places three physical egg sizes:
 - Big: Parasaurolophus, Stegosaurus, or Triceratops.
 - Large: Tyrannosaurus or Spinosaurus.
 
-Right-clicking a wild egg hatches a random species from its size class and gives ownership to that player. The hatchling joins an open Command Table slot, enters the depot if the active crew is full, or waits safely in ownership data if the player has not built a Command Table yet. Silk Touch collects the physical size egg instead.
+Right-clicking a wild egg hatches a random species from its size class and gives ownership to that player. With a claimed Command Table, the hatchling joins an open active slot or enters the depot when the crew is full. Without a table, it is written directly to the player's future depot and no world entity appears. Claiming or replacing a table never auto-equips reserve dinosaurs. Silk Touch collects the physical size egg instead.
 
 The Premium Egg Incubator holds one egg without opening a menu. It needs 2 E/S from the base network. Right-click with an egg to start; sneak-right-click with an empty hand to remove it. Small, big, and large eggs start at 2, 4, and 6 minutes, with a modest increase for better genetics and mutations. The incubator locks its selected species and genetics into the egg item, so removing and reinserting it cannot reroll the result.
 

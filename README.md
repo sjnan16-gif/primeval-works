@@ -16,7 +16,7 @@ This is our entry for CurseForge ModJam 2026: Echoes of the Past.
 
 ## **THE IDEA**
 
-The loop is simple to understand. Find an egg in the wild, hatch a companion, build a Command Table, and start giving your crew useful work. From there you can route materials, generate energy, improve machines, unlock more crew slots, and prepare stronger dinosaurs for dangerous expeditions.
+The loop is simple to understand. Find an egg in the wild, hatch a companion, build a Command Table, and start giving your crew useful work. A companion hatched before that first table is kept safely in the future depot instead of appearing without a base. From there you can equip the crew you want, route materials, generate energy, improve machines, unlock more crew slots, and prepare stronger dinosaurs for dangerous expeditions.
 
 The current roster includes Tyrannosaurus, Triceratops, Velociraptor, Stegosaurus, Parasaurolophus, Pteranodon, Dodo, and Spinosaurus.
 
@@ -29,6 +29,8 @@ The same dinosaur keeps the same identity everywhere. Moving it into the depot, 
 ## **THE COMMAND TABLE**
 
 The Command Table is the center of your base. It holds the active crew, depot, recovery area, energy reserve, assignments, expeditions, and upgrade tree. It has obsidian level durability because losing the table would break the identity of the base. Ordinary machines use normal pickaxe or axe mining rules and are practical to move in Survival.
+
+Claiming or replacing a table restores only the crew that was already equipped. Reserve dinosaurs remain in the depot until the player deliberately moves them into an active slot.
 
 A new base begins with seven active companion slots. Upgrades eventually open a second page for fourteen active dinosaurs. Other branches improve the base radius, work speed, needs, energy, expeditions, follower capacity, and related systems. Upgrade costs use real progression materials rather than an abstract point currency.
 

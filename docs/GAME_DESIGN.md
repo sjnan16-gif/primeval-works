@@ -27,7 +27,7 @@ The shortest complete loop is:
 - **Base** is one Command Table, its bounded work area, its registered stations, and its roster.
 - **Active** means materialized as an entity at a base.
 - **Reserve** means safely serialized in the Command Table roster and not present as an entity.
-- **Work type** is one of Transport, Cooking, Energy, Crafting, or Gathering.
+- **Work type** is one of Transport, Fire, Energy, Crafting, or Expedition.
 - **Guardian** is a combat-capable companion assigned to defend a base; combat is not a sixth work type.
 
 ## Player progression
@@ -39,11 +39,12 @@ The player discovers fossil traces in exposed stone, suspicious sand/gravel loot
 - Right-clicking an intact wild egg starts a short hatching sequence in place.
 - Silk Touch collects the intact egg for controlled incubation.
 - A hatchling binds to the interacting player.
-- Without a Command Table, the hatchling follows its owner and cannot work.
+- Without a Command Table, the hatchling is saved directly to the player's future depot and does not appear in the world.
 - With a nearby owned Command Table and a free slot, the hatchling registers and becomes active.
 - If the active roster is full, it enters reserve. It must never be discarded or silently fail to hatch.
+- Claiming the first table or replacing a broken table never fills empty crew slots from reserve; only dinosaurs already equipped as active are restored.
 
-The first table begins with three active slots. Upgrades increase this to five and then the promised maximum of eight. Reserve capacity begins at twelve and increases to twenty-four.
+The first table begins with seven active slots. Upgrades open a second page for a maximum of fourteen, while the depot supports twenty-five pages of twelve records.
 
 ### Chapter 2 — Living Workshop
 

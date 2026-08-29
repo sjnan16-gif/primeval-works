@@ -200,7 +200,7 @@ public final class PrimevalCommands {
             source.sendFailure(Component.literal("Travel to your Command Table before recalling dinosaurs."));
             return 0;
         }
-        DinosaurOwnership.activateForTable(player, claimed.pos(), true);
+        DinosaurOwnership.restoreActiveForTable(player, claimed.pos());
         int[][] offsets = {{5, 0}, {3, 4}, {-3, 4}, {-5, 0}, {-3, -4}, {3, -4}, {0, 6}};
         int recalled = 0;
         for (UUID id : DinosaurOwnership.activeIds(player)) {

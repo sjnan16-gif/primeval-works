@@ -45,6 +45,12 @@ Both `/pw` and `/primevalworks` are valid aliases. Commands require cheats/opera
 
 ## Command Table and ownership
 
+Before the normal roster pass, verify the pre-table lifecycle:
+
+- Hatch at least two real eggs before placing a Command Table. Each hatch should show its reveal card, but no dinosaur entity should appear in the world. The companions must be saved in the future depot with no active crew UUIDs.
+- Claim the first Command Table. Its seven active windows must stay empty, and the pre-table companions must remain in the depot until manually equipped.
+- Equip exactly one pre-table companion, replace the table, and claim the replacement. Only that explicitly equipped companion may return to the world. Every reserve companion must remain stored.
+
 1. Place one Command Table and hatch at least eight dinosaurs with `/pw hatch all` or individual hatch commands.
 2. Confirm the table is one full block, uses the authored model/texture, has a one-block outline/collision, and is not tiny in hand.
 3. Open it and check the seven active windows. Each model must stay inside its `23x23` interior during opening, hover, parallax, and dragging—no fraction of a pixel may enter the bars or neighboring slots.

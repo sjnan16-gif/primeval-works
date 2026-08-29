@@ -115,22 +115,20 @@ Global server SavedData contains one record per base:
 - stable route and station configuration identifiers
 - dismantled/orphaned recovery state
 
-The live Command Table block entity owns local inventory, current links, user-facing settings, and cached subsystem views. The global record protects identity and recovery when chunks are unloaded or the table is broken.
+The live Command Table block entity owns local inventory, current links, user-facing settings, and cached subsystem views. Player-persistent ownership records protect identity and recovery when chunks are unloaded or the table is broken.
 
 ### Command Table item binding
 
-Breaking a Command Table through an authorized action recalls loaded active dinosaurs, marks unloaded ones recall-pending, and drops a bound table/core item containing the `BaseId` as a data component. Replacing that item restores the same base rather than cloning it.
-
-An ordinary crafted table without a `BaseId` creates a new base after server validation. A copied or cheated bound item cannot duplicate a base because the global record accepts only one live table position. Administrators receive a recovery command for orphaned bases.
+Breaking the claimed table clears its position without changing reserve membership or silently selecting new crew. A later valid placement restores only UUIDs already recorded in the authoritative active list. Empty slots remain empty and every reserve record stays snapshot-only until an explicit depot-to-active action succeeds.
 
 ## Dinosaur lifecycle state machine
 
 Allowed states:
 
 ```text
-UNBOUND_HATCHLING
-    ├── bind with free slot ──> ACTIVE
-    └── bind without slot ───> RESERVE
+HATCH_TRANSACTION
+    ├── claimed table with free slot ──> ACTIVE
+    └── no table or no free slot ──────> RESERVE
 
 RESERVE ──activate──> MATERIALIZING ──success──> ACTIVE
    ▲                         └──failure────────> RESERVE

@@ -41,17 +41,26 @@ public final class DinosaurHatching {
         }
         CommandTableBlock.ClaimedTable table = CommandTableBlock.getClaimedTable(player).orElse(null);
         if (table == null) {
-            FieldDodoEntity dinosaur = createHatchling(player.level(), player.blockPosition(), player.getUUID(), genome);
+            FieldDodoEntity dinosaur = createOwnedHatchling(
+                    player.level(), player.blockPosition(), player.getUUID(), genome
+            );
             if (dinosaur == null) {
                 return HatchResult.failure(Component.translatable("message.primevalworks.egg.no_room"));
             }
-            DinosaurOwnership.register(player, dinosaur);
+            if (!DinosaurOwnership.storeNewHatchInDepot(player, dinosaur)) {
+                dinosaur.discard();
+                return HatchResult.failure(Component.literal(
+                        "Your dinosaur depot is full. Make room before hatching this egg."
+                ));
+            }
             PrimevalAdvancements.awardHatch(player, dinosaur, false);
             HatchRevealPayload.send(player, dinosaur);
             Component success = Component.literal(
-                    dinosaur.getDisplayName().getString() + " is yours. It will wait for your first Command Table."
+                    dinosaur.getDisplayName().getString()
+                            + " is safe in your depot. Equip it after claiming a Command Table."
             );
             player.sendOverlayMessage(success);
+            dinosaur.discard();
             return HatchResult.success(dinosaur, success);
         }
         return hatchAtTable(table.level(), table.pos(), player.getUUID(), genome);
@@ -118,7 +127,7 @@ public final class DinosaurHatching {
     private static @Nullable FieldDodoEntity createHatchling(
             ServerLevel level, BlockPos center, UUID owner, Genome genome
     ) {
-        FieldDodoEntity dinosaur = ModEntities.typeFor(genome.species()).create(level, EntitySpawnReason.BREEDING);
+        FieldDodoEntity dinosaur = createOwnedHatchling(level, center, owner, genome);
         if (dinosaur == null) return null;
         BlockPos spawnPos = findSpawnPosition(level, center, dinosaur);
         if (spawnPos == null) {
@@ -126,16 +135,25 @@ public final class DinosaurHatching {
             return null;
         }
         dinosaur.setPos(spawnPos.getX() + 0.5D, spawnPos.getY(), spawnPos.getZ() + 0.5D);
+        if (!level.addFreshEntity(dinosaur)) {
+            dinosaur.discard();
+            return null;
+        }
+        return dinosaur;
+    }
+
+    private static @Nullable FieldDodoEntity createOwnedHatchling(
+            ServerLevel level, BlockPos origin, UUID owner, Genome genome
+    ) {
+        FieldDodoEntity dinosaur = ModEntities.typeFor(genome.species()).create(level, EntitySpawnReason.BREEDING);
+        if (dinosaur == null) return null;
+        dinosaur.setPos(origin.getX() + 0.5D, origin.getY(), origin.getZ() + 0.5D);
         dinosaur.setYRot(level.getRandom().nextFloat() * 360.0F);
         dinosaur.setDinosaurOwner(owner);
         if (genome.hasDefinedGenetics()) {
             dinosaur.applyIncubatedGenetics(genome.quality(), genome.mutationMask(), genome.hueVariant());
         } else {
             dinosaur.initializeWildHatch();
-        }
-        if (!level.addFreshEntity(dinosaur)) {
-            dinosaur.discard();
-            return null;
         }
         return dinosaur;
     }

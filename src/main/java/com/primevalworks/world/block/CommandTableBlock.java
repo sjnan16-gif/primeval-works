@@ -115,7 +115,7 @@ public final class CommandTableBlock extends BaseEntityBlock {
             table.claim(player.getUUID());
         }
         removeLegacyExtensions(serverLevel, pos);
-        DinosaurOwnership.activateForTable(player, pos, true);
+        DinosaurOwnership.restoreActiveForTable(player, pos);
         player.sendOverlayMessage(Component.literal("Base claimed. This is your only Command Table."));
     }
 
@@ -174,7 +174,6 @@ public final class CommandTableBlock extends BaseEntityBlock {
 
     public static void claimExisting(ServerPlayer player, BlockPos pos) {
         ExistingTable existing = existingTable(player);
-        boolean firstClaim = existing == null;
         if (existing != null && !existing.matches(player.level(), pos)) {
             player.sendOverlayMessage(Component.literal("You already control a different Command Table at " + existing.positionText() + "."));
             return;
@@ -187,7 +186,7 @@ public final class CommandTableBlock extends BaseEntityBlock {
         CompoundTag data = player.getPersistentData();
         data.putLong(OWNER_TABLE_POS, pos.asLong());
         data.putString(OWNER_TABLE_DIMENSION, player.level().dimension().identifier().toString());
-        DinosaurOwnership.activateForTable(player, pos, firstClaim);
+        DinosaurOwnership.restoreActiveForTable(player, pos);
     }
 
     public static Optional<ClaimedTable> getClaimedTable(ServerPlayer player) {

@@ -3691,7 +3691,8 @@ public final class PrimevalGameTests {
             for (int z = 0; z <= 8; z++) helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
         }
         BlockPos tableRelative = new BlockPos(4, 1, 4);
-        forceTicking(helper, tableRelative);
+        BlockPos replacementRelative = new BlockPos(7, 1, 4);
+        forceTicking(helper, tableRelative, replacementRelative);
         ServerPlayer player = isolatedPlayer(helper);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_POS);
         player.getPersistentData().remove(CommandTableBlock.OWNER_TABLE_DIMENSION);
@@ -3703,6 +3704,9 @@ public final class PrimevalGameTests {
                 "A dinosaur egg could not hatch before the player placed a Command Table");
         FieldDodoEntity dinosaur = result.dinosaur();
         helper.assertTrue(dinosaur.isOwnedBy(player.getUUID()), "The pre-table hatchling has no owner");
+        helper.assertTrue(dinosaur.isRemoved()
+                        && DinosaurOwnership.findLoaded(player.level().getServer(), dinosaur.getUUID()) == null,
+                "A pre-table hatch created a live world dinosaur instead of a depot snapshot");
         helper.assertTrue(DinosaurOwnership.records(player).stream()
                         .anyMatch(record -> record.id().equals(dinosaur.getUUID())),
                 "The pre-table hatchling was not saved in the player's depot");
@@ -3711,25 +3715,41 @@ public final class PrimevalGameTests {
 
         for (int index = 1; index < 8; index++) {
             DinosaurHatching.HatchResult extra = DinosaurHatching.hatchWildEgg(player, DinosaurEggSize.SMALL);
-            helper.assertTrue(extra.success(), "Pre-table hatch " + (index + 1) + " was not saved");
+            helper.assertTrue(extra.success() && extra.dinosaur() != null && extra.dinosaur().isRemoved()
+                            && DinosaurOwnership.findLoaded(player.level().getServer(), extra.dinosaur().getUUID()) == null,
+                    "Pre-table hatch " + (index + 1) + " was not saved exclusively in the depot");
         }
         helper.assertTrue(DinosaurOwnership.records(player).size() == 8,
                 "All eight pre-table hatchlings were not saved to the player's ownership record");
 
         helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
         CommandTableBlock.claimExisting(player, helper.absolutePos(tableRelative));
-        helper.assertTrue(DinosaurOwnership.activeIds(player).size() == DinosaurOwnership.STARTING_ACTIVE_LIMIT,
-                "The first Command Table did not fill exactly seven active crew slots");
-        helper.assertTrue(DinosaurOwnership.activeIds(player).contains(dinosaur.getUUID()),
-                "The saved hatchling did not join the first Command Table crew");
-        helper.assertTrue(dinosaur.getCommandTablePos().filter(helper.absolutePos(tableRelative)::equals).isPresent(),
-                "The saved hatchling was not linked to the first Command Table");
-        UUID depotId = DinosaurOwnership.records(player).stream()
-                .map(DinosaurOwnership.OwnedDinosaur::id)
-                .filter(id -> !DinosaurOwnership.activeIds(player).contains(id))
-                .findFirst().orElseThrow();
-        helper.assertTrue(DinosaurOwnership.findLoaded(player.level().getServer(), depotId) == null,
-                "The eighth hatchling remained in the world instead of entering the depot");
+        helper.assertTrue(DinosaurOwnership.activeIds(player).isEmpty(),
+                "The first Command Table auto-filled crew slots from the future depot");
+        helper.assertTrue(DinosaurOwnership.records(player).stream()
+                        .noneMatch(record -> DinosaurOwnership.findLoaded(player.level().getServer(), record.id()) != null),
+                "Claiming the first Command Table spawned a reserve dinosaur without an explicit equip action");
+
+        DinosaurOwnership.SwapResult equip = DinosaurOwnership.swapIntoActive(
+                player, helper.absolutePos(tableRelative), dinosaur.getUUID(), 0
+        );
+        helper.assertTrue(equip.success() && DinosaurOwnership.activeIds(player).size() == 1,
+                "The saved hatchling could not be equipped manually after the table was claimed");
+
+        CommandTableBlock.releaseClaim(player, helper.absolutePos(tableRelative));
+        helper.setBlock(tableRelative, Blocks.AIR);
+        helper.setBlock(replacementRelative, ModBlocks.COMMAND_TABLE.get());
+        CommandTableBlock.claimExisting(player, helper.absolutePos(replacementRelative));
+        FieldDodoEntity restored = DinosaurOwnership.findLoaded(player.level().getServer(), dinosaur.getUUID());
+        helper.assertTrue(DinosaurOwnership.activeIds(player).size() == 1
+                        && DinosaurOwnership.activeIds(player).contains(dinosaur.getUUID())
+                        && restored != null
+                        && restored.getCommandTablePos().filter(helper.absolutePos(replacementRelative)::equals).isPresent(),
+                "Replacing the Command Table did not preserve only the explicitly equipped crew");
+        helper.assertTrue(DinosaurOwnership.records(player).stream()
+                        .filter(record -> !record.id().equals(dinosaur.getUUID()))
+                        .noneMatch(record -> DinosaurOwnership.findLoaded(player.level().getServer(), record.id()) != null),
+                "Replacing the Command Table auto-filled its empty crew slots from the depot");
         helper.succeed();
     }
 
