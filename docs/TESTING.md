@@ -34,7 +34,6 @@ Both `/pw` and `/primevalworks` are valid aliases. Commands require cheats/opera
 /pw egg small
 /pw egg big
 /pw egg large
-/pw insight 100
 ```
 
 `/pw mutation` changes the nearest owned dinosaur within 16 blocks. To exercise command-defeat recovery directly:

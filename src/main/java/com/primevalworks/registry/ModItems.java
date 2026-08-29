@@ -16,8 +16,6 @@ import com.primevalworks.world.item.TurbineBlockItem;
 import com.primevalworks.world.item.DinoWhistleItem;
 import com.primevalworks.world.item.PrimordialSwordItem;
 
-import java.util.List;
-
 public final class ModItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(PrimevalWorks.MOD_ID);
 
@@ -55,17 +53,6 @@ public final class ModItems {
     public static final DeferredItem<SpawnEggItem> SPINOSAURUS_SPAWN_EGG = ITEMS.registerItem(
             "spinosaurus_spawn_egg",
             properties -> new DinosaurEggItem(properties.spawnEgg(ModEntities.SPINOSAURUS.get()))
-    );
-    public static final List<DeferredItem<SpawnEggItem>> DINOSAUR_DEBUG_SPAWN_EGGS = List.of(
-            TYRANNOSAURUS_SPAWN_EGG, TRICERATOPS_SPAWN_EGG,
-            VELOCIRAPTOR_SPAWN_EGG, STEGOSAURUS_SPAWN_EGG,
-            PARASAUROLOPHUS_SPAWN_EGG, PTERANODON_SPAWN_EGG,
-            FIELD_DODO_SPAWN_EGG, SPINOSAURUS_SPAWN_EGG
-    );
-    public static final List<DeferredItem<SpawnEggItem>> PLAYABLE_DINOSAUR_SPAWN_EGGS = List.of(
-            TYRANNOSAURUS_SPAWN_EGG, TRICERATOPS_SPAWN_EGG, VELOCIRAPTOR_SPAWN_EGG,
-            STEGOSAURUS_SPAWN_EGG, PARASAUROLOPHUS_SPAWN_EGG, PTERANODON_SPAWN_EGG,
-            FIELD_DODO_SPAWN_EGG, SPINOSAURUS_SPAWN_EGG
     );
     public static final DeferredItem<BlockItem> SMALL_DINOSAUR_EGG = ITEMS.registerItem(
             "small_dinosaur_egg", properties -> new DinosaurEggBlockItem(ModBlocks.SMALL_DINOSAUR_EGG.get(), properties));
@@ -179,14 +166,6 @@ public final class ModItems {
         return stack.is(SMALL_DINOSAUR_EGG.get())
                 || stack.is(BIG_DINOSAUR_EGG.get())
                 || stack.is(LARGE_DINOSAUR_EGG.get());
-    }
-
-    public static boolean isDebugSpawnEgg(Item item) {
-        return DINOSAUR_DEBUG_SPAWN_EGGS.stream().anyMatch(egg -> egg.get() == item);
-    }
-
-    public static boolean isPlayableSpawnEgg(Item item) {
-        return PLAYABLE_DINOSAUR_SPAWN_EGGS.stream().anyMatch(egg -> egg.get() == item);
     }
 
     public static void register(IEventBus modBus) {

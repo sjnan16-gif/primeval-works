@@ -67,4 +67,18 @@ final class ReleasePolishContractTest {
         assertTrue(turret.contains("showEnergyStatus"));
         assertTrue(energy.contains("This block requires energy"));
     }
+
+    @Test
+    void releaseCommandsKeepUsefulToolsWithoutObsoleteInsightOrDebugEggGroups() throws Exception {
+        String commands = Files.readString(SOURCE.resolve("command/PrimevalCommands.java"));
+        String items = Files.readString(SOURCE.resolve("registry/ModItems.java"));
+        String tab = Files.readString(SOURCE.resolve("registry/ModCreativeTabs.java"));
+
+        for (String command : new String[]{"help", "roster", "recall", "egg", "mutation", "hatch"}) {
+            assertTrue(commands.contains("Commands.literal(\"" + command + "\")"), command);
+        }
+        assertFalse(commands.contains("Commands.literal(\"insight\")"));
+        assertFalse(items.contains("DEBUG_SPAWN_EGGS"));
+        assertFalse(tab.contains("isDebugSpawnEgg"));
+    }
 }

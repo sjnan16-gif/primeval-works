@@ -21,7 +21,6 @@ public final class ModCreativeTabs {
                     .displayItems((parameters, output) ->
                             ModItems.ITEMS.getEntries().stream()
                                     .map(DeferredHolder::get)
-                                    .filter(item -> !ModItems.isDebugSpawnEgg(item) || ModItems.isPlayableSpawnEgg(item))
                                     .map(ItemStack::new)
                                     .forEach(output::accept))
                     .build()

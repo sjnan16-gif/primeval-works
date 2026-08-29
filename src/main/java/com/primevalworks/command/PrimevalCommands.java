@@ -1,9 +1,7 @@
 package com.primevalworks.command;
 
-import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.primevalworks.world.block.CommandTableBlock;
-import com.primevalworks.world.block.entity.CommandTableBlockEntity;
 import com.primevalworks.world.egg.DinosaurHatching;
 import com.primevalworks.world.entity.DinosaurSpecies;
 import com.primevalworks.world.entity.FieldDodoEntity;
@@ -55,11 +53,6 @@ public final class PrimevalCommands {
                                 ))
                                 .executes(context -> mutation(
                                         context.getSource(), StringArgumentType.getString(context, "trait")
-                                ))))
-                .then(Commands.literal("insight")
-                        .then(Commands.argument("amount", IntegerArgumentType.integer(1, 999))
-                                .executes(context -> insight(
-                                        context.getSource(), IntegerArgumentType.getInteger(context, "amount")
                                 ))))
                 .then(Commands.literal("hatch")
                         .then(Commands.argument("species", StringArgumentType.word())
@@ -132,19 +125,6 @@ public final class PrimevalCommands {
             source.sendSuccess(() -> Component.literal("Active: " + names), false);
         }
         return owned.size();
-    }
-
-    private static int insight(CommandSourceStack source, int amount)
-            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
-        ServerPlayer player = source.getPlayerOrException();
-        CommandTableBlock.ClaimedTable claimed = CommandTableBlock.getClaimedTable(player).orElse(null);
-        if (claimed == null || !(claimed.level().getBlockEntity(claimed.pos()) instanceof CommandTableBlockEntity table)) {
-            source.sendFailure(Component.literal("Place and claim a Command Table first."));
-            return 0;
-        }
-        table.addInsight(amount);
-        source.sendSuccess(() -> Component.literal("Added " + amount + " insight. Total: " + table.insight()), false);
-        return amount;
     }
 
     private static int hatch(CommandSourceStack source, String requested)
