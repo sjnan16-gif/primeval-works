@@ -4,7 +4,9 @@ import org.junit.jupiter.api.Test;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -42,6 +44,45 @@ final class PrimevalUiCropAssetTest {
             assertOpaque(image, crop.right() - 1, crop.bottom() - 1);
             assertTransparent(image, crop.x - 1, crop.y - 1);
             assertTransparent(image, crop.right(), crop.bottom());
+        }
+    }
+
+    @Test
+    void liveCodeAssembledSurfacesUseTheAuthoredAtlasWithoutChangingTheirLayouts() throws Exception {
+        Path client = Path.of("src/main/java/com/primevalworks/client");
+        Map<String, List<String>> contracts = Map.ofEntries(
+                Map.entry("screen/PrimevalBubbleUi.java", List.of("PrimevalUiCrop.paperBubble")),
+                Map.entry("screen/FoodBoxScreen.java", List.of(
+                        "PrimevalUiCrop.paperPanel", "PrimevalUiCrop.paperBubble", "PrimevalUiCrop.paperSlot")),
+                Map.entry("screen/CompanionScreen.java", List.of(
+                        "PrimevalUiCrop.paperPanel", "PrimevalUiCrop.paperBubble", "PrimevalUiCrop.paperSlot")),
+                Map.entry("screen/CommandTableScreen.java", List.of("paperBubble(graphics")),
+                Map.entry("screen/EnergyNetworkScreen.java", List.of("PrimevalUiCrop.paperBubble")),
+                Map.entry("screen/WorksitePlannerScreen.java", List.of("PrimevalUiCrop.paperBubble")),
+                Map.entry("screen/AncientFurnaceScreen.java", List.of(
+                        "PrimevalUiCrop.darkBubble", "PrimevalUiCrop.darkSquare")),
+                Map.entry("screen/ProcessorScreen.java", List.of(
+                        "PrimevalUiCrop.darkBubble", "PrimevalUiCrop.darkSquare")),
+                Map.entry("effect/DinosaurHatchReveal.java", List.of(
+                        "PrimevalUiCrop.paperPanel", "PrimevalUiCrop.paperHorizontalRule")),
+                Map.entry("effect/PteranodonFlightFeedback.java", List.of(
+                        "PrimevalUiCrop.darkBubble", "PrimevalUiCrop.darkTrack"))
+        );
+        for (Map.Entry<String, List<String>> contract : contracts.entrySet()) {
+            String source = Files.readString(client.resolve(contract.getKey()));
+            for (String token : contract.getValue()) {
+                assertTrue(source.contains(token), contract.getKey() + " is missing " + token);
+            }
+        }
+        try (var paths = Files.walk(client)) {
+            assertTrue(paths.filter(path -> path.toString().endsWith(".java"))
+                    .allMatch(path -> {
+                        try {
+                            return !Files.readString(path).contains("textures/gui/space.png");
+                        } catch (java.io.IOException exception) {
+                            throw new java.io.UncheckedIOException(exception);
+                        }
+                    }));
         }
     }
 

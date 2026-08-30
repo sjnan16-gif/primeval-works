@@ -13,14 +13,15 @@ import com.primevalworks.network.payload.PassiveWhistleFollowersPayload;
 import com.primevalworks.network.payload.StopWhistleFieldWorkPayload;
 import com.primevalworks.world.block.entity.TurbineBlockEntity;
 import com.primevalworks.world.block.entity.PremiumEggIncubatorBlockEntity;
+import com.primevalworks.world.block.entity.DinosaurEggBlockEntity;
 import com.primevalworks.world.block.entity.CommandTableBlockEntity;
 import com.primevalworks.world.block.entity.FoodBoxBlockEntity;
 import com.primevalworks.world.block.entity.ProcessorBlockEntity;
 import com.primevalworks.world.block.entity.AncientFurnaceBlockEntity;
-import com.primevalworks.world.block.entity.DartTurretBlockEntity;
 import com.primevalworks.world.block.entity.LaserTurretBlockEntity;
 import com.primevalworks.world.block.CommandTableBlock;
 import com.primevalworks.world.block.FoodBoxBlock;
+import com.primevalworks.world.block.PrimevalBerryBushBlock;
 import com.primevalworks.world.block.BeamLineOfSight;
 import com.primevalworks.world.block.PoweredObserverBlock;
 import com.primevalworks.world.block.TurbineBlock;
@@ -71,15 +72,19 @@ import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.BoneMealItem;
+import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.util.Mth;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.entity.EntitySpawnReason;
@@ -113,8 +118,14 @@ public final class PrimevalGameTests {
             TEST_FUNCTIONS.register("active_work_restores_after_login", () -> PrimevalGameTests::activeWorkRestoresAfterLogin);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> CONTENT_REGISTRATION =
             TEST_FUNCTIONS.register("content_registration", () -> PrimevalGameTests::contentRegistration);
-    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> HOSTILE_TARGETS_BASE_DINOSAUR =
-            TEST_FUNCTIONS.register("hostile_targets_base_dinosaur", () -> PrimevalGameTests::hostileTargetsBaseDinosaur);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> EMBER_BERRIES_PLANT_GROW_AND_HARVEST =
+            TEST_FUNCTIONS.register("ember_berries_plant_grow_and_harvest",
+                    () -> PrimevalGameTests::emberBerriesPlantGrowAndHarvest);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> HOSTILES_IGNORE_BASE_DINOSAUR =
+            TEST_FUNCTIONS.register("hostiles_ignore_base_dinosaur", () -> PrimevalGameTests::hostilesIgnoreBaseDinosaur);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> COMBAT_FOLLOWERS_WAIT_FOR_OWNER_ATTACK =
+            TEST_FUNCTIONS.register("combat_followers_wait_for_owner_attack",
+                    () -> PrimevalGameTests::combatFollowersWaitForOwnerAttack);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> TYRANNOSAURUS_HUNTS_FROM_MOUTH_RANGE =
             TEST_FUNCTIONS.register("tyrannosaurus_hunts_from_mouth_range", () -> PrimevalGameTests::tyrannosaurusHuntsFromMouthRange);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> VELOCIRAPTOR_ATTACK_LANDS_ON_CONTACT =
@@ -218,9 +229,15 @@ public final class PrimevalGameTests {
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> GROUND_FOLLOWER_CROSSES_WATER =
             TEST_FUNCTIONS.register("ground_follower_crosses_water",
                     () -> PrimevalGameTests::groundFollowerCrossesWater);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> GROUND_FOLLOWER_CLIMBS_STEP_WITHOUT_LOOP =
+            TEST_FUNCTIONS.register("ground_follower_climbs_step_without_loop",
+                    () -> PrimevalGameTests::groundFollowerClimbsStepWithoutLoop);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> STUCK_FOLLOWER_RECOVERS_SAFELY =
             TEST_FUNCTIONS.register("stuck_follower_recovers_safely",
                     () -> PrimevalGameTests::stuckFollowerRecoversSafely);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> STUCK_SPINOSAURUS_RECOVERS_IN_WATER =
+            TEST_FUNCTIONS.register("stuck_spinosaurus_recovers_in_water",
+                    () -> PrimevalGameTests::stuckSpinosaurusRecoversInWater);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> PASSIVE_WORKER_HOLDS_FIELD_ANCHOR =
             TEST_FUNCTIONS.register("passive_worker_holds_field_anchor",
                     () -> PrimevalGameTests::passiveWorkerHoldsFieldAnchor);
@@ -257,6 +274,9 @@ public final class PrimevalGameTests {
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> FIELD_ORDER_SUSPENDS_ACROSS_COMMAND_CYCLE =
             TEST_FUNCTIONS.register("field_order_suspends_across_command_cycle",
                     () -> PrimevalGameTests::fieldOrderSuspendsAcrossCommandCycle);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> TABLE_REBIND_CLEARS_STALE_FIELD_ROUTE =
+            TEST_FUNCTIONS.register("table_rebind_clears_stale_field_route",
+                    () -> PrimevalGameTests::tableRebindClearsStaleFieldRoute);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> WHISTLE_AVAILABILITY_AND_STOP =
             TEST_FUNCTIONS.register("whistle_availability_and_stop",
                     () -> PrimevalGameTests::whistleAvailabilityAndStop);
@@ -322,8 +342,18 @@ public final class PrimevalGameTests {
                 new FunctionGameTestInstance(CONTENT_REGISTRATION.getKey(), isolatedTestData(event, "content"))
         );
         event.registerTest(
-                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "hostile_targets_base_dinosaur"),
-                new FunctionGameTestInstance(HOSTILE_TARGETS_BASE_DINOSAUR.getKey(), isolatedTestData(event, "combat"))
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "ember_berries_plant_grow_and_harvest"),
+                new FunctionGameTestInstance(EMBER_BERRIES_PLANT_GROW_AND_HARVEST.getKey(),
+                        isolatedTestData(event, "ember_berries"))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "hostiles_ignore_base_dinosaur"),
+                new FunctionGameTestInstance(HOSTILES_IGNORE_BASE_DINOSAUR.getKey(), isolatedTestData(event, "combat"))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "combat_followers_wait_for_owner_attack"),
+                new FunctionGameTestInstance(COMBAT_FOLLOWERS_WAIT_FOR_OWNER_ATTACK.getKey(),
+                        isolatedTestData(event, "combat_owner_command"))
         );
         event.registerTest(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "tyrannosaurus_hunts_from_mouth_range"),
@@ -535,9 +565,19 @@ public final class PrimevalGameTests {
                         isolatedTestData(event, "ground_follow_water", 800))
         );
         event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "ground_follower_climbs_step_without_loop"),
+                new FunctionGameTestInstance(GROUND_FOLLOWER_CLIMBS_STEP_WITHOUT_LOOP.getKey(),
+                        isolatedTestData(event, "ground_follow_step", 600))
+        );
+        event.registerTest(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "stuck_follower_recovers_safely"),
                 new FunctionGameTestInstance(STUCK_FOLLOWER_RECOVERS_SAFELY.getKey(),
                         isolatedTestData(event, "stuck_follow_recovery", 800))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "stuck_spinosaurus_recovers_in_water"),
+                new FunctionGameTestInstance(STUCK_SPINOSAURUS_RECOVERS_IN_WATER.getKey(),
+                        isolatedTestData(event, "stuck_spinosaurus_water_recovery", 800))
         );
         event.registerTest(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "passive_worker_holds_field_anchor"),
@@ -600,6 +640,11 @@ public final class PrimevalGameTests {
                         isolatedTestData(event, "field_order_command_cycle"))
         );
         event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "table_rebind_clears_stale_field_route"),
+                new FunctionGameTestInstance(TABLE_REBIND_CLEARS_STALE_FIELD_ROUTE.getKey(),
+                        isolatedTestData(event, "table_rebind_field_route"))
+        );
+        event.registerTest(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "whistle_availability_and_stop"),
                 new FunctionGameTestInstance(WHISTLE_AVAILABILITY_AND_STOP.getKey(),
                         isolatedTestData(event, "whistle_availability_stop"))
@@ -657,7 +702,19 @@ public final class PrimevalGameTests {
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "test_" + name),
                 new TestEnvironmentDefinition.AllOf(List.of())
         );
-        return new TestData<>(environment, Identifier.withDefaultNamespace("empty"), maxTicks, 0, true);
+        return new TestData<>(
+                environment,
+                Identifier.withDefaultNamespace("empty"),
+                maxTicks,
+                0,
+                true,
+                Rotation.NONE,
+                false,
+                1,
+                1,
+                false,
+                32
+        );
     }
 
     private static void forceTicking(GameTestHelper helper, BlockPos... relativePositions) {
@@ -675,9 +732,7 @@ public final class PrimevalGameTests {
 
     @SuppressWarnings("removal")
     private static ServerPlayer isolatedPlayer(GameTestHelper helper) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
-        player.setUUID(UUID.randomUUID());
-        return player;
+        return helper.makeMockServerPlayerInLevel();
     }
 
     private static void contentRegistration(GameTestHelper helper) {
@@ -722,7 +777,7 @@ public final class PrimevalGameTests {
         Block[] blocks = {
                 ModBlocks.WIND_TURBINE.get(), ModBlocks.UPGRADED_WIND_TURBINE.get(),
                 ModBlocks.WATER_TURBINE.get(), ModBlocks.LASER_OBSERVER.get(),
-                ModBlocks.ANCIENT_BARREL.get(), ModBlocks.DART_TURRET.get(),
+                ModBlocks.ANCIENT_BARREL.get(),
                 ModBlocks.PROCESSOR.get(), ModBlocks.ANCIENT_FURNACE.get(),
                 ModBlocks.ANCIENT_SPELL_STONE.get(), ModBlocks.LASER_TURRET.get(),
                 ModBlocks.SPINOSAURUS_HEAD.get(),
@@ -754,7 +809,9 @@ public final class PrimevalGameTests {
                 "Stegosaurus must hatch from a big dinosaur egg");
         ServerPlayer saddleTester = isolatedPlayer(helper);
         FieldDodoEntity spinosaurus = helper.spawn(ModEntities.SPINOSAURUS.get(), new BlockPos(3, 1, 3));
-        DinosaurOwnership.register(saddleTester, spinosaurus);
+        helper.assertTrue(DinosaurOwnership.addToActiveIfRoom(
+                        saddleTester, spinosaurus, spinosaurus.blockPosition()),
+                "The Spinosaurus mount could not join the active crew");
         saddleTester.getAbilities().instabuild = true;
         saddleTester.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.SPINOSAURUS_SADDLE.get()));
         saddleTester.interactOn(spinosaurus, InteractionHand.MAIN_HAND, Vec3.ZERO);
@@ -763,6 +820,8 @@ public final class PrimevalGameTests {
         saddleTester.interactOn(spinosaurus, InteractionHand.MAIN_HAND, Vec3.ZERO);
         helper.assertTrue(saddleTester.getVehicle() == spinosaurus,
                 "A saddled owned Spinosaurus could not be mounted");
+        helper.assertTrue(spinosaurus.getCommandMode() == DinosaurCommandMode.FOLLOW,
+                "Mounting a Home Spinosaurus did not persistently switch it to Follow");
         spinosaurus.setYRot(0.0F);
         Vec3 normalSeat = spinosaurus.getPassengerRidingPosition(saddleTester);
         helper.assertTrue(normalSeat.z > spinosaurus.getZ() + 1.0D,
@@ -863,12 +922,25 @@ public final class PrimevalGameTests {
         pteranodon.setCommandMode(DinosaurCommandMode.FOLLOW);
         double startingDistance = pteranodon.distanceToSqr(player);
         double startingY = pteranodon.getY();
+        int[] arrivalTick = {-1};
         helper.startSequence()
                 .thenWaitUntil(() -> helper.assertTrue(
                         pteranodon.isPteranodonAirborne()
                                 && pteranodon.getY() > startingY + 1.0D
                                 && pteranodon.distanceToSqr(player) < startingDistance - 16.0D,
                         "The following Pteranodon used ground pathing instead of flying to catch up"))
+                .thenWaitUntil(() -> helper.assertTrue(
+                        pteranodon.isPteranodonAirborne()
+                                && !pteranodon.onGround()
+                                && pteranodon.distanceToSqr(player) < 7.0D,
+                        "The following Pteranodon never reached its owner in flight"))
+                .thenExecute(() -> arrivalTick[0] = pteranodon.tickCount)
+                .thenWaitUntil(() -> helper.assertTrue(
+                        pteranodon.tickCount >= arrivalTick[0] + 20
+                                && pteranodon.isPteranodonAirborne()
+                                && !pteranodon.onGround()
+                                && pteranodon.distanceToSqr(player) < 12.0D,
+                        "The following Pteranodon switched to its ground state after reaching its owner"))
                 .thenExecute(() -> {
                     pteranodon.discard();
                     player.discard();
@@ -938,6 +1010,86 @@ public final class PrimevalGameTests {
                         "The ground follower entered the water but did not cross it"))
                 .thenExecute(() -> {
                     dodo.discard();
+                    player.discard();
+                })
+                .thenSucceed();
+    }
+
+    private static void groundFollowerClimbsStepWithoutLoop(GameTestHelper helper) {
+        helper.getLevel().clockManager().setTotalTicks(
+                helper.getLevel().dimensionType().defaultClock().orElseThrow(), 1_000L);
+        BlockPos dinosaurRelative = new BlockPos(2, 1, 4);
+        BlockPos ownerRelative = new BlockPos(18, 2, 4);
+        forceTicking(helper, dinosaurRelative, ownerRelative);
+        for (int x = 0; x <= 22; x++) {
+            for (int z = 0; z <= 8; z++) {
+                helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+                if (x >= 10) helper.setBlock(new BlockPos(x, 1, z), Blocks.STONE);
+                for (int y = x >= 10 ? 2 : 1; y <= 5; y++) {
+                    helper.setBlock(new BlockPos(x, y, z), Blocks.AIR);
+                }
+            }
+        }
+        ServerPlayer player = isolatedPlayer(helper);
+        Vec3 ownerPosition = helper.absolutePos(ownerRelative).getBottomCenter();
+        player.snapTo(ownerPosition.x, ownerPosition.y, ownerPosition.z, 90.0F, 0.0F);
+        FieldDodoEntity raptor = helper.spawn(ModEntities.VELOCIRAPTOR.get(), dinosaurRelative);
+        raptor.setDinosaurOwner(player.getUUID());
+        raptor.setCommandMode(DinosaurCommandMode.FOLLOW);
+        Vec3[] previousPosition = {raptor.position()};
+        float[] previousYaw = {raptor.getYRot()};
+        double[] maximumTickDisplacement = {0.0D};
+        float[] accumulatedTurn = {0.0F};
+        boolean[] arrived = {false};
+        double upperLevel = helper.absolutePos(new BlockPos(10, 2, 4)).getY();
+        double lowerLevel = helper.absolutePos(new BlockPos(4, 1, 4)).getY();
+        helper.onEachTick(() -> {
+            if (raptor.isRemoved()) return;
+            maximumTickDisplacement[0] = Math.max(maximumTickDisplacement[0],
+                    raptor.position().distanceToSqr(previousPosition[0]));
+            if (!arrived[0]) {
+                accumulatedTurn[0] += Math.abs(Mth.wrapDegrees(raptor.getYRot() - previousYaw[0]));
+            }
+            previousPosition[0] = raptor.position();
+            previousYaw[0] = raptor.getYRot();
+        });
+        helper.runAfterDelay(12, () -> {
+            Vec3 movedOwner = helper.absolutePos(new BlockPos(20, 2, 4)).getBottomCenter();
+            player.snapTo(movedOwner.x, movedOwner.y, movedOwner.z, 90.0F, 0.0F);
+        });
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(
+                        raptor.getY() >= upperLevel - 0.15D && raptor.distanceToSqr(player) < 9.0D,
+                        "The Raptor repeated the one-block approach instead of reaching its owner; position="
+                                + raptor.position() + ", path=" + raptor.getNavigation().getPath()
+                                + ", turn=" + accumulatedTurn[0]))
+                .thenExecute(() -> {
+                    helper.assertTrue(accumulatedTurn[0] < 540.0F,
+                            "The Raptor spun repeatedly while climbing a straight one-block route");
+                    arrived[0] = true;
+                    accumulatedTurn[0] = 0.0F;
+                    Vec3 lowerOwner = helper.absolutePos(new BlockPos(4, 1, 4)).getBottomCenter();
+                    player.snapTo(lowerOwner.x, lowerOwner.y, lowerOwner.z, -90.0F, 0.0F);
+                    arrived[0] = false;
+                })
+                .thenWaitUntil(() -> helper.assertTrue(
+                        raptor.getY() <= lowerLevel + 0.2D && raptor.distanceToSqr(player) < 9.0D,
+                        "The Raptor repeated the one-block descent instead of returning to its owner; position="
+                                + raptor.position() + ", path=" + raptor.getNavigation().getPath()
+                                + ", turn=" + accumulatedTurn[0]))
+                .thenExecute(() -> arrived[0] = true)
+                .thenExecuteAfter(50, () -> {
+                    helper.assertTrue(raptor.getY() <= lowerLevel + 0.2D
+                                    && raptor.distanceToSqr(player) < 16.0D,
+                            "The Raptor completed the descent and then resumed the step loop");
+                    helper.assertTrue(maximumTickDisplacement[0] < 4.0D,
+                            "The Raptor teleported instead of solving the one-block route");
+                    helper.assertTrue(accumulatedTurn[0] < 540.0F,
+                            "The Raptor spun repeatedly while descending a straight one-block route; turn="
+                                    + accumulatedTurn[0] + ", position=" + raptor.position()
+                                    + ", yaw=" + raptor.getYRot());
+                    raptor.discard();
                     player.discard();
                 })
                 .thenSucceed();
@@ -1716,60 +1868,30 @@ public final class PrimevalGameTests {
 
     private static void poweredTurretsDefendBase(GameTestHelper helper) {
         BlockPos tableRelative = new BlockPos(3, 1, 3);
-        BlockPos dartRelative = new BlockPos(5, 1, 2);
         BlockPos laserRelative = new BlockPos(5, 1, 4);
-        BlockPos dartThreatRelative = new BlockPos(4, 1, 2);
         BlockPos laserThreatRelative = new BlockPos(2, 1, 4);
         BlockPos laserWallRelative = new BlockPos(4, 1, 4);
         for (int x = 0; x <= 10; x++) for (int z = 0; z <= 6; z++) {
             helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
         }
         helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
-        helper.setBlock(dartRelative, ModBlocks.DART_TURRET.get());
         helper.setBlock(laserRelative, ModBlocks.LASER_TURRET.get());
         helper.setBlock(laserWallRelative, Blocks.STONE);
         helper.setBlock(laserWallRelative.above(), Blocks.STONE);
-        DartTurretBlockEntity dartTurret = helper.getBlockEntity(dartRelative, DartTurretBlockEntity.class);
         LaserTurretBlockEntity laserTurret = helper.getBlockEntity(laserRelative, LaserTurretBlockEntity.class);
-        dartTurret.setItem(0, new ItemStack(ModItems.DART.get(), 3));
-        dartTurret.setChanged();
         CommandTableBlockEntity table = helper.getBlockEntity(tableRelative, CommandTableBlockEntity.class);
         table.receiveGeneratedEnergy(500.0F);
-        helper.assertTrue(table.toggleEnergyConsumer(helper.getLevel(), helper.absolutePos(dartRelative)),
-                "The Dart Turret could not join the powered base network");
-        net.minecraft.world.entity.monster.Creeper[] dartThreat = {null};
-        float[] dartHealth = {0.0F};
+        helper.assertTrue(table.toggleEnergyConsumer(helper.getLevel(), helper.absolutePos(laserRelative)),
+                "The Laser Turret could not join the powered base network");
+        BaseEnergyRules.bindConsumer(helper.getLevel(), helper.absolutePos(tableRelative),
+                helper.absolutePos(laserRelative), false);
+        helper.assertTrue(BaseEnergyRules.isPowered(helper.getLevel(), helper.absolutePos(laserRelative)),
+                "A loaded Command Table did not repair a lost runtime energy binding");
         net.minecraft.world.entity.monster.Creeper[] laserThreat = {null};
         float[] laserHealth = {0.0F};
 
         helper.startSequence()
                 .thenExecute(() -> {
-                    helper.assertTrue(BaseEnergyRules.activeDemandPerSecond(
-                                    helper.getLevel(), helper.absolutePos(dartRelative)) == 0.0F,
-                            "An idle Dart Turret requested base energy without a target");
-                    dartThreat[0] = helper.spawn(EntityType.CREEPER, dartThreatRelative);
-                    dartThreat[0].setNoAi(true);
-                    dartHealth[0] = dartThreat[0].getHealth();
-                    helper.assertTrue(BaseEnergyRules.ownsPosition(helper.getLevel(),
-                                    helper.absolutePos(dartRelative), dartThreat[0].position()),
-                            "The Dart Turret test target was outside its Command Table's base cell");
-                })
-                .thenWaitUntil(() -> helper.assertTrue(
-                        dartTurret.countItem(ModItems.DART.get()) == 2,
-                        "The powered Dart Turret did not independently acquire, fire, and consume one dart"))
-                .thenExecute(() -> {
-                    helper.assertTrue(dartThreat[0].getHealth() < dartHealth[0]
-                                    || dartTurret.aimController().targetEntityId() >= 0,
-                            "The Dart Turret spent ammunition without retaining a hostile target");
-                    dartThreat[0].discard();
-                    helper.assertTrue(!table.toggleEnergyConsumer(helper.getLevel(), helper.absolutePos(dartRelative)),
-                            "The Dart Turret did not disconnect before the isolated Laser Turret test");
-                    helper.assertTrue(table.toggleEnergyConsumer(helper.getLevel(), helper.absolutePos(laserRelative)),
-                            "The Laser Turret could not join the powered base network");
-                    BaseEnergyRules.bindConsumer(helper.getLevel(), helper.absolutePos(tableRelative),
-                            helper.absolutePos(laserRelative), false);
-                    helper.assertTrue(BaseEnergyRules.isPowered(helper.getLevel(), helper.absolutePos(laserRelative)),
-                            "A loaded Command Table did not repair a lost runtime energy binding");
                     helper.assertTrue(BaseEnergyRules.activeDemandPerSecond(
                                     helper.getLevel(), helper.absolutePos(laserRelative)) == 0.0F,
                             "An idle Laser Turret requested base energy without a target");
@@ -1815,10 +1937,16 @@ public final class PrimevalGameTests {
         }
         ServerPlayer player = isolatedPlayer(helper);
         player.getAbilities().instabuild = false;
+        BlockPos tableRelative = new BlockPos(1, 1, 4);
+        helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
+        CommandTableBlock.claimExisting(player, helper.absolutePos(tableRelative));
         FieldDodoEntity first = helper.spawn(ModEntities.PTERANODON.get(), new BlockPos(2, 1, 2));
         FieldDodoEntity second = helper.spawn(ModEntities.PTERANODON.get(), new BlockPos(4, 1, 2));
-        DinosaurOwnership.register(player, first);
-        DinosaurOwnership.register(player, second);
+        helper.assertTrue(DinosaurOwnership.addToActiveIfRoom(
+                        player, first, helper.absolutePos(tableRelative))
+                        && DinosaurOwnership.addToActiveIfRoom(
+                        player, second, helper.absolutePos(tableRelative)),
+                "The breeding fixture could not create two authoritative active parents");
         first.setMutationMaskForTesting(DinosaurMutationRules.HUGE);
         second.setMutationMaskForTesting(DinosaurMutationRules.HUGE);
         player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.NESTING_TREAT.get(), 2));
@@ -1831,18 +1959,33 @@ public final class PrimevalGameTests {
         helper.assertTrue(first.isBreedingWith(second.getUUID()) && second.isBreedingWith(first.getUUID()),
                 "The two treated dinosaurs did not enter courtship");
         Vec3 eggCenter = first.position().add(second.position()).scale(0.5D);
-        ItemEntity[] bredEgg = new ItemEntity[1];
+        BlockPos[] bredEggPos = new BlockPos[1];
         helper.startSequence()
                 .thenWaitUntil(() -> {
-                    bredEgg[0] = helper.getLevel().getEntitiesOfClass(
-                                    ItemEntity.class, new AABB(eggCenter, eggCenter).inflate(4.0D), ItemEntity::isAlive)
-                            .stream().filter(item -> DinosaurEggGenome.read(item.getItem()).isPresent())
-                            .findFirst().orElse(null);
-                    helper.assertTrue(bredEgg[0] != null,
-                            "Breeding never laid a genetic dinosaur egg on the ground");
+                    BlockPos center = BlockPos.containing(eggCenter);
+                    for (BlockPos pos : BlockPos.betweenClosed(center.offset(-4, -2, -4), center.offset(4, 3, 4))) {
+                        if (helper.getLevel().getBlockEntity(pos) instanceof DinosaurEggBlockEntity egg
+                                && DinosaurEggGenome.read(egg.geneticEgg()).isPresent()) {
+                            bredEggPos[0] = pos.immutable();
+                            break;
+                        }
+                    }
+                    helper.assertTrue(bredEggPos[0] != null,
+                            "Breeding never placed its genetic dinosaur egg on supported ground; first="
+                                    + first.position() + "/alive=" + first.isAlive() + "/removed=" + first.isRemoved()
+                                    + "/ticks=" + first.tickCount
+                                    + "/partner=" + first.isBreedingWith(second.getUUID())
+                                    + ", second=" + second.position() + "/alive=" + second.isAlive()
+                                    + "/removed=" + second.isRemoved()
+                                    + "/ticks=" + second.tickCount
+                                    + "/partner=" + second.isBreedingWith(first.getUUID())
+                                    + ", distance=" + first.distanceTo(second)
+                                    + ", active=" + DinosaurOwnership.activeIds(player));
                 })
                 .thenExecute(() -> {
-                    DinosaurEggGenome genome = DinosaurEggGenome.read(bredEgg[0].getItem())
+                    DinosaurEggBlockEntity egg = (DinosaurEggBlockEntity)helper.getLevel()
+                            .getBlockEntity(bredEggPos[0]);
+                    DinosaurEggGenome genome = DinosaurEggGenome.read(egg.geneticEgg())
                             .orElseThrow(() -> new AssertionError("The laid egg lost its genome"));
                     helper.assertTrue(genome.species() == DinosaurSpecies.PTERANODON,
                             "The bred egg did not preserve its parents' species");
@@ -1853,13 +1996,23 @@ public final class PrimevalGameTests {
                     helper.assertTrue((genome.mutationMask()
                                     & ~(DinosaurMutationRules.HUGE | DinosaurMutationRules.ALBINO)) == 0,
                             "The bred egg stored an unsupported mutation");
+                    CompoundTag eggSnapshot = egg.saveWithoutMetadata(helper.getLevel().registryAccess());
+                    DinosaurEggBlockEntity reloadedEgg = new DinosaurEggBlockEntity(
+                            bredEggPos[0], helper.getLevel().getBlockState(bredEggPos[0]));
+                    reloadedEgg.loadCustomOnly(TagValueInput.create(
+                            ProblemReporter.DISCARDING, helper.getLevel().registryAccess(), eggSnapshot));
+                    helper.assertTrue(DinosaurEggGenome.read(reloadedEgg.geneticEgg()).equals(java.util.Optional.of(genome)),
+                            "The placed bred egg lost its genome during a block-entity reload");
                     helper.assertTrue(first.getBreedingCooldownRemaining() > 0L
                                     && second.getBreedingCooldownRemaining() > 0L,
                             "Successful breeding did not start both parent cooldowns");
                     helper.assertTrue(DinosaurMutationRules.rollBred(
-                                    DinosaurMutationRules.HUGE, DinosaurMutationRules.HUGE, 0.87F, 1.0F)
+                                    new DinosaurMutationRules.ParentGenetics(DinosaurMutationRules.HUGE, 1, 0),
+                                    new DinosaurMutationRules.ParentGenetics(DinosaurMutationRules.HUGE, 1, 0),
+                                    new DinosaurMutationRules.TraitRolls(1.0F, 0.08F, 1.0F),
+                                    new DinosaurMutationRules.TraitRolls(1.0F, 1.0F, 1.0F))
                                     == DinosaurMutationRules.HUGE,
-                            "Two matching parent mutations did not use their intended inheritance chance");
+                            "The second mutation-carrying parent did not receive an independent inheritance roll");
                     first.discard();
                     second.discard();
                     player.discard();
@@ -2363,7 +2516,9 @@ public final class PrimevalGameTests {
         helper.setBlock(new BlockPos(3, 0, 3), Blocks.STONE);
         ServerPlayer player = isolatedPlayer(helper);
         FieldDodoEntity pteranodon = helper.spawn(ModEntities.PTERANODON.get(), dinosaurRelative);
-        DinosaurOwnership.register(player, pteranodon);
+        helper.assertTrue(DinosaurOwnership.addToActiveIfRoom(
+                        player, pteranodon, pteranodon.blockPosition()),
+                "The Pteranodon mount could not join the active crew");
         player.snapTo(pteranodon.getX(), pteranodon.getY(), pteranodon.getZ() + 1.0D, 180.0F, 0.0F);
         player.getAbilities().instabuild = true;
         player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.PTERANODON_SADDLE.get()));
@@ -2375,6 +2530,8 @@ public final class PrimevalGameTests {
         player.interactOn(pteranodon, InteractionHand.MAIN_HAND, Vec3.ZERO);
         helper.assertTrue(player.getVehicle() == pteranodon,
                 "A saddled owned Pteranodon could not be mounted while its saddle remained held");
+        helper.assertTrue(pteranodon.getCommandMode() == DinosaurCommandMode.FOLLOW,
+                "Mounting a Home Pteranodon did not persistently switch it to Follow");
         var flightTestChunk = pteranodon.chunkPosition();
         helper.getLevel().getChunkSource().addTicketWithRadius(TicketType.FORCED, flightTestChunk, 10);
         boolean[] hoverObserved = {false};
@@ -2392,67 +2549,84 @@ public final class PrimevalGameTests {
                 player.setLastClientInput(new Input(forward, false, false, false, takeoff, false, descend));
             }
         });
-        helper.runAfterDelay(4, () -> helper.assertTrue(!pteranodon.isPteranodonAirborne(),
-                "The Pteranodon entered flight without an explicit takeoff input"));
-        helper.runAfterDelay(18, () -> helper.assertTrue(hoverObserved[0] || pteranodon.isPteranodonHovering(),
-                "A Space-only takeoff never settled into the air-idle hover state; airborne="
-                        + pteranodon.isPteranodonAirborne() + ", onGround=" + pteranodon.onGround()
-                        + ", movement=" + pteranodon.getDeltaMovement() + ", entityTicks=" + pteranodon.tickCount));
-        helper.runAfterDelay(31, () -> {
-            helper.assertTrue(!pteranodon.isPteranodonGliding(),
-                    "Forward-powered flight incorrectly switched to the gliding animation");
-            helper.assertTrue(pteranodon.getXRot() > 4.0F,
-                    "Sprint/Ctrl input did not pitch the Pteranodon nose-down; pitch="
-                            + pteranodon.getXRot());
-        });
-        helper.runAfterDelay(40, () -> {
-            helper.assertTrue(Math.abs(pteranodon.getPteranodonBankDegrees()) > 2.0F,
-                    "Looking into a turn did not produce a natural flight bank");
-        });
-        helper.runAfterDelay(55, () -> helper.assertTrue(pteranodon.isPteranodonGliding(),
-                "A high-speed powered dive did not transition into the glide pose"));
-        helper.runAfterDelay(60, () -> {
-            helper.assertTrue(player.getVehicle() == pteranodon,
-                    "The rider detached during sustained flight");
-            helper.assertTrue(pteranodon.isPteranodonAirborne(),
-                    "The mounted Pteranodon never entered its airborne animation state; noGravity="
-                            + pteranodon.isNoGravity()
-                            + ", onGround=" + pteranodon.onGround()
-                            + ", position=" + pteranodon.position()
-                            + ", entityTicks=" + pteranodon.tickCount);
-            helper.assertTrue(pteranodon.isSprinting(),
-                    "Sustained forward input did not reach the Pteranodon's high-speed flight state");
-            helper.assertTrue(!pteranodon.isPteranodonGliding(),
-                    "The powered dive glide did not return to flapping flight after leveling out");
-            helper.assertTrue(Math.abs(Mth.wrapDegrees(pteranodon.getYRot() - 150.0F)) <= 15.0F,
-                    "The Pteranodon body did not turn toward the rider's look direction; yaw="
-                            + pteranodon.getYRot());
-            helper.assertTrue(pteranodon.getPteranodonStamina() < 99.0F,
-                    "Powered Pteranodon flight did not consume stamina");
-        });
-        helper.runAfterDelay(62, () -> {
-            pteranodon.setPos(pteranodon.getX(), pteranodon.getY() + 6.0D, pteranodon.getZ());
-            pteranodon.setDeltaMovement(Vec3.directionFromRotation(0.0F, pteranodon.getYRot()).scale(0.92D));
-        });
-        helper.runAfterDelay(64, () -> staminaAtGlideStart[0] = pteranodon.getPteranodonStamina());
-        helper.runAfterDelay(72, () -> {
-            helper.getLevel().getChunkSource().removeTicketWithRadius(TicketType.FORCED, flightTestChunk, 10);
-            helper.assertTrue(pteranodon.isPteranodonGliding(),
-                    "Releasing forward input at flying speed did not enter the glide state; airborne="
-                            + pteranodon.isPteranodonAirborne()
-                            + ", hovering=" + pteranodon.isPteranodonHovering()
-                            + ", movement=" + pteranodon.getDeltaMovement()
-                            + ", pitch=" + pteranodon.getXRot()
-                            + ", entityTicks=" + pteranodon.tickCount);
-            helper.assertTrue(pteranodon.getPteranodonAnimationSpeed(1.0F) > 0.72F,
-                    "Gliding did not retain a speed-responsive animation cadence");
-            helper.assertTrue(pteranodon.getPteranodonStamina() > staminaAtGlideStart[0],
-                    "Gliding did not restore Pteranodon stamina");
-            player.stopRiding();
-            pteranodon.discard();
-            player.discard();
-            helper.succeed();
-        });
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(
+                        pteranodon.tickCount >= 4 && !pteranodon.isPteranodonAirborne(),
+                        "The Pteranodon entered flight without an explicit takeoff input"))
+                .thenWaitUntil(() -> helper.assertTrue(
+                        pteranodon.tickCount >= 18 && hoverObserved[0],
+                        "A Space-only takeoff never settled into the air-idle hover state; airborne="
+                                + pteranodon.isPteranodonAirborne() + ", onGround=" + pteranodon.onGround()
+                                + ", movement=" + pteranodon.getDeltaMovement()
+                                + ", entityTicks=" + pteranodon.tickCount))
+                .thenWaitUntil(() -> {
+                    helper.assertTrue(pteranodon.tickCount >= 31,
+                            "The mounted descent check has not reached its entity-relative tick");
+                    helper.assertTrue(!pteranodon.isPteranodonGliding(),
+                            "Forward-powered flight incorrectly switched to the gliding animation");
+                    helper.assertTrue(pteranodon.getXRot() > 4.0F,
+                            "Sprint/Ctrl input did not pitch the Pteranodon nose-down; pitch="
+                                    + pteranodon.getXRot());
+                })
+                .thenWaitUntil(() -> helper.assertTrue(
+                        pteranodon.tickCount >= 40
+                                && Math.abs(pteranodon.getPteranodonBankDegrees()) > 2.0F,
+                        "Looking into a turn did not produce a natural flight bank"))
+                .thenWaitUntil(() -> helper.assertTrue(
+                        pteranodon.tickCount >= 55 && pteranodon.isPteranodonGliding(),
+                        "A high-speed powered dive did not transition into the glide pose"))
+                .thenWaitUntil(() -> {
+                    helper.assertTrue(pteranodon.tickCount >= 60,
+                            "The sustained flight check has not reached its entity-relative tick");
+                    helper.assertTrue(player.getVehicle() == pteranodon,
+                            "The rider detached during sustained flight");
+                    helper.assertTrue(pteranodon.isPteranodonAirborne(),
+                            "The mounted Pteranodon never entered its airborne animation state; noGravity="
+                                    + pteranodon.isNoGravity()
+                                    + ", onGround=" + pteranodon.onGround()
+                                    + ", position=" + pteranodon.position()
+                                    + ", entityTicks=" + pteranodon.tickCount);
+                    helper.assertTrue(pteranodon.isSprinting(),
+                            "Sustained forward input did not reach the Pteranodon's high-speed flight state");
+                    helper.assertTrue(!pteranodon.isPteranodonGliding(),
+                            "The powered dive glide did not return to flapping flight after leveling out");
+                    helper.assertTrue(Math.abs(Mth.wrapDegrees(pteranodon.getYRot() - 150.0F)) <= 15.0F,
+                            "The Pteranodon body did not turn toward the rider's look direction; yaw="
+                                    + pteranodon.getYRot());
+                    helper.assertTrue(pteranodon.getPteranodonStamina() < 99.0F,
+                            "Powered Pteranodon flight did not consume stamina");
+                })
+                .thenWaitUntil(() -> helper.assertTrue(pteranodon.tickCount >= 62,
+                        "The glide release setup has not reached its entity-relative tick"))
+                .thenExecute(() -> {
+                    pteranodon.setPos(pteranodon.getX(), pteranodon.getY() + 6.0D, pteranodon.getZ());
+                    pteranodon.setDeltaMovement(Vec3.directionFromRotation(0.0F, pteranodon.getYRot()).scale(0.92D));
+                })
+                .thenWaitUntil(() -> helper.assertTrue(pteranodon.tickCount >= 64,
+                        "The glide stamina sample has not reached its entity-relative tick"))
+                .thenExecute(() -> staminaAtGlideStart[0] = pteranodon.getPteranodonStamina())
+                .thenWaitUntil(() -> {
+                    helper.assertTrue(pteranodon.tickCount >= 72 && pteranodon.isPteranodonGliding(),
+                            "Releasing forward input at flying speed did not enter the glide state; airborne="
+                                    + pteranodon.isPteranodonAirborne()
+                                    + ", hovering=" + pteranodon.isPteranodonHovering()
+                                    + ", movement=" + pteranodon.getDeltaMovement()
+                                    + ", pitch=" + pteranodon.getXRot()
+                                    + ", entityTicks=" + pteranodon.tickCount);
+                    helper.assertTrue(pteranodon.getPteranodonAnimationSpeed(1.0F) > 0.72F,
+                            "Gliding did not retain a speed-responsive animation cadence");
+                    helper.assertTrue(pteranodon.getPteranodonStamina() > staminaAtGlideStart[0],
+                            "Gliding did not restore Pteranodon stamina");
+                })
+                .thenExecute(() -> {
+                    helper.getLevel().getChunkSource().removeTicketWithRadius(TicketType.FORCED, flightTestChunk, 10);
+                    player.stopRiding();
+                    helper.assertTrue(pteranodon.getCommandMode() == DinosaurCommandMode.FOLLOW,
+                            "Dismounting restored the Pteranodon's stale Home command");
+                    pteranodon.discard();
+                    player.discard();
+                })
+                .thenSucceed();
     }
 
     private static void defeatedDinosaurReturnsToDepot(GameTestHelper helper) {
@@ -2751,7 +2925,6 @@ public final class PrimevalGameTests {
                 ModItems.FOSSIL_FRAGMENT.get(),
                 ModItems.SILK.get(),
                 ModItems.SULFUR.get(),
-                ModItems.DODO_FEATHER.get(),
                 ModItems.PTERANODON_WING_FRAGMENT.get(),
                 ModItems.TYRANNOSAURUS_TOOTH.get(),
                 ModItems.CORE.get(),
@@ -3319,7 +3492,7 @@ public final class PrimevalGameTests {
         helper.succeed();
     }
 
-    private static void hostileTargetsBaseDinosaur(GameTestHelper helper) {
+    private static void hostilesIgnoreBaseDinosaur(GameTestHelper helper) {
         for (int x = 0; x <= 9; x++) {
             for (int z = 0; z <= 4; z++) {
                 helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
@@ -3357,23 +3530,111 @@ public final class PrimevalGameTests {
         zombie.getAttribute(Attributes.MAX_HEALTH).setBaseValue(200.0D);
         zombie.getAttribute(Attributes.KNOCKBACK_RESISTANCE).setBaseValue(1.0D);
         zombie.setHealth(200.0F);
-        helper.succeedWhen(() -> {
-            helper.assertTrue(zombie.getTarget() instanceof FieldDodoEntity,
-                    "A hostile mob inside the base did not acquire a dinosaur; target=" + zombie.getTarget()
-                            + ", dinoTable=" + dinosaur.getCommandTablePos()
-                            + ", alive=" + zombie.isAlive() + "/" + dinosaur.isAlive()
-                            + ", canAttack=" + zombie.canAttack(dinosaur)
-                            + ", allied=" + zombie.isAlliedTo(dinosaur)
-                            + ", distance=" + zombie.distanceTo(dinosaur)
-                            + ", dinoTicks=" + dinosaur.tickCount
-                            + ", zombieTicks=" + zombie.tickCount);
+        helper.startSequence()
+                .thenExecuteAfter(35, () -> {
+                    helper.assertTrue(dinosaur.isWorkEnabled(),
+                            "The assigned Tyrannosaurus job stopped before combat priority was checked");
+                    helper.assertTrue(dinosaur.getTarget() == null && zombie.getHealth() == 200.0F,
+                            "A working Tyrannosaurus abandoned its job to auto-attack");
+                    dinosaur.setCommandMode(DinosaurCommandMode.STAY);
+                })
+                .thenWaitUntil(() -> {
             helper.assertTrue(dinosaur.getTarget() instanceof Monster hostile && hostile.isAlive(),
-                    "A combat-capable dinosaur did not acquire a live hostile inside its base");
+                    "An idle apex dinosaur did not acquire a live hostile inside its guarded area");
             helper.assertTrue(dinosaur.isSprinting(),
-                    "A combat-capable dinosaur acquired a hostile mob but did not enter its chase sprint");
+                    "An idle apex dinosaur acquired a hostile mob but did not enter its chase sprint");
+                })
+                .thenWaitUntil(() -> helper.assertTrue(zombie.getHealth() < 200.0F,
+                        "The dinosaur never reached the hostile, so retaliation protection was not exercised"))
+                .thenExecute(() -> {
+            helper.assertTrue(zombie.getTarget() == null,
+                    "A hostile mob acquired a dinosaur target after being attacked; target=" + zombie.getTarget());
             zombie.discard();
             dinosaur.discard();
-        });
+                })
+                .thenSucceed();
+    }
+
+    private static void stuckSpinosaurusRecoversInWater(GameTestHelper helper) {
+        helper.getLevel().clockManager().setTotalTicks(
+                helper.getLevel().dimensionType().defaultClock().orElseThrow(), 1_000L);
+        BlockPos dinosaurRelative = new BlockPos(3, 1, 4);
+        BlockPos ownerRelative = new BlockPos(18, 3, 4);
+        forceTicking(helper, dinosaurRelative, ownerRelative);
+        for (int x = 0; x <= 24; x++) for (int z = 0; z <= 8; z++) {
+            helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+        }
+        for (int x = 14; x <= 22; x++) for (int z = 0; z <= 8; z++) {
+            for (int y = 1; y <= 5; y++) helper.setBlock(new BlockPos(x, y, z), Blocks.WATER);
+        }
+        for (int x = 0; x <= 6; x++) for (int z = 1; z <= 7; z++) {
+            if (x > 0 && x < 6 && z > 1 && z < 7) continue;
+            for (int y = 1; y <= 6; y++) helper.setBlock(new BlockPos(x, y, z), Blocks.STONE);
+        }
+        helper.setBlock(dinosaurRelative, Blocks.WATER);
+        ServerPlayer player = isolatedPlayer(helper);
+        Vec3 ownerPosition = helper.absolutePos(ownerRelative).getCenter();
+        player.snapTo(ownerPosition.x, ownerPosition.y, ownerPosition.z, 90.0F, 0.0F);
+        FieldDodoEntity spinosaurus = helper.spawn(ModEntities.SPINOSAURUS.get(), dinosaurRelative);
+        spinosaurus.setDinosaurOwner(player.getUUID());
+        spinosaurus.setCommandMode(DinosaurCommandMode.FOLLOW);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(
+                        spinosaurus.distanceToSqr(player) < 64.0D && spinosaurus.isInWater(),
+                        "The enclosed Spinosaurus could not recover safely beside its underwater owner"))
+                .thenExecute(() -> {
+                    helper.assertTrue(spinosaurus.getCommandMode() == DinosaurCommandMode.FOLLOW
+                                    && !spinosaurus.isInWall() && spinosaurus.isAlive(),
+                            "Water recovery damaged the Spinosaurus or lost its follow command");
+                    spinosaurus.discard();
+                    player.discard();
+                })
+                .thenSucceed();
+    }
+
+    private static void combatFollowersWaitForOwnerAttack(GameTestHelper helper) {
+        for (int x = 0; x <= 11; x++) {
+            for (int z = 0; z <= 6; z++) {
+                helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+            }
+        }
+        BlockPos ownerRelative = new BlockPos(2, 1, 3);
+        BlockPos dinosaurRelative = new BlockPos(3, 1, 3);
+        BlockPos zombieRelative = new BlockPos(9, 1, 3);
+        forceTicking(helper, ownerRelative, dinosaurRelative, zombieRelative);
+        ServerPlayer player = isolatedPlayer(helper);
+        Vec3 ownerPosition = helper.absolutePos(ownerRelative).getCenter();
+        player.snapTo(ownerPosition.x, ownerPosition.y, ownerPosition.z, 90.0F, 0.0F);
+        FieldDodoEntity raptor = helper.spawn(ModEntities.VELOCIRAPTOR.get(), dinosaurRelative);
+        helper.assertTrue(DinosaurOwnership.addToActiveIfRoom(player, raptor, raptor.blockPosition()),
+                "The combat-role Raptor could not join the active crew");
+        raptor.setCommandMode(DinosaurCommandMode.FOLLOW);
+        var zombie = helper.spawn(EntityType.HUSK, zombieRelative);
+        zombie.setNoAi(true);
+        zombie.getAttribute(Attributes.MAX_HEALTH).setBaseValue(200.0D);
+        zombie.getAttribute(Attributes.KNOCKBACK_RESISTANCE).setBaseValue(1.0D);
+        zombie.setHealth(200.0F);
+        float[] healthAfterOwnerHit = {200.0F};
+
+        helper.startSequence()
+                .thenExecuteAfter(35, () -> {
+                    helper.assertTrue(raptor.getTarget() == null && zombie.getHealth() == 200.0F,
+                            "A Raptor proactively attacked before its owner struck the hostile");
+                    player.attack(zombie);
+                    healthAfterOwnerHit[0] = zombie.getHealth();
+                    helper.assertTrue(healthAfterOwnerHit[0] < 200.0F,
+                            "The owner attack did not establish a combat command target");
+                })
+                .thenWaitUntil(() -> helper.assertTrue(
+                        raptor.getTarget() == zombie && zombie.getHealth() < healthAfterOwnerHit[0],
+                        "The Raptor did not join combat after its owner attacked"))
+                .thenExecute(() -> {
+                    zombie.discard();
+                    raptor.discard();
+                    player.discard();
+                })
+                .thenSucceed();
     }
 
     private static void tyrannosaurusHuntsFromMouthRange(GameTestHelper helper) {
@@ -3754,6 +4015,45 @@ public final class PrimevalGameTests {
         helper.succeed();
     }
 
+    private static void emberBerriesPlantGrowAndHarvest(GameTestHelper helper) {
+        BlockPos soilRelative = new BlockPos(2, 0, 2);
+        BlockPos bushRelative = soilRelative.above();
+        helper.setBlock(soilRelative, Blocks.GRASS_BLOCK);
+        helper.setBlock(bushRelative, Blocks.AIR);
+        forceTicking(helper, soilRelative, bushRelative);
+        ServerPlayer player = isolatedPlayer(helper);
+        BlockPos soil = helper.absolutePos(soilRelative);
+        BlockPos bush = helper.absolutePos(bushRelative);
+        ItemStack berries = new ItemStack(ModItems.BERRIES.get(), 4);
+        player.setItemInHand(InteractionHand.MAIN_HAND, berries);
+        BlockHitResult plantingHit = new BlockHitResult(
+                new Vec3(soil.getX() + 0.5D, soil.getY() + 1.0D, soil.getZ() + 0.5D),
+                Direction.UP, soil, false);
+        ModItems.BERRIES.get().useOn(new UseOnContext(player, InteractionHand.MAIN_HAND, plantingHit));
+        helper.assertBlockPresent(ModBlocks.BERRY_BUSH.get(), bushRelative);
+        helper.assertTrue(helper.getBlockState(bushRelative).getValue(PrimevalBerryBushBlock.AGE) == 0,
+                "Planting Ember Berries did not create a young bush");
+
+        ItemStack boneMeal = new ItemStack(Items.BONE_MEAL, 3);
+        for (int stage = 1; stage <= 3; stage++) {
+            helper.assertTrue(BoneMealItem.growCrop(boneMeal, helper.getLevel(), bush),
+                    "Bonemeal did not advance Ember Berry stage " + stage);
+            helper.assertTrue(helper.getBlockState(bushRelative).getValue(PrimevalBerryBushBlock.AGE) == stage,
+                    "Ember Berry Bush skipped or lost growth stage " + stage);
+        }
+
+        player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        BlockHitResult harvestHit = new BlockHitResult(bush.getCenter(), Direction.UP, bush, false);
+        helper.getBlockState(bushRelative).useWithoutItem(helper.getLevel(), player, harvestHit);
+        helper.assertTrue(helper.getBlockState(bushRelative).getValue(PrimevalBerryBushBlock.AGE) == 1,
+                "Harvesting a mature Ember Berry Bush did not reset its growth");
+        helper.assertTrue(helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(bush).inflate(2.0D))
+                        .stream().anyMatch(item -> item.getItem().is(ModItems.BERRIES.get())),
+                "Harvesting a mature Ember Berry Bush dropped no Ember Berries");
+        player.discard();
+        helper.succeed();
+    }
+
     private static boolean smallEggSpecies(DinosaurSpecies species) {
         return species == DinosaurSpecies.DODO
                 || species == DinosaurSpecies.VELOCIRAPTOR
@@ -3770,11 +4070,7 @@ public final class PrimevalGameTests {
         forceTicking(helper, tableRelative, dinosaurRelative, threatRelative);
         helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
         FieldDodoEntity spinosaurus = helper.spawn(ModEntities.SPINOSAURUS.get(), dinosaurRelative);
-        spinosaurus.assignWork(
-                0, helper.absolutePos(tableRelative), List.of(), List.of(), List.of(), null,
-                List.of(), List.of(), List.of(), Map.of(),
-                0, 1, 1, 0, 0, 0, 0, 1, true, true
-        );
+        spinosaurus.linkToCommandTable(helper.absolutePos(tableRelative));
         var threat = helper.spawn(EntityType.HUSK, threatRelative);
         threat.setNoAi(true);
         threat.getAttribute(Attributes.MAX_HEALTH).setBaseValue(200.0D);
@@ -4247,6 +4543,33 @@ public final class PrimevalGameTests {
                 .thenExecute(() -> helper.assertTrue(!dinosaur.hasFieldWork(),
                         "The resumed quarry order stayed active after completion"))
                 .thenSucceed();
+    }
+
+    private static void tableRebindClearsStaleFieldRoute(GameTestHelper helper) {
+        BlockPos oldTable = helper.absolutePos(new BlockPos(1, 1, 1));
+        BlockPos newTable = helper.absolutePos(new BlockPos(12, 1, 1));
+        BlockPos oldCollectionAnchor = helper.absolutePos(new BlockPos(2, 1, 2));
+        ServerPlayer player = isolatedPlayer(helper);
+        FieldDodoEntity raptor = helper.spawn(ModEntities.VELOCIRAPTOR.get(), new BlockPos(3, 1, 2));
+        raptor.setDinosaurOwner(player.getUUID());
+        raptor.linkToCommandTable(oldTable);
+        raptor.setCommandMode(DinosaurCommandMode.FOLLOW);
+        raptor.assignFieldWork(new DinoWhistleSettings(
+                DinoWhistleSettings.FieldMode.COLLECT,
+                DinoWhistleSettings.Pattern.SINGLE,
+                48), oldCollectionAnchor, null);
+        helper.assertTrue(raptor.hasFieldWork() && raptor.isFieldWorkActive(),
+                "The relocation regression did not establish its old Collect route");
+
+        raptor.linkToCommandTable(newTable);
+        helper.assertTrue(raptor.getCommandTablePos().filter(newTable::equals).isPresent(),
+                "The follower kept its old Command Table link after relocation");
+        helper.assertTrue(!raptor.hasFieldWork() && !raptor.isFieldWorkActive(),
+                "An old Whistle anchor survived a Command Table relocation and can hijack Follow");
+        helper.assertTrue(raptor.getCommandMode() == DinosaurCommandMode.FOLLOW,
+                "Relocating the base changed the follower's selected command mode");
+        player.discard();
+        helper.succeed();
     }
 
     private static void commandModesRecoverNavigation(GameTestHelper helper) {

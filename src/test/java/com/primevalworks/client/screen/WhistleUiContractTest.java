@@ -16,10 +16,6 @@ final class WhistleUiContractTest {
 
     @Test
     void whistleSurfacesUseTheAuthoredBubbleAssets() throws Exception {
-        BufferedImage space = ImageIO.read(Path.of(
-                "src/main/resources/assets/primevalworks/textures/gui/space.png").toFile());
-        assertEquals(86, space.getWidth());
-        assertEquals(14, space.getHeight());
         BufferedImage crop = ImageIO.read(Path.of(
                 "src/main/resources/assets/primevalworks/textures/gui/ui_crop.png").toFile());
         assertEquals(427, crop.getWidth());
@@ -36,6 +32,9 @@ final class WhistleUiContractTest {
         assertTrue(config.contains("drawInsetBubble(graphics, rangeLabel)"));
         assertTrue(config.contains("drawInsetBubble(graphics, followerLabel)"));
         assertUsesBubble(CLIENT.resolve("screen/WhistleFollowerPickerScreen.java"));
+        String bubble = Files.readString(CLIENT.resolve("screen/PrimevalBubbleUi.java"));
+        assertTrue(bubble.contains("PrimevalUiCrop.paperBubble"));
+        assertFalse(bubble.contains("space.png"));
     }
 
     @Test
@@ -127,7 +126,8 @@ final class WhistleUiContractTest {
     @Test
     void followerChoiceIsAuthoredSlotsOverTheWorldInsteadOfAnotherPanel() throws Exception {
         String picker = Files.readString(CLIENT.resolve("screen/WhistleFollowerPickerScreen.java"));
-        assertTrue(picker.contains("hotbar.png"));
+        assertTrue(picker.contains("PrimevalUiCrop.paperSlot"));
+        assertFalse(picker.contains("hotbar.png"));
         assertTrue(picker.contains("extractPreview"));
         assertTrue(picker.contains("slotReveal"));
         assertTrue(picker.contains("payload.selectionToken()"));
@@ -135,6 +135,38 @@ final class WhistleUiContractTest {
                 "A double-click can submit the same picker transaction twice");
         assertFalse(picker.contains("graphics.fill(0, 0, width, height"));
         assertFalse(picker.contains("PANEL_WIDTH"));
+    }
+
+    @Test
+    void transportedCargoUsesTheCenteredAuthoredCropSlot() throws Exception {
+        String indicator = Files.readString(Path.of(
+                "src/main/java/com/primevalworks/client/render/entity/DodoIndicatorLayer.java"));
+        assertTrue(indicator.contains("textures/gui/ui_crop.png"));
+        assertTrue(indicator.contains("ItemDisplayContext.GUI"));
+        assertTrue(indicator.contains("117.0F / 427.0F")
+                && indicator.contains("75.0F / 240.0F")
+                && indicator.contains("135.0F / 427.0F")
+                && indicator.contains("94.0F / 240.0F"));
+        assertTrue(occurrences(indicator,
+                "pose.translate(0.0F, indicatorHeight + (0.48F + bob) * scaleCompensation") == 2,
+                "The cargo frame and GUI model stopped sharing one centered billboard origin");
+        assertFalse(indicator.contains("PLANNER_TEXTURE"));
+        assertFalse(indicator.contains("addSearchSlotQuad"));
+    }
+
+    @Test
+    void configuredFourthFollowerSurvivesEveryWhistleBoundary() throws Exception {
+        String config = Files.readString(CLIENT.resolve("screen/DinoWhistleScreen.java"));
+        String markedPayload = Files.readString(Path.of(
+                "src/main/java/com/primevalworks/network/payload/WhistleFollowerListPayload.java"));
+        String passivePayload = Files.readString(Path.of(
+                "src/main/java/com/primevalworks/network/payload/PassiveWhistleFollowersPayload.java"));
+        assertEquals(2, occurrences(config, "FollowerCapacityRules.MAXIMUM_SLOTS"),
+                "Drawing and clicking must share the configurable follower limit");
+        assertTrue(markedPayload.contains("FollowerCapacityRules.MAXIMUM_SLOTS"));
+        assertTrue(passivePayload.contains("FollowerCapacityRules.MAXIMUM_SLOTS"));
+        assertFalse(markedPayload.contains("Math.min(3"));
+        assertFalse(passivePayload.contains("Math.min(3"));
     }
 
     @Test
@@ -197,5 +229,10 @@ final class WhistleUiContractTest {
                 path.getFileName() + " covered the authored bubble with a custom dark panel");
         assertFalse(source.contains("drawDarkControl"),
                 path.getFileName() + " replaced authored controls with custom cards");
+    }
+
+
+    private static int occurrences(String source, String needle) {
+        return source.split(java.util.regex.Pattern.quote(needle), -1).length - 1;
     }
 }

@@ -19,7 +19,7 @@ final class ReleasePolishContractTest {
         String diamond = Files.readString(RESOURCES.resolve("data/minecraft/tags/block/needs_diamond_tool.json"));
 
         for (String block : new String[]{"wind_turbine", "water_turbine", "processor", "ancient_furnace",
-                "laser_observer", "dart_turret", "laser_turret", "premium_egg_incubator"}) {
+                "laser_observer", "laser_turret", "premium_egg_incubator"}) {
             assertTrue(pickaxe.contains("primevalworks:" + block), block);
         }
         assertTrue(axe.contains("primevalworks:food_box"));
@@ -50,11 +50,16 @@ final class ReleasePolishContractTest {
     }
 
     @Test
-    void hostilesDoNotInstallAutomaticDinosaurTargets() throws Exception {
+    void hostilesCannotAcquireDinosaursAsTargets() throws Exception {
         String entrypoint = Files.readString(SOURCE.resolve("PrimevalWorks.java"));
+        String protection = Files.readString(SOURCE.resolve("world/entity/DinosaurTargetProtection.java"));
+        String dinosaur = Files.readString(SOURCE.resolve("world/entity/FieldDodoEntity.java"));
 
-        assertFalse(Files.exists(SOURCE.resolve("world/entity/DinosaurThreatTargeting.java")));
-        assertFalse(entrypoint.contains("DinosaurThreatTargeting"));
+        assertTrue(entrypoint.contains("DinosaurTargetProtection::preventHostileTargeting"));
+        assertTrue(protection.contains("event.getEntity() instanceof Enemy"));
+        assertTrue(protection.contains("event.getNewAboutToBeSetTarget() instanceof FieldDodoEntity"));
+        assertTrue(protection.contains("event.setNewAboutToBeSetTarget(null)"));
+        assertFalse(dinosaur.contains("threat.setTarget(this)"));
     }
 
     @Test

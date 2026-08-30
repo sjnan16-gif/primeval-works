@@ -77,8 +77,6 @@ public final class ModItems {
             ITEMS.registerSimpleBlockItem("laser_observer", ModBlocks.LASER_OBSERVER);
     public static final DeferredItem<BlockItem> ANCIENT_BARREL =
             ITEMS.registerSimpleBlockItem("ancient_barrel", ModBlocks.ANCIENT_BARREL);
-    public static final DeferredItem<BlockItem> DART_TURRET =
-            ITEMS.registerSimpleBlockItem("dart_turret", ModBlocks.DART_TURRET);
     public static final DeferredItem<BlockItem> PROCESSOR =
             ITEMS.registerSimpleBlockItem("processor", ModBlocks.PROCESSOR);
     public static final DeferredItem<BlockItem> ANCIENT_FURNACE =
@@ -118,11 +116,9 @@ public final class ModItems {
     public static final DeferredItem<Item> SMALL_DINO_BONE = ITEMS.registerSimpleItem("small_dino_bone");
     public static final DeferredItem<Item> PTERANODON_WING_FRAGMENT = ITEMS.registerSimpleItem("pteranodon_wing_fragment");
     public static final DeferredItem<Item> TYRANNOSAURUS_TOOTH = ITEMS.registerSimpleItem("tyrannosaurus_tooth");
-    public static final DeferredItem<Item> DODO_FEATHER = ITEMS.registerSimpleItem("dodo_feather");
     public static final DeferredItem<Item> CORE = ITEMS.registerSimpleItem("core");
     public static final DeferredItem<Item> COMPRESSED_CORE = ITEMS.registerSimpleItem("compressed_core");
     public static final DeferredItem<Item> NESTING_TREAT = ITEMS.registerSimpleItem("nesting_treat");
-    public static final DeferredItem<Item> DART = ITEMS.registerSimpleItem("dart");
     public static final DeferredItem<BlockItem> BERRIES = ITEMS.registerItem(
             "berries",
             properties -> new BlockItem(ModBlocks.BERRY_BUSH.get(),

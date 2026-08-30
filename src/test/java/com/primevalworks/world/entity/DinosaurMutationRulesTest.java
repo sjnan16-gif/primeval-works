@@ -20,53 +20,60 @@ final class DinosaurMutationRulesTest {
                 DinosaurMutationRules.roll(true, 0.059F, 0.01F));
         assertEquals(DinosaurMutationRules.ALBINO,
                 DinosaurMutationRules.roll(true, 0.06F, 0.009F));
-        assertEquals(0,
-                DinosaurMutationRules.roll(true, 0.06F, 0.01F));
+        assertEquals(0, DinosaurMutationRules.roll(true, 0.06F, 0.01F));
     }
 
     @Test
-    void premiumIncubationIsStrictlyBetterThanWildHatching() {
-        assertEquals(0.05F, DinosaurMutationRules.hugeChance(false));
-        assertEquals(0.005F, DinosaurMutationRules.albinoChance(false));
-        assertEquals(0.06F, DinosaurMutationRules.hugeChance(true));
-        assertEquals(0.01F, DinosaurMutationRules.albinoChance(true));
+    void parentInheritanceStartsAtNinePercentAndScalesWithParentStats() {
+        assertEquals(0.09F, DinosaurMutationRules.parentInheritanceChance(1, 0), 0.0001F);
+        assertEquals(0.21F, DinosaurMutationRules.parentInheritanceChance(100, 100), 0.0001F);
     }
 
     @Test
-    void bredMutationOddsFavorParentTraits() {
-        assertEquals(DinosaurMutationRules.HUGE,
-                DinosaurMutationRules.rollBred(
-                        DinosaurMutationRules.HUGE,
-                        0,
-                        DinosaurMutationRules.ONE_PARENT_INHERITANCE_CHANCE - 0.001F,
-                        1.0F
-                ));
-        assertEquals(0,
-                DinosaurMutationRules.rollBred(
-                        DinosaurMutationRules.HUGE,
-                        0,
-                        DinosaurMutationRules.ONE_PARENT_INHERITANCE_CHANCE,
-                        1.0F
-                ));
-        assertEquals(DinosaurMutationRules.ALBINO,
-                DinosaurMutationRules.rollBred(
-                        DinosaurMutationRules.ALBINO,
-                        DinosaurMutationRules.ALBINO,
-                        1.0F,
-                        DinosaurMutationRules.TWO_PARENT_INHERITANCE_CHANCE - 0.001F
-                ));
+    void eachMutationCarryingParentGetsAnIndependentInheritanceRoll() {
+        DinosaurMutationRules.ParentGenetics lowParent = parent(DinosaurMutationRules.HUGE, 1, 0);
+        DinosaurMutationRules.ParentGenetics clearParent = parent(0, 1, 0);
+        assertEquals(DinosaurMutationRules.HUGE, DinosaurMutationRules.rollBred(
+                lowParent, clearParent,
+                rolls(0.089F, 1.0F, 1.0F), rolls(1.0F, 1.0F, 1.0F)));
+        assertEquals(0, DinosaurMutationRules.rollBred(
+                lowParent, clearParent,
+                rolls(0.09F, 1.0F, 1.0F), rolls(1.0F, 1.0F, 1.0F)));
+
+        DinosaurMutationRules.ParentGenetics secondCarrier = parent(DinosaurMutationRules.HUGE, 1, 0);
+        assertEquals(DinosaurMutationRules.HUGE, DinosaurMutationRules.rollBred(
+                lowParent, secondCarrier,
+                rolls(1.0F, 0.089F, 1.0F), rolls(1.0F, 1.0F, 1.0F)));
     }
 
     @Test
-    void bredEggsStillHaveAControlledChanceForNewTraits() {
+    void highLevelHighQualityParentsReceiveTheScaledChance() {
+        DinosaurMutationRules.ParentGenetics strongParent = parent(DinosaurMutationRules.ALBINO, 100, 100);
+        assertEquals(DinosaurMutationRules.ALBINO, DinosaurMutationRules.rollBred(
+                strongParent, parent(0, 1, 0),
+                rolls(1.0F, 1.0F, 1.0F), rolls(0.209F, 1.0F, 1.0F)));
+        assertEquals(0, DinosaurMutationRules.rollBred(
+                strongParent, parent(0, 1, 0),
+                rolls(1.0F, 1.0F, 1.0F), rolls(0.211F, 1.0F, 1.0F)));
+    }
+
+    @Test
+    void bredEggsRetainControlledNovelMutationOdds() {
+        DinosaurMutationRules.ParentGenetics clear = parent(0, 1, 0);
         assertEquals(DinosaurMutationRules.HUGE | DinosaurMutationRules.ALBINO,
-                DinosaurMutationRules.rollBred(0, 0, 0.0F, 0.0F));
-        assertEquals(0,
                 DinosaurMutationRules.rollBred(
-                        0,
-                        0,
-                        DinosaurMutationRules.BRED_HUGE_CHANCE,
-                        DinosaurMutationRules.BRED_ALBINO_CHANCE
-                ));
+                        clear, clear, rolls(1.0F, 1.0F, 0.0F), rolls(1.0F, 1.0F, 0.0F)));
+        assertEquals(0, DinosaurMutationRules.rollBred(
+                clear, clear,
+                rolls(1.0F, 1.0F, DinosaurMutationRules.BRED_HUGE_CHANCE),
+                rolls(1.0F, 1.0F, DinosaurMutationRules.BRED_ALBINO_CHANCE)));
+    }
+
+    private static DinosaurMutationRules.ParentGenetics parent(int mutations, int level, int quality) {
+        return new DinosaurMutationRules.ParentGenetics(mutations, level, quality);
+    }
+
+    private static DinosaurMutationRules.TraitRolls rolls(float first, float second, float novel) {
+        return new DinosaurMutationRules.TraitRolls(first, second, novel);
     }
 }

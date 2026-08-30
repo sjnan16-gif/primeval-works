@@ -220,13 +220,20 @@ public final class DinosaurOwnership {
 
         int restoredFollowers = 0;
         int followerLimit = tableLevel.getBlockEntity(tablePos) instanceof CommandTableBlockEntity table
-                && table.isOwnedBy(player.getUUID()) ? table.followerCapacity() : 1;
+                && table.isOwnedBy(player.getUUID()) ? table.followerCapacity() : startingFollowerLimit();
         for (int index = 0; index < active.size(); index++) {
             OwnedDinosaur record = find(records, active.get(index)).orElse(null);
             if (record == null) continue;
             FieldDodoEntity dinosaur = restoreMissingActive
                     ? findOrLoad(player.level().getServer(), record)
                     : findLoaded(player.level().getServer(), record.id());
+            boolean changingDimension = dinosaur != null && dinosaur.level() != tableLevel;
+            if (changingDimension && restoreMissingActive) {
+                record = capture(dinosaur);
+                upsert(records, record);
+                dinosaur.discard();
+                dinosaur = spawn(tableLevel, record, slotPosition(tablePos, index));
+            }
             if (dinosaur == null && restoreMissingActive) {
                 dinosaur = spawn(tableLevel, record, slotPosition(tablePos, index));
             }
@@ -236,8 +243,9 @@ public final class DinosaurOwnership {
                 if (restoredFollowers >= followerLimit) dinosaur.setCommandMode(DinosaurCommandMode.HOME);
                 else restoredFollowers++;
             }
-            boolean changingBase = dinosaur.getCommandTablePos().filter(tablePos::equals).isEmpty();
-            dinosaur.linkToCommandTable(tablePos);
+            boolean changingBase = changingDimension
+                    || dinosaur.getCommandTablePos().filter(tablePos::equals).isEmpty();
+            dinosaur.linkToCommandTable(tablePos, changingBase);
             if (changingBase) moveToSlot(dinosaur, tablePos, index);
             upsert(records, capture(dinosaur));
         }
@@ -517,13 +525,22 @@ public final class DinosaurOwnership {
 
     public static int followerLimit(ServerPlayer player) {
         CommandTableBlock.ClaimedTable claimed = CommandTableBlock.getClaimedTable(player).orElse(null);
-        if (claimed == null) return 1;
+        if (claimed == null) return startingFollowerLimit();
         claimed.level().getChunkAt(claimed.pos());
         if (claimed.level().getBlockEntity(claimed.pos()) instanceof CommandTableBlockEntity table
                 && table.isOwnedBy(player.getUUID())) {
             return table.followerCapacity();
         }
-        return 1;
+        return startingFollowerLimit();
+    }
+
+    private static int startingFollowerLimit() {
+        PrimevalTuning.Server tuning = PrimevalTuning.server();
+        return FollowerCapacityRules.capacity(
+                tuning.startingFollowerSlots(),
+                tuning.followerSlotsPerFieldCommandRank(),
+                tuning.maximumFollowerSlots(),
+                0);
     }
 
     public static int followerCount(ServerPlayer player) {

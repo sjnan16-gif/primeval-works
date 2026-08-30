@@ -12,6 +12,7 @@ import com.primevalworks.registry.ModItems;
 import com.primevalworks.registry.ModMenus;
 import com.primevalworks.world.block.CommandTableBlock;
 import com.primevalworks.world.entity.FieldDodoEntity;
+import com.primevalworks.world.entity.DinosaurTargetProtection;
 import com.primevalworks.world.ownership.DinosaurOwnership;
 import com.primevalworks.client.PrimevalItemTooltips;
 import com.primevalworks.config.PrimevalConfig;
@@ -76,6 +77,7 @@ public final class PrimevalWorks {
             }
         });
         NeoForge.EVENT_BUS.addListener(ServerTickEvent.Post.class, PrimevalWorks::restoreLoginCompanions);
+        NeoForge.EVENT_BUS.addListener(DinosaurTargetProtection::preventHostileTargeting);
         NeoForge.EVENT_BUS.addListener(LivingIncomingDamageEvent.class, event -> {
             if (!(event.getEntity() instanceof FieldDodoEntity dinosaur)
                     || !dinosaur.shouldRecoverFromLethalDamage(event.getSource())) {
@@ -94,7 +96,8 @@ public final class PrimevalWorks {
                     || !(event.getLevel() instanceof net.minecraft.server.level.ServerLevel level)) return;
             if (com.primevalworks.world.base.BaseEnergyRules.hasPoweredBlockNearby(
                     level, BlockPos.containing(event.getX(), event.getY(), event.getZ()),
-                    ModBlocks.ANCIENT_SPELL_STONE.get(), 48)) {
+                    ModBlocks.ANCIENT_SPELL_STONE.get(),
+                    com.primevalworks.world.base.BaseEnergyRules.ANCIENT_SPELL_STONE_WARD_RADIUS)) {
                 event.setResult(MobSpawnEvent.PositionCheck.Result.FAIL);
             }
         });

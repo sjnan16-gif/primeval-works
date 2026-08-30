@@ -21,8 +21,7 @@ final class BlockPreviewAssetsTest {
             "template_compact_block.json", "template_dinosaur_egg.json", "spinosaurus_head.json");
     private static final List<String> BLOCK_ITEMS = List.of(
             "command_table", "food_box", "wind_turbine", "upgraded_wind_turbine", "water_turbine",
-            "laser_observer", "ancient_barrel",
-            "dart_turret", "processor", "ancient_furnace",
+            "laser_observer", "ancient_barrel", "processor", "ancient_furnace",
             "ancient_spell_stone", "laser_turret", "spinosaurus_head", "premium_egg_incubator",
             "small_dinosaur_egg", "big_dinosaur_egg", "large_dinosaur_egg"
     );
@@ -34,7 +33,6 @@ final class BlockPreviewAssetsTest {
             Map.entry("water_turbine", "primevalworks:item/water_turbine"),
             Map.entry("laser_observer", "primevalworks:block/laser_observer"),
             Map.entry("ancient_barrel", "primevalworks:block/ancient_barrel"),
-            Map.entry("dart_turret", "primevalworks:block/dart_turret_item"),
             Map.entry("processor", "primevalworks:block/processor"),
             Map.entry("ancient_furnace", "primevalworks:block/ancient_furnace"),
             Map.entry("ancient_spell_stone", "primevalworks:block/ancient_spell_stone"),

@@ -35,8 +35,6 @@ final class FoodBoxPresentationAssetsTest {
         assertEquals(1, countOccurrences(full, "\"from\""),
                 "The full Food Box no longer uses its authored single-cube geometry");
 
-        assertTrue(Files.isRegularFile(Path.of("art/blocks/food_box/food_box_empty.bbmodel")));
-        assertTrue(Files.isRegularFile(Path.of("art/blocks/food_box/food_box_full.bbmodel")));
     }
 
     @Test
@@ -44,7 +42,6 @@ final class FoodBoxPresentationAssetsTest {
         assertImage("textures/item/dino_whistle.png", 16, 16);
         String model = Files.readString(ASSETS.resolve("models/item/dino_whistle.json"));
         assertTrue(model.contains("primevalworks:item/dino_whistle"));
-        assertTrue(Files.isRegularFile(Path.of("art/items/dino_whistle/dino_whistle.png")));
     }
 
     private static int countOccurrences(String text, String needle) {

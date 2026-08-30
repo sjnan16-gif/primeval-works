@@ -79,7 +79,6 @@ import java.util.Map;
 import java.util.Optional;
 
 public final class WorksitePlannerScreen extends Screen {
-    private static final Identifier SPACE_TEXTURE = Identifier.fromNamespaceAndPath("primevalworks", "textures/gui/space.png");
     private static final Identifier PLANNER_TEXTURE = Identifier.fromNamespaceAndPath("primevalworks", "textures/gui/worksite_planner.png");
     private static final int PLANNER_TEXTURE_WIDTH = 427;
     private static final int PLANNER_TEXTURE_HEIGHT = 240;
@@ -119,8 +118,6 @@ public final class WorksitePlannerScreen extends Screen {
                     .setOutputTarget(OutputTarget.ITEM_ENTITY_TARGET)
                     .createRenderSetup()
     );
-    private static final int PANEL = 0xC8D0AD89;
-    private static final int PANEL_DARK = 0xDDA67B5B;
     private static final int EDGE = 0xFF654638;
     private static final int INK = 0xFF403936;
     private static final int MUTED = 0xFF776D68;
@@ -2893,7 +2890,11 @@ public final class WorksitePlannerScreen extends Screen {
             boolean selected = option == selection;
             boolean hovered = row.contains(mouseX, mouseY);
             int accent = option.color;
-            graphics.fill(row.x, row.y, row.right(), row.bottom(), selected ? 0xE8F2D4B5 : hovered ? 0xDDE2C3A4 : 0xC8C6A27F);
+            PrimevalUiCrop.paperBubble(graphics, row.x, row.y, row.width, row.height);
+            if (selected || hovered) {
+                graphics.fill(row.x + 2, row.y + 2, row.right() - 2, row.bottom() - 2,
+                        withAlpha(accent, selected ? 38 : 22));
+            }
             graphics.fill(row.x, row.y, row.x + (selected ? 4 : 2), row.bottom(), accent);
             graphics.item(option.icon, row.x + 8, row.y + 7);
             textFit(graphics, (i + 1) + "  " + option.label, row.x + 29, row.y + 6, row.width - 35, selected || hovered ? accent : INK);
@@ -2901,7 +2902,7 @@ public final class WorksitePlannerScreen extends Screen {
             textFit(graphics, position == null ? option.shortHint : compactPos(position), row.x + 29, row.y + 18, row.width - 35, position == null ? MUTED : INK);
         }
         int y = rect.bottom() - 47;
-        graphics.fill(rect.x + 9, y, rect.right() - 9, y + 1, EDGE);
+        PrimevalUiCrop.paperHorizontalRule(graphics, rect.x + 9, y, rect.width - 18, 1, 255);
         text(graphics, "CURRENT STEP", rect.x + 11, y + 8, MUTED);
         textFit(graphics, selection.instruction, rect.x + 11, y + 21, rect.width - 22, selection.color);
     }
@@ -2931,7 +2932,11 @@ public final class WorksitePlannerScreen extends Screen {
             for (int i = 0; i < filterItems.size(); i++) {
                 Rect slot = filterSlot(rect, i);
                 boolean selected = BuiltInRegistries.ITEM.getKey(filterItems.get(i).getItem()).toString().equals(itemFilter);
-                graphics.fill(slot.x, slot.y, slot.right(), slot.bottom(), selected ? 0xFFF4D28D : slot.contains(mouseX, mouseY) ? 0xE8E7CBAA : 0xD0B78F70);
+                PrimevalUiCrop.paperSlot(graphics, slot.x, slot.y, slot.width, slot.height, 255);
+                if (selected || slot.contains(mouseX, mouseY)) {
+                    graphics.fill(slot.x + 2, slot.y + 2, slot.right() - 2, slot.bottom() - 2,
+                            withAlpha(AMBER, selected ? 52 : 28));
+                }
                 outline(graphics, slot, selected ? AMBER : EDGE);
                 graphics.item(filterItems.get(i), slot.x + 3, slot.y + 3);
             }
@@ -2939,8 +2944,11 @@ public final class WorksitePlannerScreen extends Screen {
     }
 
     private void drawRuleTab(GuiGraphicsExtractor graphics, Rect rect, String label, boolean selected, int mouseX, int mouseY) {
-        int color = selected ? 0xFFE8C18F : rect.contains(mouseX, mouseY) ? 0xFFD4B18B : 0xFFAD876A;
-        graphics.fill(rect.x, rect.y, rect.right(), rect.bottom(), color);
+        PrimevalUiCrop.paperBubble(graphics, rect.x, rect.y, rect.width, rect.height);
+        if (selected || rect.contains(mouseX, mouseY)) {
+            graphics.fill(rect.x + 2, rect.y + 2, rect.right() - 2, rect.bottom() - 2,
+                    withAlpha(GREEN, selected ? 38 : 20));
+        }
         graphics.fill(rect.x, rect.bottom() - 2, rect.right(), rect.bottom(), selected ? GREEN : EDGE);
         boldCenteredFit(graphics, label, new Rect(rect.x + 3, rect.y + 2, rect.width - 6, rect.height - 4),
                 selected ? INK : MUTED);
@@ -2948,7 +2956,11 @@ public final class WorksitePlannerScreen extends Screen {
 
     private void drawRule(GuiGraphicsExtractor graphics, Rect rect, String label, String value, int mouseX, int mouseY, int accent) {
         boolean hovered = rect.contains(mouseX, mouseY);
-        graphics.fill(rect.x, rect.y, rect.right(), rect.bottom(), hovered ? 0xE8E8C9A7 : 0xCDBF9978);
+        PrimevalUiCrop.paperBubble(graphics, rect.x, rect.y, rect.width, rect.height);
+        if (hovered) {
+            graphics.fill(rect.x + 2, rect.y + 2, rect.right() - 2, rect.bottom() - 2,
+                    withAlpha(accent, 24));
+        }
         graphics.fill(rect.x, rect.y, rect.x + (hovered ? 4 : 2), rect.bottom(), hovered ? accent : EDGE);
         int valueWidth = Math.min(rect.width / 2, font().width(boldComponent(value)) + 12);
         textFit(graphics, label, rect.x + 8, rect.y + 6,
@@ -2976,7 +2988,7 @@ public final class WorksitePlannerScreen extends Screen {
         int lift = Math.round(pulse * 2.0F);
         Rect lifted = new Rect(rect.x, rect.y - lift, rect.width, rect.height);
         graphics.fill(lifted.x + 3, lifted.y + 4, lifted.right() + 3, lifted.bottom() + 4, 0x5A000000);
-        graphics.fill(lifted.x, lifted.y, lifted.right(), lifted.bottom(), 0xE8B79370);
+        PrimevalUiCrop.paperBubble(graphics, lifted.x, lifted.y, lifted.width, lifted.height);
         outline(graphics, lifted, selection.color);
 
         Rect preview = new Rect(lifted.x + 3, lifted.y + 3, 29, 29);
@@ -3732,19 +3744,7 @@ public final class WorksitePlannerScreen extends Screen {
     }
 
     private void drawSpaceBubble(GuiGraphicsExtractor graphics, Rect rect) {
-        int border = 2;
-        int middleWidth = Math.max(0, rect.width - border * 2);
-        int middleHeight = Math.max(0, rect.height - border * 2);
-
-        blitRegion(graphics, SPACE_TEXTURE, new Rect(rect.x, rect.y, border, border), 0, 0, 2, 2, 86, 14);
-        blitRegion(graphics, SPACE_TEXTURE, new Rect(rect.x + border, rect.y, middleWidth, border), 2, 0, 82, 2, 86, 14);
-        blitRegion(graphics, SPACE_TEXTURE, new Rect(rect.right() - border, rect.y, border, border), 84, 0, 2, 2, 86, 14);
-        blitRegion(graphics, SPACE_TEXTURE, new Rect(rect.x, rect.y + border, border, middleHeight), 0, 2, 2, 10, 86, 14);
-        blitRegion(graphics, SPACE_TEXTURE, new Rect(rect.x + border, rect.y + border, middleWidth, middleHeight), 2, 2, 82, 10, 86, 14);
-        blitRegion(graphics, SPACE_TEXTURE, new Rect(rect.right() - border, rect.y + border, border, middleHeight), 84, 2, 2, 10, 86, 14);
-        blitRegion(graphics, SPACE_TEXTURE, new Rect(rect.x, rect.bottom() - border, border, border), 0, 12, 2, 2, 86, 14);
-        blitRegion(graphics, SPACE_TEXTURE, new Rect(rect.x + border, rect.bottom() - border, middleWidth, border), 2, 12, 82, 2, 86, 14);
-        blitRegion(graphics, SPACE_TEXTURE, new Rect(rect.right() - border, rect.bottom() - border, border, border), 84, 12, 2, 2, 86, 14);
+        PrimevalUiCrop.paperBubble(graphics, rect.x, rect.y, rect.width, rect.height);
     }
 
     private void blitRegion(
@@ -3841,11 +3841,10 @@ public final class WorksitePlannerScreen extends Screen {
 
     private void panel(GuiGraphicsExtractor graphics, Rect rect, int accent) {
         graphics.fill(rect.x + 3, rect.y + 4, rect.right() + 3, rect.bottom() + 4, 0x62000000);
-        graphics.fill(rect.x, rect.y, rect.right(), rect.bottom(), PANEL);
-        graphics.fill(rect.x, rect.y, rect.right(), rect.y + 32, PANEL_DARK);
-        outline(graphics, rect, EDGE);
+        PrimevalUiCrop.paperPanel(graphics, rect.x, rect.y, rect.width, rect.height);
         graphics.fill(rect.x + 1, rect.y + 1, rect.x + 6, rect.y + 31, accent);
-        graphics.fill(rect.x + 7, rect.y + 31, rect.right() - 1, rect.y + 32, 0x8F6E4E3C);
+        PrimevalUiCrop.paperHorizontalRule(graphics, rect.x + 7, rect.y + 31,
+                rect.width - 8, 1, 143);
     }
 
     private void outline(GuiGraphicsExtractor graphics, Rect rect, int color) {
@@ -3857,15 +3856,22 @@ public final class WorksitePlannerScreen extends Screen {
 
     private void drawButton(GuiGraphicsExtractor graphics, Rect rect, String label, boolean primary, int mouseX, int mouseY) {
         boolean hovered = rect.contains(mouseX, mouseY);
-        int background = primary ? hovered ? 0xFFF0A451 : 0xFFE18B39 : hovered ? 0xFFE3C39E : 0xFFC9A680;
-        graphics.fill(rect.x, rect.y, rect.right(), rect.bottom(), background);
+        PrimevalUiCrop.paperBubble(graphics, rect.x, rect.y, rect.width, rect.height);
+        if (primary || hovered) {
+            graphics.fill(rect.x + 2, rect.y + 2, rect.right() - 2, rect.bottom() - 2,
+                    withAlpha(primary ? CORAL : CREAM, hovered ? 46 : 30));
+        }
         outline(graphics, rect, primary ? CORAL : EDGE);
         boldCenteredFit(graphics, label, new Rect(rect.x + 4, rect.y + 3, rect.width - 8, rect.height - 6),
                 primary ? 0xFF382923 : INK);
     }
 
     private void drawSmallButton(GuiGraphicsExtractor graphics, Rect rect, String label, boolean selected, int mouseX, int mouseY) {
-        graphics.fill(rect.x, rect.y, rect.right(), rect.bottom(), selected ? 0xFFF0C875 : rect.contains(mouseX, mouseY) ? 0xFFE2C6A3 : 0xFFB89070);
+        PrimevalUiCrop.paperBubble(graphics, rect.x, rect.y, rect.width, rect.height);
+        if (selected || rect.contains(mouseX, mouseY)) {
+            graphics.fill(rect.x + 2, rect.y + 2, rect.right() - 2, rect.bottom() - 2,
+                    withAlpha(AMBER, selected ? 48 : 24));
+        }
         outline(graphics, rect, selected ? AMBER : EDGE);
         boldCenteredFit(graphics, label, new Rect(rect.x + 3, rect.y + 2, rect.width - 6, rect.height - 4), INK);
     }

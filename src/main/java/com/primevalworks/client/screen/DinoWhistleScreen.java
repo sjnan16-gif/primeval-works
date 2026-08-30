@@ -10,6 +10,7 @@ import com.primevalworks.network.payload.StopWhistleFieldWorkPayload;
 import com.primevalworks.registry.ModItems;
 import com.primevalworks.world.entity.FieldDodoEntity;
 import com.primevalworks.world.item.DinoWhistleItem;
+import com.primevalworks.world.ownership.FollowerCapacityRules;
 import com.primevalworks.world.work.DinoWhistleSettings;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -261,7 +262,7 @@ public final class DinoWhistleScreen extends Screen {
         }
 
         centeredText(graphics, "FOLLOWER", followerLabel, MUTED, 0.66F);
-        int maximum = 3;
+        int maximum = FollowerCapacityRules.MAXIMUM_SLOTS;
         for (int index = 0; index < Math.min(maximum, followers.size()); index++) {
             Rect slot = followerSlot(row, index);
             PassiveWhistleFollowersPayload.Entry entry = followers.get(index);
@@ -556,7 +557,7 @@ public final class DinoWhistleScreen extends Screen {
         }
         if (settings.mode().isPassive()) {
             Rect row = followerRect(panel);
-            int maximum = 3;
+            int maximum = FollowerCapacityRules.MAXIMUM_SLOTS;
             for (int index = 0; index < Math.min(maximum, followers.size()); index++) {
                 if (!followerSlot(row, index).contains(localX, mouseY)) continue;
                 PassiveWhistleFollowersPayload.Entry entry = followers.get(index);

@@ -4,7 +4,7 @@ import java.util.List;
 
 public enum DinosaurSpecies {
     TYRANNOSAURUS("tyrannosaurus", 2.03F, 3.25F, 1.25F, 8.5F, 320, 2.40F, Diet.CARNIVORE, 180.0D, 20.0D, 0.23D),
-    TRICERATOPS("triceratops", 1.45F, 1.80F, 1.00F, 7.5F, 480, 1.55F, Diet.HERBIVORE, 80.0D, 10.0D, 0.24D),
+    TRICERATOPS("triceratops", 1.875F, 3.375F, 1.00F, 7.5F, 480, 1.55F, Diet.HERBIVORE, 80.0D, 0.0D, 0.24D),
     BRACHIOSAURUS("brachiosaurus", 1.50F, 3.20F, 1.50F, 5.5F, 280, 2.60F, Diet.HERBIVORE, 130.0D, 5.0D, 0.18D),
     DILOPHOSAURUS("dilophosaurus", 0.80F, 1.40F, 0.85F, 11.0F, 620, 1.15F, Diet.CARNIVORE, 30.0D, 6.0D, 0.24D),
     VELOCIRAPTOR("velociraptor", 0.77F, 1.55F, 1.15F, 14.0F, 680, 1.00F, Diet.CARNIVORE, 28.0D, 7.0D, 0.30D),
@@ -127,10 +127,14 @@ public enum DinosaurSpecies {
 
     public boolean combatCapable() {
         return switch (this) {
-            case TYRANNOSAURUS, TRICERATOPS, DILOPHOSAURUS, VELOCIRAPTOR,
+            case TYRANNOSAURUS, DILOPHOSAURUS, VELOCIRAPTOR,
                     STEGOSAURUS, ANKYLOSAURUS, SPINOSAURUS, PACHYCEPHALOSAURUS -> true;
             default -> false;
         };
+    }
+
+    public boolean autoAttacksHostiles() {
+        return this == TYRANNOSAURUS || this == SPINOSAURUS;
     }
 
     public boolean heavyweight() {

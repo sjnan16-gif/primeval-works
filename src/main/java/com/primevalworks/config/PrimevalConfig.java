@@ -25,12 +25,15 @@ public final class PrimevalConfig {
     public static void loadServer(ModConfigEvent event) {
         if (event.getConfig().getSpec() != SERVER_SPEC) return;
         PrimevalTuning.apply(new PrimevalTuning.Server(
+                SERVER.startingFollowerSlots.get(), SERVER.followerSlotsPerFieldCommandRank.get(),
+                SERVER.maximumFollowerSlots.get(),
                 SERVER.hungerDrainRate.get(), SERVER.moodDrainRate.get(), SERVER.nightShiftMoodRate.get(),
                 SERVER.foodBoxThreshold.get(), SERVER.recoveryTime.get(), SERVER.breedingCooldown.get(),
                 SERVER.wildHugeChance.get(), SERVER.wildAlbinoChance.get(),
                 SERVER.incubatedHugeChance.get(), SERVER.incubatedAlbinoChance.get(),
                 SERVER.bredHugeChance.get(), SERVER.bredAlbinoChance.get(),
-                SERVER.oneParentInheritance.get(), SERVER.twoParentInheritance.get(),
+                SERVER.parentMutationInheritanceChance.get(), SERVER.parentMutationLevelBonus.get(),
+                SERVER.parentMutationQualityBonus.get(),
                 SERVER.hugeScale.get(), SERVER.hugeStats.get(), SERVER.albinoStats.get(), SERVER.albinoHealth.get(),
                 SERVER.workSpeed.get(), SERVER.transportCapacity.get(), SERVER.energyGeneration.get(),
                 SERVER.targetsPerWorkOrder.get(), SERVER.energyStorage.get(), SERVER.waterTurbineOutput.get(),
@@ -102,6 +105,10 @@ public final class PrimevalConfig {
     }
 
     public static final class Server {
+        public final ModConfigSpec.IntValue startingFollowerSlots;
+        public final ModConfigSpec.IntValue followerSlotsPerFieldCommandRank;
+        public final ModConfigSpec.IntValue maximumFollowerSlots;
+
         public final ModConfigSpec.DoubleValue hungerDrainRate;
         public final ModConfigSpec.DoubleValue moodDrainRate;
         public final ModConfigSpec.DoubleValue nightShiftMoodRate;
@@ -115,8 +122,9 @@ public final class PrimevalConfig {
         public final ModConfigSpec.DoubleValue incubatedAlbinoChance;
         public final ModConfigSpec.DoubleValue bredHugeChance;
         public final ModConfigSpec.DoubleValue bredAlbinoChance;
-        public final ModConfigSpec.DoubleValue oneParentInheritance;
-        public final ModConfigSpec.DoubleValue twoParentInheritance;
+        public final ModConfigSpec.DoubleValue parentMutationInheritanceChance;
+        public final ModConfigSpec.DoubleValue parentMutationLevelBonus;
+        public final ModConfigSpec.DoubleValue parentMutationQualityBonus;
         public final ModConfigSpec.DoubleValue hugeScale;
         public final ModConfigSpec.DoubleValue hugeStats;
         public final ModConfigSpec.DoubleValue albinoStats;
@@ -153,6 +161,17 @@ public final class PrimevalConfig {
         public final ModConfigSpec.DoubleValue incubatorSpeed;
 
         private Server(ModConfigSpec.Builder builder) {
+            builder.comment("Travel-crew capacity. Every limit is enforced by the server and supports up to four followers.")
+                    .translation("config.primevalworks.server.followers")
+                    .push("followers");
+            startingFollowerSlots = integer(builder, "startingFollowerSlots", 1, 1, 4,
+                    "Follower slots available at a fresh Command Table.");
+            followerSlotsPerFieldCommandRank = integer(builder, "followerSlotsPerFieldCommandRank", 1, 0, 3,
+                    "Follower slots added by each of the two Field Command ranks.");
+            maximumFollowerSlots = integer(builder, "maximumFollowerSlots", 3, 1, 4,
+                    "Final follower cap. If this is below the starting value, the starting value wins.");
+            builder.pop();
+
             builder.comment("Everyday companion needs and recovery timing.")
                     .translation("config.primevalworks.server.needs")
                     .push("needs");
@@ -185,10 +204,12 @@ public final class PrimevalConfig {
                     "Huge chance for a bred egg when neither parent is Huge.");
             bredAlbinoChance = decimal(builder, "bredAlbinoChance", 0.012D, 0.0D, 1.0D,
                     "Albino chance for a bred egg when neither parent is Albino.");
-            oneParentInheritance = decimal(builder, "oneParentInheritance", 0.65D, 0.0D, 1.0D,
-                    "Chance to inherit a mutation carried by one parent.");
-            twoParentInheritance = decimal(builder, "twoParentInheritance", 0.88D, 0.0D, 1.0D,
-                    "Chance to inherit a mutation carried by both parents.");
+            parentMutationInheritanceChance = decimal(builder, "parentMutationInheritanceChance", 0.09D, 0.0D, 1.0D,
+                    "Base chance for each mutation-carrying parent to pass that mutation to a bred egg.");
+            parentMutationLevelBonus = decimal(builder, "parentMutationLevelBonus", 0.06D, 0.0D, 1.0D,
+                    "Extra inheritance chance a level 100 parent contributes. Lower levels scale smoothly.");
+            parentMutationQualityBonus = decimal(builder, "parentMutationQualityBonus", 0.06D, 0.0D, 1.0D,
+                    "Extra inheritance chance a 100-quality parent contributes. Lower quality scales smoothly.");
             hugeScale = decimal(builder, "hugeScale", 1.18D, 1.0D, 2.0D,
                     "Visual and collision scale for Huge dinosaurs.");
             hugeStats = decimal(builder, "hugeStats", 1.20D, 0.25D, 5.0D,
@@ -254,11 +275,11 @@ public final class PrimevalConfig {
             dinosaurDamage = decimal(builder, "dinosaurDamage", 1.0D, 0.0D, 10.0D,
                     "Scales melee damage for combat-capable dinosaurs.");
             hostileMobTargeting = bool(builder, "hostileMobTargeting", true,
-                    "Lets combat-capable dinosaurs proactively defend the base. Hostile mobs do not target dinosaurs by default.");
+                    "Lets idle Tyrannosaurus and Spinosaurus proactively defend the base. Jobs always take priority, and hostile mobs do not target dinosaurs by default.");
             turretDamage = decimal(builder, "turretDamage", 1.0D, 0.0D, 10.0D,
-                    "Scales Dart and Laser Turret damage.");
+                    "Scales Laser Turret damage.");
             turretRange = decimal(builder, "turretRange", 1.0D, 0.25D, 4.0D,
-                    "Scales target range for both defensive turrets.");
+                    "Scales target range for the defensive turret.");
             builder.pop();
 
             builder.comment("Energy cost and processing speed for powered machines.")

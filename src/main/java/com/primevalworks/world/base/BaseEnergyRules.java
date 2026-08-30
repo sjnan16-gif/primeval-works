@@ -26,6 +26,7 @@ import java.util.WeakHashMap;
 
 public final class BaseEnergyRules {
     public static final int PROCESSOR_DEMAND = 6;
+    public static final int ANCIENT_SPELL_STONE_WARD_RADIUS = 20;
     private static final Map<net.minecraft.world.level.Level, Map<BlockPos, BlockPos>> NETWORK_BINDINGS =
             java.util.Collections.synchronizedMap(new WeakHashMap<>());
     private static final Map<net.minecraft.world.level.Level, Set<BlockPos>> LOADED_TABLES =
@@ -44,9 +45,6 @@ public final class BaseEnergyRules {
             return 1;
         }
         if (block == ModBlocks.ANCIENT_FURNACE.get()) return 3;
-        if (block == ModBlocks.DART_TURRET.get()) {
-            return 3;
-        }
         if (block == ModBlocks.ANCIENT_SPELL_STONE.get()) {
             return 4;
         }

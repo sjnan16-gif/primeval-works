@@ -32,12 +32,41 @@ final class DinosaurFollowRulesTest {
     }
 
     @Test
+    void circlingWithoutClosingDistanceTriggersCatchupRecovery() {
+        assertFalse(DinosaurFollowRules.madeOwnerCatchupProgress(8.0D, 8.02D));
+        assertFalse(DinosaurFollowRules.madeOwnerCatchupProgress(8.0D, 7.90D));
+        assertTrue(DinosaurFollowRules.madeOwnerCatchupProgress(8.0D, 7.70D));
+    }
+
+    @Test
+    void landPathsMeasureWaypointsFromFeetWhileSwimmingUsesBodyCenter() {
+        assertEquals(64.0D, DinosaurFollowRules.navigationSampleY(64.0D, 5.05D, false));
+        assertEquals(66.525D, DinosaurFollowRules.navigationSampleY(64.0D, 5.05D, true), 0.0001D);
+    }
+
+    @Test
+    void aFullTurnWithoutCatchupForcesARouteReset() {
+        assertFalse(DinosaurFollowRules.shouldRecoverTurnLoop(224.9F, 12.0D * 12.0D));
+        assertTrue(DinosaurFollowRules.shouldRecoverTurnLoop(225.0F, 12.0D * 12.0D));
+        assertFalse(DinosaurFollowRules.shouldRecoverTurnLoop(500.0F, 5.0D * 5.0D));
+    }
+
+    @Test
     void teleportIsReservedForSustainedNavigationFailure() {
         assertFalse(DinosaurFollowRules.shouldTeleportAfterStall(139, 12.0D * 12.0D));
         assertTrue(DinosaurFollowRules.shouldTeleportAfterStall(140, 12.0D * 12.0D));
         assertFalse(DinosaurFollowRules.shouldTeleportAfterStall(79, 40.0D * 40.0D));
         assertTrue(DinosaurFollowRules.shouldTeleportAfterStall(80, 40.0D * 40.0D));
         assertFalse(DinosaurFollowRules.shouldTeleportAfterStall(500, 5.0D * 5.0D));
+    }
+
+    @Test
+    void followerRecoveryCannotBeSuppressedForeverByJitterOrExtremeSeparation() {
+        assertFalse(DinosaurFollowRules.shouldTeleportFollower(79, 79, 99, 40.0D * 40.0D));
+        assertTrue(DinosaurFollowRules.shouldTeleportFollower(0, 80, 0, 40.0D * 40.0D));
+        assertFalse(DinosaurFollowRules.shouldTeleportFollower(0, 0, 99, 101.0D * 101.0D));
+        assertTrue(DinosaurFollowRules.shouldTeleportFollower(0, 0, 100, 101.0D * 101.0D));
+        assertFalse(DinosaurFollowRules.shouldTeleportFollower(500, 500, 500, 5.0D * 5.0D));
     }
 
     @Test

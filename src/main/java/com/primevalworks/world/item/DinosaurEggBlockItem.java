@@ -36,12 +36,7 @@ public final class DinosaurEggBlockItem extends BlockItem {
         if (genome == null) return super.useOn(context);
         if (!(context.getPlayer() instanceof ServerPlayer player)) return InteractionResult.SUCCESS;
 
-        DinosaurHatching.Genome hatchGenome = genome.origin() == DinosaurEggGenome.Origin.INCUBATED
-                ? DinosaurHatching.Genome.incubated(
-                        genome.species(), genome.quality(), genome.mutationMask(), genome.hueVariant())
-                : DinosaurHatching.Genome.bred(
-                        genome.species(), genome.quality(), genome.mutationMask(), genome.hueVariant());
-        DinosaurHatching.HatchResult result = DinosaurHatching.hatchForPlayer(player, hatchGenome);
+        DinosaurHatching.HatchResult result = DinosaurHatching.hatchForPlayer(player, genome.hatchingGenome());
         player.sendOverlayMessage(result.message());
         if (!result.success()) return InteractionResult.FAIL;
         context.getItemInHand().consume(1, player);

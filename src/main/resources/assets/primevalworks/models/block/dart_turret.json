@@ -1,8 +1,0 @@
-{
-  "parent": "minecraft:block/block",
-  "textures": {"metal":"minecraft:block/deepslate_tiles","trim":"minecraft:block/copper_block","dark":"minecraft:block/blackstone","particle":"minecraft:block/deepslate_tiles"},
-  "elements": [
-    {"from":[1,0,1],"to":[15,4,15],"faces":{"down":{"texture":"#dark"},"up":{"texture":"#metal"},"north":{"texture":"#metal"},"south":{"texture":"#metal"},"west":{"texture":"#metal"},"east":{"texture":"#metal"}}},
-    {"from":[5,4,5],"to":[11,10,11],"faces":{"down":{"texture":"#metal"},"up":{"texture":"#trim"},"north":{"texture":"#dark"},"south":{"texture":"#dark"},"west":{"texture":"#trim"},"east":{"texture":"#trim"}}}
-  ]
-}

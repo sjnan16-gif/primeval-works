@@ -39,7 +39,10 @@ public record DinosaurVisualProfile(
                     "stegosaurus", texture("stegosaurus"), texture("stegosaurus_blink"),
                     1.0F, 0.0F, 1.12F, 3.14F, 1.18F, 1.75F, 2.88F, "Head"
             );
-            case "triceratops" -> placeholder(1.22F, 0.82F, 2.05F);
+            case "triceratops" -> new DinosaurVisualProfile(
+                    "triceratops", texture("triceratops"), texture("triceratops_blink"),
+                    1.0F, 0.0F, 1.25F, 3.68F, 1.28F, 2.25F, 3.375F, "head"
+            );
             case "parasaurolophus" -> new DinosaurVisualProfile(
                     "parasaurolophus", texture("parasaurolophus"), texture("parasaurolophus_blink"),
                     1.0F, 0.0F, 1.0F, 3.55F, 1.14F, 1.50F, 3.32F, "Head"

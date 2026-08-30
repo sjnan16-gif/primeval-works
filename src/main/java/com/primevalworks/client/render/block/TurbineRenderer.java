@@ -31,7 +31,9 @@ public final class TurbineRenderer<R extends BlockEntityRenderState & GeoRenderS
 
     @Override
     public RenderType getRenderType(R renderState, Identifier texture) {
-        return RenderTypes.entityCutout(texture);
+        return renderState.getOrDefaultGeckolibData(TurbineGeoModel.WIND, false)
+                ? RenderTypes.entityCutoutCull(texture)
+                : RenderTypes.entityCutout(texture);
     }
 
     @Override

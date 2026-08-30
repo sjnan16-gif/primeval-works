@@ -18,14 +18,12 @@ public final class ExpeditionRewards {
     private static final List<Tier> TIERS = List.of(
             new Tier("Safe Forage", 1, List.of(
                     reward(() -> ModItems.BERRIES.get(), 3, 6, 7),
-                    reward(() -> ModItems.DODO_FEATHER.get(), 1, 3, 5),
                     reward(() -> ModItems.FOSSIL_FRAGMENT.get(), 1, 1, 2),
                     reward(() -> Items.WHEAT_SEEDS, 3, 7, 5),
                     reward(() -> Items.FLINT, 1, 3, 3)
             )),
             new Tier("Ridge Trail", 2, List.of(
                     reward(() -> ModItems.SULFUR.get(), 1, 3, 6),
-                    reward(() -> ModItems.DODO_FEATHER.get(), 2, 5, 4),
                     reward(() -> ModItems.FOSSIL_FRAGMENT.get(), 1, 2, 3),
                     reward(() -> ModItems.HARDWOOD.get(), 2, 4, 4),
                     reward(() -> Items.COAL, 2, 5, 3)
@@ -94,7 +92,7 @@ public final class ExpeditionRewards {
 
     public static String shortPoolDescription(int tier) {
         return switch (Math.max(0, Math.min(4, tier))) {
-            case 0 -> "Berries, feathers, seeds, fossil fragments";
+            case 0 -> "Ember Berries, feathers, seeds, fossil fragments";
             case 1 -> "Sulfur, feathers, fossils, hardwood, coal";
             case 2 -> "Silk, sulfur, nesting treats, cores, rare metal";
             case 3 -> "Teeth, wings, nesting treats, cores, ancient metal";

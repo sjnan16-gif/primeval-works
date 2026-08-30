@@ -41,9 +41,9 @@ public final class DodoIndicatorLayer<R extends LivingEntityRenderState & GeoRen
     private static final Identifier NEUTRAL = Identifier.fromNamespaceAndPath("primevalworks", "textures/entity/indicator/neutral.png");
     private static final Identifier SAD = Identifier.fromNamespaceAndPath("primevalworks", "textures/entity/indicator/sad.png");
     private static final Identifier FOOD = Identifier.withDefaultNamespace("textures/gui/sprites/hud/food_full.png");
-    private static final Identifier PLANNER_TEXTURE = Identifier.fromNamespaceAndPath(
+    private static final Identifier UI_CROP_TEXTURE = Identifier.fromNamespaceAndPath(
             "primevalworks",
-            "textures/gui/worksite_planner.png"
+            "textures/gui/ui_crop.png"
     );
     private final float indicatorHeight;
     private final float scaleCompensation;
@@ -149,8 +149,8 @@ public final class DodoIndicatorLayer<R extends LivingEntityRenderState & GeoRen
         pose.mulPose(Axis.YP.rotationDegrees(renderPassInfo.renderState().bodyRot - 180.0F));
         pose.mulPose(renderPassInfo.cameraState().orientation);
         pose.scale(frameScale, frameScale, frameScale);
-        renderTasks.submitCustomGeometry(pose, RenderTypes.entityTranslucent(PLANNER_TEXTURE), (matrix, vertices) ->
-                addSearchSlotQuad(vertices, matrix, 0xFFFFFFFF, OverlayTexture.NO_OVERLAY, 0x00F000F0));
+        renderTasks.submitCustomGeometry(pose, RenderTypes.entityTranslucent(UI_CROP_TEXTURE), (matrix, vertices) ->
+                addCargoSlotQuad(vertices, matrix, 0xFFFFFFFF, OverlayTexture.NO_OVERLAY, 0x00F000F0));
         pose.popPose();
 
         pose.pushPose();
@@ -314,7 +314,7 @@ public final class DodoIndicatorLayer<R extends LivingEntityRenderState & GeoRen
         vertices.addVertex(matrix, left, top, z).setColor(color).setUv(0.0F, 0.0F).setOverlay(overlay).setLight(light).setNormal(0.0F, 0.0F, 1.0F);
     }
 
-    private static void addSearchSlotQuad(
+    private static void addCargoSlotQuad(
             VertexConsumer vertices,
             PoseStack.Pose matrix,
             int color,
@@ -323,12 +323,12 @@ public final class DodoIndicatorLayer<R extends LivingEntityRenderState & GeoRen
     ) {
         float left = -0.5F;
         float right = 0.5F;
-        float bottom = -0.5F;
-        float top = 0.5F;
-        float u1 = 0.0F;
-        float v1 = 214.0F / 240.0F;
-        float u2 = 26.0F / 427.0F;
-        float v2 = 1.0F;
+        float bottom = -19.0F / 36.0F;
+        float top = 19.0F / 36.0F;
+        float u1 = 117.0F / 427.0F;
+        float v1 = 75.0F / 240.0F;
+        float u2 = 135.0F / 427.0F;
+        float v2 = 94.0F / 240.0F;
         vertices.addVertex(matrix, left, bottom, 0.0F).setColor(color).setUv(u1, v2).setOverlay(overlay).setLight(light).setNormal(0.0F, 0.0F, 1.0F);
         vertices.addVertex(matrix, right, bottom, 0.0F).setColor(color).setUv(u2, v2).setOverlay(overlay).setLight(light).setNormal(0.0F, 0.0F, 1.0F);
         vertices.addVertex(matrix, right, top, 0.0F).setColor(color).setUv(u2, v1).setOverlay(overlay).setLight(light).setNormal(0.0F, 0.0F, 1.0F);

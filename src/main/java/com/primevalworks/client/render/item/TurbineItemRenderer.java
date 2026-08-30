@@ -22,7 +22,9 @@ public final class TurbineItemRenderer extends GeoItemRenderer<TurbineBlockItem>
 
     @Override
     public RenderType getRenderType(GeoRenderState renderState, Identifier texture) {
-        return RenderTypes.entityCutout(texture);
+        return variant == TurbineBlockItem.Variant.WATER
+                ? RenderTypes.entityCutout(texture)
+                : RenderTypes.entityCutoutCull(texture);
     }
 
     @Override

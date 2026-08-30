@@ -3,6 +3,7 @@ package com.primevalworks.world.entity;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DinosaurSpeciesTest {
@@ -12,6 +13,8 @@ class DinosaurSpeciesTest {
         assertEquals(1.56F, DinosaurSpecies.DODO.collisionHeight());
         assertEquals(2.03F, DinosaurSpecies.TYRANNOSAURUS.collisionWidth());
         assertEquals(3.25F, DinosaurSpecies.TYRANNOSAURUS.collisionHeight());
+        assertEquals(1.875F, DinosaurSpecies.TRICERATOPS.collisionWidth());
+        assertEquals(3.375F, DinosaurSpecies.TRICERATOPS.collisionHeight());
         assertEquals(1.75F, DinosaurSpecies.STEGOSAURUS.collisionWidth());
         assertEquals(2.88F, DinosaurSpecies.STEGOSAURUS.collisionHeight());
         assertEquals(1.35F, DinosaurSpecies.PTERANODON.collisionWidth());
@@ -50,11 +53,25 @@ class DinosaurSpeciesTest {
     void onlyAuthoredCombatSpeciesDefendThemselves() {
         assertTrue(DinosaurSpecies.TYRANNOSAURUS.combatCapable());
         assertTrue(DinosaurSpecies.VELOCIRAPTOR.combatCapable());
-        assertTrue(DinosaurSpecies.TRICERATOPS.combatCapable());
+        assertFalse(DinosaurSpecies.TRICERATOPS.combatCapable());
+        assertEquals(0.0D, DinosaurSpecies.TRICERATOPS.baseAttackDamage());
         assertTrue(DinosaurSpecies.ANKYLOSAURUS.combatCapable());
         assertTrue(DinosaurSpecies.SPINOSAURUS.combatCapable());
         assertTrue(!DinosaurSpecies.DODO.combatCapable());
         assertTrue(!DinosaurSpecies.BRACHIOSAURUS.combatCapable());
+    }
+
+    @Test
+    void onlyApexPredatorsProactivelyAcquireHostiles() {
+        for (DinosaurSpecies species : DinosaurSpecies.values()) {
+            assertEquals(species == DinosaurSpecies.TYRANNOSAURUS
+                            || species == DinosaurSpecies.SPINOSAURUS,
+                    species.autoAttacksHostiles(), species.registryName());
+        }
+        assertTrue(DinosaurSpecies.VELOCIRAPTOR.combatCapable());
+        assertFalse(DinosaurSpecies.VELOCIRAPTOR.autoAttacksHostiles());
+        assertTrue(DinosaurSpecies.STEGOSAURUS.combatCapable());
+        assertFalse(DinosaurSpecies.STEGOSAURUS.autoAttacksHostiles());
     }
 
     @Test

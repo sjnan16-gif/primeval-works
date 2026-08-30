@@ -148,9 +148,7 @@ public final class ProcessorScreen extends AbstractContainerScreen<ProcessorMenu
         int panelY = topPos + 108;
         int panelWidth = 176;
         int panelHeight = 92;
-        graphics.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, 0xFF15151F);
-        graphics.fill(panelX + 2, panelY + 2, panelX + panelWidth - 2, panelY + panelHeight - 2, 0xFF292B3E);
-        graphics.fill(panelX + 3, panelY + 3, panelX + panelWidth - 3, panelY + panelHeight - 3, 0xFF292839);
+        PrimevalUiCrop.darkBubble(graphics, panelX, panelY, panelWidth, panelHeight, 255);
         graphics.text(font, Component.translatable("container.inventory").withStyle(style -> style.withBold(true)),
                 leftPos + ProcessorMenu.PLAYER_INVENTORY_X, topPos + 110, 0xFFB8B5C4, true);
 
@@ -158,9 +156,7 @@ public final class ProcessorScreen extends AbstractContainerScreen<ProcessorMenu
             var slot = menu.getSlot(index);
             int x = leftPos + slot.x - 1;
             int y = topPos + slot.y - 1;
-            graphics.fill(x, y, x + 18, y + 18, 0xFF15151F);
-            graphics.fill(x + 1, y + 1, x + 17, y + 17, 0xFF202230);
-            graphics.fill(x + 2, y + 2, x + 16, y + 16, 0xFF292839);
+            PrimevalUiCrop.darkSquare(graphics, x, y, 18, 18, 255);
         }
     }
 

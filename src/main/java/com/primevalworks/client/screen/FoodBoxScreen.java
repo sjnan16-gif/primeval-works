@@ -1,6 +1,5 @@
 package com.primevalworks.client.screen;
 
-import com.primevalworks.PrimevalWorks;
 import com.primevalworks.world.inventory.FoodBoxMenu;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -8,7 +7,6 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
-import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
 import net.minecraft.world.entity.player.Inventory;
@@ -26,15 +24,6 @@ public final class FoodBoxScreen extends AbstractContainerScreen<FoodBoxMenu> {
     private static final int FOOD_ROW_Y = 14;
     private static final int INVENTORY_X = 14;
     private static final int INVENTORY_Y = 39;
-    private static final Identifier SPACE = Identifier.fromNamespaceAndPath(
-            PrimevalWorks.MOD_ID,
-            "textures/gui/space.png"
-    );
-    private static final int EDGE_DARK = 0xFF6D4E3B;
-    private static final int EDGE = 0xFF88664F;
-    private static final int PAPER_DARK = 0xFFB99472;
-    private static final int PAPER = 0xFFD7B392;
-    private static final int PAPER_LIGHT = 0xFFE7C9AA;
     private static final int TITLE_COLOR = 0xFFC74F43;
     private static final float POPUP_DURATION_TICKS = 24.0F;
 
@@ -167,9 +156,7 @@ public final class FoodBoxScreen extends AbstractContainerScreen<FoodBoxMenu> {
             boolean hovered,
             int index
     ) {
-        graphics.fill(rect.x, rect.y, rect.right(), rect.bottom(), EDGE_DARK);
-        graphics.fill(rect.x + 1, rect.y + 1, rect.right() - 1, rect.bottom() - 1, PAPER_DARK);
-        graphics.fill(rect.x + 2, rect.y + 2, rect.right() - 2, rect.bottom() - 2, PAPER_LIGHT);
+        PrimevalUiCrop.paperSlot(graphics, rect.x, rect.y, rect.width, rect.height, 255);
         if (hovered) {
             outline(graphics, new Rect(rect.x - 1, rect.y - 1, rect.width + 2, rect.height + 2), 0xB8FFF1C7);
         }
@@ -239,39 +226,11 @@ public final class FoodBoxScreen extends AbstractContainerScreen<FoodBoxMenu> {
 
     private void drawPaperPanel(GuiGraphicsExtractor graphics, Rect panel) {
         graphics.fill(panel.x + 4, panel.y + 5, panel.right() + 4, panel.bottom() + 5, 0x46000000);
-        graphics.fill(panel.x, panel.y, panel.right(), panel.bottom(), EDGE_DARK);
-        graphics.fill(panel.x + 2, panel.y + 2, panel.right() - 2, panel.bottom() - 2, EDGE);
-        graphics.fill(panel.x + 4, panel.y + 4, panel.right() - 4, panel.bottom() - 4, PAPER);
-        for (int y = panel.y + 7; y < panel.bottom() - 5; y += 7) {
-            graphics.fill(panel.x + 5, y, panel.right() - 5, y + 1, 0x12FFFFFF);
-        }
-        graphics.fill(panel.x + 2, panel.y + 2, panel.x + 10, panel.y + 4, PAPER_LIGHT);
-        graphics.fill(panel.right() - 10, panel.y + 2, panel.right() - 2, panel.y + 4, PAPER_LIGHT);
-        graphics.fill(panel.x + 2, panel.bottom() - 4, panel.x + 10, panel.bottom() - 2, PAPER_DARK);
-        graphics.fill(panel.right() - 10, panel.bottom() - 4, panel.right() - 2, panel.bottom() - 2, PAPER_DARK);
+        PrimevalUiCrop.paperPanel(graphics, panel.x, panel.y, panel.width, panel.height);
     }
 
     private void drawBubble(GuiGraphicsExtractor graphics, Rect rect) {
-        int border = 2;
-        blitRegion(graphics, rect.x, rect.y, border, border, 0, 0, 2, 2);
-        blitRegion(graphics, rect.x + border, rect.y, rect.width - 4, border, 2, 0, 82, 2);
-        blitRegion(graphics, rect.right() - border, rect.y, border, border, 84, 0, 2, 2);
-        blitRegion(graphics, rect.x, rect.y + border, border, rect.height - 4, 0, 2, 2, 10);
-        blitRegion(graphics, rect.x + border, rect.y + border, rect.width - 4, rect.height - 4, 2, 2, 82, 10);
-        blitRegion(graphics, rect.right() - border, rect.y + border, border, rect.height - 4, 84, 2, 2, 10);
-        blitRegion(graphics, rect.x, rect.bottom() - border, border, border, 0, 12, 2, 2);
-        blitRegion(graphics, rect.x + border, rect.bottom() - border, rect.width - 4, border, 2, 12, 82, 2);
-        blitRegion(graphics, rect.right() - border, rect.bottom() - border, border, border, 84, 12, 2, 2);
-    }
-
-    private void blitRegion(GuiGraphicsExtractor graphics, int x, int y, int width, int height,
-                            int sourceX, int sourceY, int sourceWidth, int sourceHeight) {
-        if (width <= 0 || height <= 0) {
-            return;
-        }
-        graphics.blit(SPACE, x, y, x + width, y + height,
-                sourceX / 86.0F, (sourceX + sourceWidth) / 86.0F,
-                sourceY / 14.0F, (sourceY + sourceHeight) / 14.0F);
+        PrimevalUiCrop.paperBubble(graphics, rect.x, rect.y, rect.width, rect.height);
     }
 
     private Rect local(int x, int y, int width, int height) {

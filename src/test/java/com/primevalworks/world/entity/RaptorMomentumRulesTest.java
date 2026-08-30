@@ -53,4 +53,13 @@ final class RaptorMomentumRulesTest {
                 - RaptorMomentumRules.steeringResponse(1.0F, 61.0F)) < 0.01F,
                 "Small path-node changes must not flip steering strength between ticks");
     }
+
+    @Test
+    void ownerRouteReversalBrakesOnlyWhenVelocityPointsAway() {
+        assertTrue(RaptorMomentumRules.shouldBrakeForRouteReversal(-0.8D, 160.0F));
+        assertTrue(!RaptorMomentumRules.shouldBrakeForRouteReversal(0.4D, 160.0F));
+        assertTrue(!RaptorMomentumRules.shouldBrakeForRouteReversal(-0.8D, 40.0F));
+        assertEquals(0.22F, RaptorMomentumRules.steeringMomentum(1.0F, true), 0.0001F);
+        assertEquals(1.0F, RaptorMomentumRules.steeringMomentum(1.0F, false), 0.0001F);
+    }
 }

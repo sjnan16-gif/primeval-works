@@ -47,14 +47,117 @@ final class AuthoredProgressionAssetsTest {
 
     @Test
     void ancientMetalArtAndNuggetConversionAreComplete() throws Exception {
+        assertImage("textures/item/raw_ancient_metal_ingot.png", 16, 16);
         assertImage("textures/item/ancient_metal_ingot.png", 16, 16);
         assertImage("textures/item/ancient_metal_nugget.png", 16, 16);
+        assertImage("textures/item/compressed_ancient_metal_ingot.png", 16, 16);
+        assertLocalItemModel("raw_ancient_metal_ingot");
         assertLocalItemModel("ancient_metal_ingot");
         assertLocalItemModel("ancient_metal_nugget");
+        assertLocalItemModel("compressed_ancient_metal_ingot");
         assertTrue(Files.readString(DATA.resolve("recipe/ancient_metal_nugget_from_ingot.json"))
                 .contains("\"count\": 9"));
         assertTrue(Files.readString(DATA.resolve("recipe/ancient_metal_ingot_from_nuggets.json"))
                 .contains("primevalworks:ancient_metal_nugget"));
+    }
+
+    @Test
+    void cookedFieldFoodsUseTheirAuthoredSprites() throws Exception {
+        assertImage("textures/item/roasted_beet.png", 16, 16);
+        assertImage("textures/item/fire_roasted_melon.png", 16, 16);
+        assertLocalItemModel("roasted_beet");
+        assertLocalItemModel("fire_roasted_melon");
+        assertFalse(Files.readString(ASSETS.resolve("models/item/roasted_beet.json"))
+                .contains("minecraft:item/beetroot"));
+        assertFalse(Files.readString(ASSETS.resolve("models/item/fire_roasted_melon.json"))
+                .contains("minecraft:item/melon_slice"));
+    }
+
+    @Test
+    void releaseEggSulfurAndNestingTreatSpritesUseTheirStableItems() throws Exception {
+        for (String item : new String[] {
+                "field_dodo_spawn_egg",
+                "parasaurolophus_spawn_egg",
+                "pteranodon_spawn_egg",
+                "spinosaurus_spawn_egg",
+                "stegosaurus_spawn_egg",
+                "triceratops_spawn_egg",
+                "tyrannosaurus_spawn_egg",
+                "velociraptor_spawn_egg",
+                "sulfur",
+                "nesting_treat"
+        }) {
+            assertImage("textures/item/" + item + ".png", 16, 16);
+            assertLocalItemModel(item);
+            assertFalse(Files.readString(ASSETS.resolve("items/" + item + ".json"))
+                    .contains("minecraft:item/turtle_spawn_egg"));
+        }
+    }
+
+    @Test
+    void emberBerriesUseEveryAuthoredStageAndGenerateInTemperateBiomes() throws Exception {
+        assertImage("textures/item/berries.png", 16, 16);
+        assertLocalItemModel("berries");
+        String baseModel = Files.readString(ASSETS.resolve(
+                "models/block/ember_berry_bush_base.json"));
+        assertEquals(2, baseModel.split("\\\"from\\\"", -1).length - 1);
+        assertTrue(baseModel.contains("\"angle\": -45"));
+        assertTrue(baseModel.contains("\"angle\": 45"));
+        assertTrue(baseModel.contains("\"uv\": [0, 0, 8, 8]"));
+        assertTrue(baseModel.contains("\"uv\": [8, 0, 16, 8]"));
+        assertTrue(baseModel.contains("\"rescale\": false"));
+        for (int stage = 0; stage <= 3; stage++) {
+            assertImage("textures/block/ember_berry_bush_stage" + stage + ".png", 32, 32);
+            String model = Files.readString(ASSETS.resolve(
+                    "models/block/ember_berry_bush_stage" + stage + ".json"));
+            assertTrue(model.contains("primevalworks:block/ember_berry_bush_base"));
+            assertTrue(model.contains("primevalworks:block/ember_berry_bush_stage" + stage));
+        }
+
+        String blockState = Files.readString(ASSETS.resolve("blockstates/berry_bush.json"));
+        for (int stage = 0; stage <= 3; stage++) {
+            assertTrue(blockState.contains("age=" + stage));
+            assertTrue(blockState.contains("primevalworks:block/ember_berry_bush_stage" + stage));
+        }
+        assertFalse(blockState.contains("minecraft:block/sweet_berry_bush"));
+
+        String configured = Files.readString(DATA.resolve(
+                "worldgen/configured_feature/ember_berry_bush.json"));
+        assertTrue(configured.contains("primevalworks:berry_bush"));
+        assertTrue(configured.contains("\"age\": \"3\""));
+        String placed = Files.readString(DATA.resolve(
+                "worldgen/placed_feature/ember_berry_patch.json"));
+        assertTrue(placed.contains("primevalworks:ember_berry_bush"));
+        assertTrue(placed.contains("minecraft:rarity_filter"));
+        assertTrue(placed.contains("minecraft:grass_block"));
+        String biomes = Files.readString(DATA.resolve(
+                "neoforge/biome_modifier/ember_berry_patches.json"));
+        assertTrue(biomes.contains("minecraft:meadow"));
+        assertTrue(biomes.contains("minecraft:flower_forest"));
+        assertTrue(biomes.contains("primevalworks:ember_berry_patch"));
+
+        String bush = Files.readString(Path.of(
+                "src/main/java/com/primevalworks/world/block/PrimevalBerryBushBlock.java"));
+        assertTrue(bush.contains("extends SweetBerryBushBlock"));
+        assertTrue(bush.contains("ModItems.BERRIES.get()"));
+        String items = Files.readString(Path.of(
+                "src/main/java/com/primevalworks/registry/ModItems.java"));
+        assertTrue(items.contains("new BlockItem(ModBlocks.BERRY_BUSH.get()"));
+        String language = Files.readString(ASSETS.resolve("lang/en_us.json"));
+        assertTrue(language.contains("\"item.primevalworks.berries\": \"Ember Berries\""));
+        assertTrue(language.contains("\"block.primevalworks.berry_bush\": \"Ember Berry Bush\""));
+    }
+
+    @Test
+    void ancientCoresUseTheirAuthoredPngSprites() throws Exception {
+        assertImage("textures/item/core.png", 16, 16);
+        assertImage("textures/item/compressed_core.png", 16, 16);
+        assertLocalItemModel("core");
+        assertLocalItemModel("compressed_core");
+        assertFalse(Files.readString(ASSETS.resolve("items/core.json"))
+                .contains("minecraft:item/echo_shard"));
+        assertFalse(Files.readString(ASSETS.resolve("items/compressed_core.json"))
+                .contains("minecraft:item/heart_of_the_sea"));
     }
 
     @Test
@@ -70,6 +173,31 @@ final class AuthoredProgressionAssetsTest {
         assertTrue(states.contains("facing=down,powered=true"));
         assertTrue(states.contains("facing=up,powered=false"));
         assertTrue(states.contains("facing=west,powered=true"));
+    }
+
+    @Test
+    void ancientSpellStoneUsesAuthoredGeometryAndBalancedWard() throws Exception {
+        assertImage("textures/block/ancient_spell_stone.png", 64, 64);
+        String model = Files.readString(ASSETS.resolve("models/block/ancient_spell_stone.json"));
+        assertTrue(model.contains("primevalworks:block/ancient_spell_stone"));
+        assertTrue(model.contains("\"from\": [0, 0, 0]"));
+        assertTrue(model.contains("\"to\": [16, 16, 16]"));
+        assertTrue(model.contains("\"uv\": [4, 4, 8, 8]"));
+        assertTrue(model.contains("\"uv\": [12, 4, 16, 8]"));
+        String energyRules = Files.readString(Path.of(
+                "src/main/java/com/primevalworks/world/base/BaseEnergyRules.java"));
+        assertTrue(energyRules.contains("ANCIENT_SPELL_STONE_WARD_RADIUS = 20"));
+        String startup = Files.readString(Path.of("src/main/java/com/primevalworks/PrimevalWorks.java"));
+        assertTrue(startup.contains("BaseEnergyRules.ANCIENT_SPELL_STONE_WARD_RADIUS"));
+        String client = Files.readString(Path.of(
+                "src/main/java/com/primevalworks/client/PrimevalWorksClient.java"));
+        assertFalse(client.contains("MachineStatusScreen"));
+        assertFalse(Files.exists(Path.of(
+                "src/main/java/com/primevalworks/client/screen/MachineStatusScreen.java")));
+        String block = Files.readString(Path.of(
+                "src/main/java/com/primevalworks/world/block/PoweredMachineBlock.java"));
+        assertTrue(block.contains("BaseEnergyRules.unavailableMessage(serverPlayer, pos)"));
+        assertFalse(block.contains("is drawing power"));
     }
 
     @Test

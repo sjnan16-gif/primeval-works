@@ -21,6 +21,14 @@ public enum DinosaurCommandMode {
         return description;
     }
 
+    public DinosaurCommandMode next(boolean followSlotAvailable) {
+        return switch (this) {
+            case HOME -> STAY;
+            case STAY -> followSlotAvailable ? FOLLOW : HOME;
+            case FOLLOW -> HOME;
+        };
+    }
+
     public static DinosaurCommandMode byId(int id) {
         return values()[Math.max(0, Math.min(values().length - 1, id))];
     }

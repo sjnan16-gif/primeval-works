@@ -34,9 +34,6 @@ public final class PoweredMachineBlock extends Block {
             serverPlayer.sendOverlayMessage(BaseEnergyRules.unavailableMessage(serverPlayer, pos));
             return InteractionResult.SUCCESS;
         }
-        serverPlayer.sendOverlayMessage(net.minecraft.network.chat.Component.literal(
-                state.getBlock().getName().getString() + " is drawing power."
-        ));
         return InteractionResult.SUCCESS;
     }
 

@@ -3,6 +3,7 @@ package com.primevalworks.network.payload;
 import com.primevalworks.PrimevalWorks;
 import com.primevalworks.client.effect.DinoWhistleClient;
 import com.primevalworks.client.screen.DinoWhistleScreen;
+import com.primevalworks.world.ownership.FollowerCapacityRules;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -26,8 +27,8 @@ public record PassiveWhistleFollowersPayload(int inventorySlot, int mode, int av
         buffer.writeVarInt(payload.mode);
         buffer.writeVarInt(payload.availableModes);
         buffer.writeVarInt(payload.maximumEligibleLevel);
-        buffer.writeVarInt(Math.min(3, payload.entries.size()));
-        for (Entry entry : payload.entries.stream().limit(3).toList()) {
+        buffer.writeVarInt(Math.min(FollowerCapacityRules.MAXIMUM_SLOTS, payload.entries.size()));
+        for (Entry entry : payload.entries.stream().limit(FollowerCapacityRules.MAXIMUM_SLOTS).toList()) {
             buffer.writeVarInt(entry.entityId);
             buffer.writeUUID(entry.uuid);
             buffer.writeUtf(entry.name, 96);
@@ -42,7 +43,7 @@ public record PassiveWhistleFollowersPayload(int inventorySlot, int mode, int av
         int mode = buffer.readVarInt();
         int availableModes = buffer.readVarInt();
         int maximumEligibleLevel = buffer.readVarInt();
-        int count = Math.min(3, buffer.readVarInt());
+        int count = Math.min(FollowerCapacityRules.MAXIMUM_SLOTS, buffer.readVarInt());
         List<Entry> entries = new ArrayList<>(count);
         for (int index = 0; index < count; index++) {
             entries.add(new Entry(buffer.readVarInt(), buffer.readUUID(), buffer.readUtf(96),

@@ -14,7 +14,6 @@ import com.primevalworks.world.block.PrimevalBerryBushBlock;
 import com.primevalworks.world.block.TurbineBlock;
 import com.primevalworks.world.block.TurbinePartBlock;
 import com.primevalworks.world.block.DinosaurEggBlock;
-import com.primevalworks.world.block.DartTurretBlock;
 import com.primevalworks.world.block.LaserTurretBlock;
 import com.primevalworks.world.block.SpinosaurusHeadBlock;
 import net.minecraft.resources.Identifier;
@@ -84,10 +83,6 @@ public final class ModBlocks {
             properties -> new AncientBarrelBlock(properties.mapColor(MapColor.COLOR_BROWN)
                     .strength(2.5F).sound(SoundType.WOOD))
     );
-    public static final DeferredBlock<Block> DART_TURRET = BLOCKS.registerBlock(
-            "dart_turret",
-            properties -> new DartTurretBlock(properties.mapColor(MapColor.METAL).strength(3.5F)
-                    .noOcclusion().sound(SoundType.METAL)));
     public static final DeferredBlock<Block> PROCESSOR = BLOCKS.registerBlock(
             "processor",
             properties -> new ProcessorBlock(properties.mapColor(MapColor.METAL).strength(4.0F)

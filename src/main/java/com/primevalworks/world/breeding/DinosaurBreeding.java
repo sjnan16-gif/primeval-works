@@ -10,6 +10,8 @@ import com.primevalworks.world.entity.FieldDodoEntity;
 import com.primevalworks.world.ownership.DinosaurOwnership;
 import com.primevalworks.world.progression.PrimevalAdvancements;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -18,6 +20,9 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.SupportType;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Comparator;
@@ -116,15 +121,17 @@ public final class DinosaurBreeding {
                 offspring.hueVariant
         ).writeTo(egg);
         ServerLevel level = (ServerLevel)first.level();
-        ItemEntity dropped = new ItemEntity(
-                level,
-                (first.getX() + second.getX()) * 0.5D,
-                Math.min(first.getY(), second.getY()) + 0.2D,
-                (first.getZ() + second.getZ()) * 0.5D,
-                egg
-        );
-        dropped.setPickUpDelay(80);
-        level.addFreshEntity(dropped);
+        if (!placeBredEgg(level, first, second, egg)) {
+            ItemEntity dropped = new ItemEntity(
+                    level,
+                    (first.getX() + second.getX()) * 0.5D,
+                    Math.min(first.getY(), second.getY()) + 0.2D,
+                    (first.getZ() + second.getZ()) * 0.5D,
+                    egg
+            );
+            dropped.setPickUpDelay(80);
+            level.addFreshEntity(dropped);
+        }
         long cooldown = Math.max(0L, Math.round(BREEDING_COOLDOWN_TICKS
                 * PrimevalTuning.server().breedingCooldown()));
         first.beginBreedingCooldown(cooldown);
@@ -150,14 +157,68 @@ public final class DinosaurBreeding {
             FieldDodoEntity second,
             RandomSource random
     ) {
-        int averageQuality = (first.getGeneticQuality() + second.getGeneticQuality()) / 2;
-        int quality = Mth.clamp(averageQuality + 4 + random.nextInt(7), 0, 100);
+        int quality = DinosaurBreedingRules.inheritedQuality(
+                first.getGeneticQuality(), second.getGeneticQuality(), random.nextInt(7));
         int mutationMask = DinosaurMutationRules.rollBred(
-                first.getMutationMask(), second.getMutationMask(), random.nextFloat(), random.nextFloat());
+                new DinosaurMutationRules.ParentGenetics(
+                        first.getMutationMask(), first.getDinosaurLevel(), first.getGeneticQuality()),
+                new DinosaurMutationRules.ParentGenetics(
+                        second.getMutationMask(), second.getDinosaurLevel(), second.getGeneticQuality()),
+                new DinosaurMutationRules.TraitRolls(random.nextFloat(), random.nextFloat(), random.nextFloat()),
+                new DinosaurMutationRules.TraitRolls(random.nextFloat(), random.nextFloat(), random.nextFloat())
+        );
         quality = Mth.clamp(quality + DinosaurMutationRules.qualityBonus(mutationMask, random.nextFloat()), 0, 100);
         int averageHue = Math.round((first.getHueVariant() + second.getHueVariant()) * 0.5F);
         int hueVariant = Mth.clamp(averageHue + random.nextInt(5) - 2, -8, 8);
         return new OffspringGenome(quality, mutationMask, hueVariant);
+    }
+
+    private static boolean placeBredEgg(
+            ServerLevel level,
+            FieldDodoEntity first,
+            FieldDodoEntity second,
+            ItemStack egg
+    ) {
+        DinosaurEggSize size = DinosaurEggSize.fromItem(egg).orElse(null);
+        if (size == null) return false;
+        BlockState eggState = size.block().defaultBlockState();
+        BlockPos center = BlockPos.containing(
+                (first.getX() + second.getX()) * 0.5D,
+                Math.min(first.getY(), second.getY()),
+                (first.getZ() + second.getZ()) * 0.5D
+        );
+        for (int radius = 0; radius <= 4; radius++) {
+            for (int x = -radius; x <= radius; x++) {
+                for (int z = -radius; z <= radius; z++) {
+                    if (radius > 0 && Math.abs(x) != radius && Math.abs(z) != radius) continue;
+                    for (int y : new int[]{0, 1, -1, 2, -2}) {
+                        BlockPos candidate = center.offset(x, y, z);
+                        if (!validEggPosition(level, candidate, eggState)) continue;
+                        BlockState replaced = level.getBlockState(candidate);
+                        if (!level.setBlock(candidate, eggState, 3)) continue;
+                        if (level.getBlockEntity(candidate)
+                                instanceof com.primevalworks.world.block.entity.DinosaurEggBlockEntity blockEntity
+                                && blockEntity.setGeneticEgg(egg)) {
+                            return true;
+                        }
+                        level.setBlock(candidate, replaced, 3);
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    private static boolean validEggPosition(ServerLevel level, BlockPos pos, BlockState eggState) {
+        if (!level.hasChunkAt(pos) || !level.getWorldBorder().isWithinBounds(pos)) return false;
+        BlockState existing = level.getBlockState(pos);
+        if (!existing.canBeReplaced() || !existing.getFluidState().isEmpty()) return false;
+        BlockPos supportPos = pos.below();
+        if (!level.getBlockState(supportPos)
+                .isFaceSturdy(level, supportPos, Direction.UP, SupportType.CENTER)) return false;
+        if (!eggState.canSurvive(level, pos)) return false;
+        return level.getEntities((net.minecraft.world.entity.Entity)null,
+                new AABB(pos), entity -> entity.isAlive()).isEmpty();
     }
 
     private static Component breedingBlockReason(ServerPlayer player, FieldDodoEntity dinosaur) {

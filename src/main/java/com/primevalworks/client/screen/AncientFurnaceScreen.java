@@ -144,18 +144,14 @@ public final class AncientFurnaceScreen extends AbstractContainerScreen<AncientF
     private void drawPlayerInventory(GuiGraphicsExtractor graphics) {
         int panelX = leftPos + 126;
         int panelY = topPos + 108;
-        graphics.fill(panelX, panelY, panelX + 176, panelY + 92, 0xFF15151F);
-        graphics.fill(panelX + 2, panelY + 2, panelX + 174, panelY + 90, 0xFF292B3E);
-        graphics.fill(panelX + 3, panelY + 3, panelX + 173, panelY + 89, 0xFF292839);
+        PrimevalUiCrop.darkBubble(graphics, panelX, panelY, 176, 92, 255);
         graphics.text(font, Component.translatable("container.inventory").withStyle(Style.EMPTY.withBold(true)),
                 leftPos + AncientFurnaceMenu.PLAYER_INVENTORY_X, topPos + 110, 0xFFB8B5C4, true);
         for (int index = AncientFurnaceMenu.MACHINE_SLOTS; index < menu.slots.size(); index++) {
             var slot = menu.getSlot(index);
             int x = leftPos + slot.x - 1;
             int y = topPos + slot.y - 1;
-            graphics.fill(x, y, x + 18, y + 18, 0xFF15151F);
-            graphics.fill(x + 1, y + 1, x + 17, y + 17, 0xFF202230);
-            graphics.fill(x + 2, y + 2, x + 16, y + 16, 0xFF292839);
+            PrimevalUiCrop.darkSquare(graphics, x, y, 18, 18, 255);
         }
     }
 

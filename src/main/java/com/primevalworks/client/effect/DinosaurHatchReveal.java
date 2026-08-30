@@ -3,6 +3,7 @@ package com.primevalworks.client.effect;
 import com.primevalworks.config.PrimevalConfig;
 import com.primevalworks.client.model.entity.DinosaurVisualProfile;
 import com.primevalworks.client.model.entity.DinosaurPreviewBounds;
+import com.primevalworks.client.screen.PrimevalUiCrop;
 import com.primevalworks.network.payload.HatchRevealPayload;
 import com.primevalworks.registry.ModEntities;
 import com.primevalworks.registry.ModItems;
@@ -78,16 +79,12 @@ public final class DinosaurHatchReveal {
             GuiGraphicsExtractor graphics, Minecraft minecraft, int x, int y, int width, int height
     ) {
         graphics.fill(x - 3, y + 4, x + width, y + height + 4, 0x71120E0B);
-        graphics.fill(x, y, x + width, y + height, 0xF2C6A276);
-        graphics.fill(x + 2, y + 2, x + width, y + height - 2, 0xF2AE855E);
-        graphics.fill(x + 5, y + 5, x + width, y + height - 5, 0xF2C7A678);
-        graphics.outline(x, y, width + 1, height, 0xFF503326);
-        graphics.outline(x + 3, y + 3, width - 2, height - 6, 0xFFDEBE8F);
+        PrimevalUiCrop.paperPanel(graphics, x, y, width, height);
         graphics.fill(x, y + 7, x + 3, y + height - 7, 0xFFE2A23D);
-        graphics.fill(x + 59, y + 7, x + 61, y + height - 7, 0xA06A4936);
-        graphics.fill(x + 65, y + 17, x + width - 6, y + 18, 0x706A4936);
-        graphics.fill(x + 65, y + 39, x + width - 6, y + 40, 0x706A4936);
-        graphics.fill(x + 65, y + 53, x + width - 6, y + 54, 0x706A4936);
+        PrimevalUiCrop.paperVerticalRule(graphics, x + 59, y + 7, 2, height - 14, 160);
+        PrimevalUiCrop.paperHorizontalRule(graphics, x + 65, y + 17, width - 71, 1, 112);
+        PrimevalUiCrop.paperHorizontalRule(graphics, x + 65, y + 39, width - 71, 1, 112);
+        PrimevalUiCrop.paperHorizontalRule(graphics, x + 65, y + 53, width - 71, 1, 112);
 
         ensurePreview(minecraft);
         if (preview != null) {

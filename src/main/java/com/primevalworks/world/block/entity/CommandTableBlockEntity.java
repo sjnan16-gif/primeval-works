@@ -11,6 +11,7 @@ import com.primevalworks.registry.ModBlockEntities;
 import com.primevalworks.world.block.CommandTableBlock;
 import com.primevalworks.world.base.BaseEnergyRules;
 import com.primevalworks.world.base.BaseUpgrade;
+import com.primevalworks.world.ownership.FollowerCapacityRules;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
@@ -157,7 +158,12 @@ public final class CommandTableBlockEntity extends BlockEntity implements GeoBlo
     }
 
     public int followerCapacity() {
-        return 1 + level(BaseUpgrade.FIELD_COMMAND);
+        PrimevalTuning.Server tuning = PrimevalTuning.server();
+        return FollowerCapacityRules.capacity(
+                tuning.startingFollowerSlots(),
+                tuning.followerSlotsPerFieldCommandRank(),
+                tuning.maximumFollowerSlots(),
+                level(BaseUpgrade.FIELD_COMMAND));
     }
 
     private static int countItem(ServerPlayer player, BaseUpgrade.UpgradeCost cost) {

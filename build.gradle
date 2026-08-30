@@ -62,6 +62,10 @@ neoForge {
         gameTestServer {
             type = "gameTestServer"
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            def gameTestSelection = providers.gradleProperty('gameTestSelection')
+            if (gameTestSelection.isPresent()) {
+                programArguments.addAll '--tests', gameTestSelection.get()
+            }
         }
 
         data {
@@ -142,23 +146,27 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 def releaseJarTask = tasks.named('jar', Jar)
+def releaseArchive = releaseJarTask.flatMap { it.archiveFile }
+def releaseClassDirs = sourceSets.main.output.classesDirs
+def releaseResources = layout.buildDirectory.dir('resources/main')
 def verifyReleaseJar = tasks.register('verifyReleaseJar') {
     group = 'verification'
     description = 'Checks that the distributable jar exactly contains every compiled class and processed resource.'
     dependsOn releaseJarTask
-    inputs.files(sourceSets.main.output)
-    inputs.file(releaseJarTask.flatMap { it.archiveFile })
+    inputs.files(releaseClassDirs)
+    inputs.dir(releaseResources)
+    inputs.file(releaseArchive)
 
     doLast {
-        File archive = releaseJarTask.get().archiveFile.get().asFile
+        File archive = releaseArchive.get().asFile
         Map<String, File> expected = new LinkedHashMap<>()
-        sourceSets.main.output.classesDirs.files.each { File root ->
+        releaseClassDirs.files.each { File root ->
             if (!root.isDirectory()) return
             root.eachFileRecurse(groovy.io.FileType.FILES) { File file ->
                 expected[root.toPath().relativize(file.toPath()).toString().replace('\\', '/')] = file
             }
         }
-        File resources = sourceSets.main.output.resourcesDir
+        File resources = releaseResources.get().asFile
         if (resources != null && resources.isDirectory()) {
             resources.eachFileRecurse(groovy.io.FileType.FILES) { File file ->
                 expected[resources.toPath().relativize(file.toPath()).toString().replace('\\', '/')] = file

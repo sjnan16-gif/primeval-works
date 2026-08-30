@@ -4,7 +4,6 @@ import com.primevalworks.PrimevalWorks;
 import com.primevalworks.world.inventory.FoodBoxMenu;
 import com.primevalworks.world.inventory.ProcessorMenu;
 import com.primevalworks.world.inventory.AncientFurnaceMenu;
-import com.primevalworks.world.inventory.DartTurretMenu;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.inventory.MenuType;
@@ -28,11 +27,6 @@ public final class ModMenus {
             "ancient_furnace",
             () -> new MenuType<>(AncientFurnaceMenu::new, FeatureFlags.VANILLA_SET)
     );
-    public static final DeferredHolder<MenuType<?>, MenuType<DartTurretMenu>> DART_TURRET = MENUS.register(
-            "dart_turret",
-            () -> new MenuType<>(DartTurretMenu::new, FeatureFlags.VANILLA_SET)
-    );
-
     private ModMenus() {
     }
 

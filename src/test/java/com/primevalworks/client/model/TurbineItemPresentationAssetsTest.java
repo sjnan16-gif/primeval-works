@@ -19,8 +19,10 @@ final class TurbineItemPresentationAssetsTest {
 
         String renderer = Files.readString(Path.of(
                 "src/main/java/com/primevalworks/client/render/item/TurbineItemRenderer.java"));
-        assertTrue(renderer.contains("RenderTypes.entityCutout(texture)"),
-                "Turbine item panel backs can disappear from the inventory preview");
+        assertTrue(renderer.contains("variant == TurbineBlockItem.Variant.WATER")
+                        && renderer.contains("RenderTypes.entityCutout(texture)")
+                        && renderer.contains("RenderTypes.entityCutoutCull(texture)"),
+                "Turbine item geometry lost its per-model thin-panel render treatment");
         assertTrue(renderer.contains("case GUI -> 0.48F")
                         && renderer.contains("FIRST_PERSON_RIGHT_HAND -> 0.33F")
                         && renderer.contains("THIRD_PERSON_RIGHT_HAND -> 0.45F"),

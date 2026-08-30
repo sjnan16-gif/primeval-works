@@ -9,6 +9,7 @@ public record DinosaurPreviewBounds(float width, float height, float depth) {
         return switch (assetName) {
             case "dodo" -> new DinosaurPreviewBounds(0.88F, 1.56F, 1.69F);
             case "t_rex" -> new DinosaurPreviewBounds(2.0F, 3.25F, 6.19F);
+            case "triceratops" -> new DinosaurPreviewBounds(2.25F, 3.375F, 7.0F);
             case "stegosaurus" -> new DinosaurPreviewBounds(1.75F, 2.88F, 5.94F);
             case "parasaurolophus" -> new DinosaurPreviewBounds(1.50F, 3.32F, 6.29F);
             case "velociraptor" -> new DinosaurPreviewBounds(0.77F, 1.55F, 3.47F);

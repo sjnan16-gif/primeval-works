@@ -2,7 +2,6 @@ package com.primevalworks.client.screen;
 
 import com.mojang.blaze3d.platform.cursor.CursorTypes;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.primevalworks.PrimevalWorks;
 import com.primevalworks.client.model.entity.DinosaurPreviewBounds;
 import com.primevalworks.client.model.entity.DinosaurVisualProfile;
 import com.primevalworks.network.payload.AssignWhistleFieldWorkPayload;
@@ -22,7 +21,6 @@ import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
-import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
 import net.minecraft.world.entity.Entity;
@@ -40,7 +38,6 @@ public final class WhistleFollowerPickerScreen extends Screen {
     private static final int SLOT_GAP = 7;
     private static final int INK = 0xFF494341;
     private static final int MUTED_INK = 0xFF6E6764;
-    private static final Identifier HOTBAR = texture("hotbar.png");
     private static WhistleFollowerPickerScreen active;
 
     private final WhistleFollowerListPayload payload;
@@ -116,7 +113,7 @@ public final class WhistleFollowerPickerScreen extends Screen {
         graphics.pose().translate(visualCenterX, visualCenterY);
         graphics.pose().scale(scale, scale);
         graphics.pose().translate(-slot.centerX(), -slot.centerY());
-        blit(graphics, HOTBAR, slot);
+        PrimevalUiCrop.paperSlot(graphics, slot.x, slot.y, slot.w, slot.h, 255);
         graphics.pose().popMatrix();
 
         FloatRect visualSlot = new FloatRect(
@@ -315,10 +312,6 @@ public final class WhistleFollowerPickerScreen extends Screen {
         graphics.pose().popMatrix();
     }
 
-    private static void blit(GuiGraphicsExtractor graphics, Identifier texture, Rect rect) {
-        graphics.blit(texture, rect.x, rect.y, rect.right(), rect.bottom(), 0.0F, 1.0F, 0.0F, 1.0F);
-    }
-
     private static FloatRect inset(FloatRect rect, float amount) {
         return new FloatRect(rect.x + amount, rect.y + amount,
                 Math.max(1.0F, rect.width - amount * 2.0F), Math.max(1.0F, rect.height - amount * 2.0F));
@@ -326,10 +319,6 @@ public final class WhistleFollowerPickerScreen extends Screen {
 
     private static void fill(GuiGraphicsExtractor graphics, FloatRect rect, int color) {
         graphics.fill(Mth.ceil(rect.x), Mth.ceil(rect.y), Mth.floor(rect.right()), Mth.floor(rect.bottom()), color);
-    }
-
-    private static Identifier texture(String name) {
-        return Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "textures/gui/" + name);
     }
 
     private record FloatRect(float x, float y, float width, float height) {

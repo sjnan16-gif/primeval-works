@@ -11,6 +11,9 @@ final class AlbinoEyeMasks {
         if (path.contains("/t_rex")) {
             return y >= 93 && y <= 94 && (x >= 3 && x <= 9 || x >= 57 && x <= 63);
         }
+        if (path.contains("/triceratops")) {
+            return y >= 125 && y <= 126 && (x >= 10 && x <= 15 || x >= 26 && x <= 31);
+        }
         if (path.contains("/pteranodon")) {
             return y == 89 && (x >= 45 && x <= 56 || x >= 84 && x <= 93);
         }

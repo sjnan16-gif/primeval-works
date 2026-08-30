@@ -1,0 +1,6 @@
+{
+  "parent": "primevalworks:block/ember_berry_bush_base",
+  "textures": {
+    "bush": "primevalworks:block/ember_berry_bush_stage0"
+  }
+}

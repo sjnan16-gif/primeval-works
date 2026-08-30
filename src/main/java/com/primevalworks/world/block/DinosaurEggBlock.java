@@ -2,7 +2,9 @@ package com.primevalworks.world.block;
 
 import com.mojang.serialization.MapCodec;
 import com.primevalworks.world.egg.DinosaurEggSize;
+import com.primevalworks.world.egg.DinosaurEggGenome;
 import com.primevalworks.world.egg.DinosaurHatching;
+import com.primevalworks.world.block.entity.DinosaurEggBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
@@ -59,16 +61,24 @@ public abstract class DinosaurEggBlock extends BaseEntityBlock {
         if (!(player instanceof ServerPlayer serverPlayer)) {
             return InteractionResult.SUCCESS;
         }
-        DinosaurHatching.HatchResult result = DinosaurHatching.hatchWildEgg(serverPlayer, size);
+        DinosaurEggBlockEntity eggBlockEntity = level.getBlockEntity(pos) instanceof DinosaurEggBlockEntity egg
+                ? egg : null;
+        DinosaurEggGenome genome = eggBlockEntity == null
+                ? null : DinosaurEggGenome.read(eggBlockEntity.geneticEgg()).orElse(null);
+        DinosaurHatching.HatchResult result = genome == null
+                ? DinosaurHatching.hatchWildEgg(serverPlayer, size)
+                : DinosaurHatching.hatchForPlayer(serverPlayer, genome.hatchingGenome());
         if (!result.success()) {
             serverPlayer.sendOverlayMessage(result.message());
             return InteractionResult.FAIL;
         }
         level.removeBlock(pos, false);
-        popResource(level, pos, new ItemStack(
-                com.primevalworks.registry.ModItems.FOSSIL_FRAGMENT.get(),
-                size.fossilFragmentCount(level.getRandom())
-        ));
+        if (genome == null) {
+            popResource(level, pos, new ItemStack(
+                    com.primevalworks.registry.ModItems.FOSSIL_FRAGMENT.get(),
+                    size.fossilFragmentCount(level.getRandom())
+            ));
+        }
         if (level instanceof ServerLevel serverLevel) {
             serverLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.POOF,
                     pos.getX() + 0.5D, pos.getY() + 0.45D, pos.getZ() + 0.5D,
@@ -92,7 +102,9 @@ public abstract class DinosaurEggBlock extends BaseEntityBlock {
                         level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.SILK_TOUCH),
                         tool
                 ) > 0) {
-            popResource(level, pos, new ItemStack(size.item()));
+            ItemStack storedEgg = blockEntity instanceof DinosaurEggBlockEntity egg
+                    ? egg.geneticEgg() : ItemStack.EMPTY;
+            popResource(level, pos, storedEgg.isEmpty() ? new ItemStack(size.item()) : storedEgg);
         }
         super.playerDestroy(level, player, pos, state, blockEntity, tool);
     }

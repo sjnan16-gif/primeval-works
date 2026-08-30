@@ -34,7 +34,6 @@ public final class PrimevalItemTooltips {
             case "water_turbine" -> "Generates energy in water.";
             case "laser_observer" -> "Detects distant block updates.";
             case "ancient_barrel" -> "High-capacity automation storage.";
-            case "dart_turret" -> "Automated base defense.";
             case "processor" -> "Refines ancient materials.";
             case "ancient_furnace" -> "A fast powered furnace.";
             case "ancient_spell_stone" -> "Suppresses nearby hostile spawns.";
@@ -57,12 +56,10 @@ public final class PrimevalItemTooltips {
             case "small_dino_bone" -> "Small dinosaur trophy.";
             case "pteranodon_wing_fragment" -> "Upgrades a Wind Turbine in the Processor.";
             case "tyrannosaurus_tooth" -> "Tyrannosaurus crafting trophy.";
-            case "dodo_feather" -> "Light crafting material.";
             case "core" -> "Rare Processor material.";
             case "compressed_core" -> "Advanced power component.";
             case "nesting_treat" -> "Primes matching dinosaurs to breed.";
-            case "dart" -> "Dart Turret ammunition.";
-            case "berries" -> "Herbivore food and crop.";
+            case "berries" -> "A warm meadow fruit. Eat it or plant it.";
             case "big_dino_meat" -> "Food for large carnivores.";
             case "small_dino_meat" -> "Food for small carnivores.";
             case "cooked_dino_meat" -> "Cooked meat from a small dinosaur.";

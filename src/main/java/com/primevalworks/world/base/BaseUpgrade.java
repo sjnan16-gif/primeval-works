@@ -50,7 +50,7 @@ public enum BaseUpgrade {
     ANCIENT_BONDS(30, "+3 Slots", "Hold a larger crew together.", "Adds three active dinosaur slots to this base.", 1, 6, 25, 1, 140, 245),
 
     FIELD_COMMAND(31, "Field Command", "Take more companions beyond the walls.",
-            "Each rank adds one follower slot. Followers answer your whistle.",
+            "Each rank expands follower capacity. Followers answer your whistle.",
             2, 3, 10, 1, -280, 245);
 
     private final int id;

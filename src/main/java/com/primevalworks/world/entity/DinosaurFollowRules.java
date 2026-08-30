@@ -4,8 +4,11 @@ public final class DinosaurFollowRules {
     public static final int LOCAL_RECOVERY_TICKS = 50;
     public static final int TELEPORT_RECOVERY_TICKS = 140;
     public static final int FAR_TELEPORT_RECOVERY_TICKS = 80;
+    public static final int EXTREME_SEPARATION_RECOVERY_TICKS = 100;
+    public static final float TURN_LOOP_RECOVERY_DEGREES = 225.0F;
     private static final double RUN_DISTANCE = 8.0D;
     private static final double FAR_RECOVERY_DISTANCE = 32.0D;
+    private static final double EXTREME_SEPARATION_DISTANCE = 100.0D;
 
     private DinosaurFollowRules() {
     }
@@ -33,6 +36,19 @@ public final class DinosaurFollowRules {
         return previousDistance - currentDistance >= 0.12D || displacementSquared >= 0.035D;
     }
 
+    public static boolean madeOwnerCatchupProgress(double previousDistance, double currentDistance) {
+        return previousDistance - currentDistance >= 0.18D;
+    }
+
+    public static double navigationSampleY(double feetY, double height, boolean inLiquid) {
+        return inLiquid ? feetY + height * 0.5D : feetY;
+    }
+
+    public static boolean shouldRecoverTurnLoop(float unproductiveTurnDegrees, double distanceSquared) {
+        return distanceSquared > RUN_DISTANCE * RUN_DISTANCE
+                && unproductiveTurnDegrees >= TURN_LOOP_RECOVERY_DEGREES;
+    }
+
     public static boolean shouldTryLocalRecovery(int stalledTicks) {
         return stalledTicks >= LOCAL_RECOVERY_TICKS;
     }
@@ -42,6 +58,17 @@ public final class DinosaurFollowRules {
                 ? FAR_TELEPORT_RECOVERY_TICKS
                 : TELEPORT_RECOVERY_TICKS;
         return distanceSquared > RUN_DISTANCE * RUN_DISTANCE && stalledTicks >= threshold;
+    }
+
+    public static boolean shouldTeleportFollower(
+            int stalledTicks,
+            int noCatchupTicks,
+            int extremeSeparationTicks,
+            double distanceSquared
+    ) {
+        if (shouldTeleportAfterStall(Math.max(stalledTicks, noCatchupTicks), distanceSquared)) return true;
+        return distanceSquared >= EXTREME_SEPARATION_DISTANCE * EXTREME_SEPARATION_DISTANCE
+                && extremeSeparationTicks >= EXTREME_SEPARATION_RECOVERY_TICKS;
     }
 
     public static float locomotionAnimationSpeed(float smoothedMovement, boolean running) {

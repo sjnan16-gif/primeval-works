@@ -13,20 +13,16 @@ import com.primevalworks.client.render.IrisPipelineCompat;
 import com.primevalworks.client.render.block.PremiumEggIncubatorRenderer;
 import com.primevalworks.client.render.block.DinosaurEggRenderer;
 import com.primevalworks.client.render.block.TurbineRenderer;
-import com.primevalworks.client.render.block.DartTurretRenderer;
 import com.primevalworks.client.render.block.LaserTurretRenderer;
 import com.primevalworks.client.render.block.LaserObserverRenderer;
 import com.primevalworks.client.screen.CommandTableScreen;
 import com.primevalworks.client.screen.CompanionScreen;
 import com.primevalworks.client.screen.WorksitePlannerScreen;
-import com.primevalworks.client.screen.MachineStatusScreen;
 import com.primevalworks.client.screen.FoodBoxScreen;
 import com.primevalworks.client.screen.ProcessorScreen;
 import com.primevalworks.client.screen.EnergyNetworkScreen;
 import com.primevalworks.client.screen.AncientFurnaceScreen;
-import com.primevalworks.client.screen.DartTurretScreen;
 import com.primevalworks.client.screen.WhistleFollowerPickerScreen;
-import com.primevalworks.client.render.entity.DartProjectileRenderer;
 import com.primevalworks.config.PrimevalConfig;
 import com.primevalworks.registry.ModBlocks;
 import com.primevalworks.registry.ModBlockEntities;
@@ -44,8 +40,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
-import net.minecraft.world.item.Items;
-import net.minecraft.world.level.block.Block;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
@@ -80,7 +74,6 @@ public final class PrimevalWorksClient {
             event.register(ModMenus.FOOD_BOX.get(), FoodBoxScreen::new);
             event.register(ModMenus.PROCESSOR.get(), ProcessorScreen::new);
             event.register(ModMenus.ANCIENT_FURNACE.get(), AncientFurnaceScreen::new);
-            event.register(ModMenus.DART_TURRET.get(), DartTurretScreen::new);
         });
         NeoForge.EVENT_BUS.addListener(PrimevalWorksClient::openCompanionScreen);
         NeoForge.EVENT_BUS.addListener(PrimevalWorksClient::mountedDinosaurAttack);
@@ -122,10 +115,8 @@ public final class PrimevalWorksClient {
         );
         event.registerBlockEntityRenderer(ModBlockEntities.DINOSAUR_EGG.get(), DinosaurEggRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.TURBINE.get(), TurbineRenderer::new);
-        event.registerBlockEntityRenderer(ModBlockEntities.DART_TURRET.get(), DartTurretRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.LASER_TURRET.get(), LaserTurretRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.LASER_OBSERVER.get(), LaserObserverRenderer::new);
-        event.registerEntityRenderer(ModEntities.DART_PROJECTILE.get(), DartProjectileRenderer::new);
     }
 
     private static void hidePlannerHand(RenderHandEvent event) {
@@ -194,15 +185,6 @@ public final class PrimevalWorksClient {
             }
         }
 
-        if (minecraft.hitResult instanceof BlockHitResult blockHit && minecraft.level != null) {
-            Block block = minecraft.level.getBlockState(blockHit.getBlockPos()).getBlock();
-            MachineStatusScreen.Descriptor descriptor = machineDescriptor(block);
-            if (descriptor != null) {
-                event.setCanceled(true);
-                event.setSwingHand(false);
-                minecraft.setScreen(new MachineStatusScreen(blockHit.getBlockPos(), descriptor));
-            }
-        }
     }
 
     private static void mountedDinosaurAttack(InputEvent.InteractionKeyMappingTriggered event) {
@@ -235,31 +217,6 @@ public final class PrimevalWorksClient {
             if (minecraft.level.getBlockState(masterPos).is(ModBlocks.COMMAND_TABLE.get())) return masterPos;
         }
         return null;
-    }
-
-    private static MachineStatusScreen.Descriptor machineDescriptor(Block block) {
-        if (block == ModBlocks.ANCIENT_SPELL_STONE.get()) {
-            return machine("Ancient Spell Stone", "Defense", "48-block hostile ward",
-                    "Prevents hostile spawn checks while powered.",
-                    "Connect power from the Energy Map. Command, breeding, and saved entity loads are unaffected.",
-                    Items.AMETHYST_SHARD, Items.END_CRYSTAL);
-        }
-        return null;
-    }
-
-    private static MachineStatusScreen.Descriptor machine(
-            String title,
-            String specialty,
-            String status,
-            String detail,
-            String assignment,
-            net.minecraft.world.item.Item input,
-            net.minecraft.world.item.Item output
-    ) {
-        return new MachineStatusScreen.Descriptor(
-                title, specialty, status, detail, assignment,
-                input.getDefaultInstance(), output.getDefaultInstance()
-        );
     }
 
     private static BlockPos findCommandTable(Minecraft minecraft, FieldDodoEntity dodo) {

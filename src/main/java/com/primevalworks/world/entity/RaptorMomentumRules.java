@@ -33,6 +33,14 @@ public final class RaptorMomentumRules {
         return clamp((0.18F + turnDemand * 0.10F) * speedStability, 0.085F, 0.28F);
     }
 
+    public static boolean shouldBrakeForRouteReversal(double velocityAlignment, float yawError) {
+        return velocityAlignment < 0.15D && Math.abs(yawError) > 55.0F;
+    }
+
+    public static float steeringMomentum(float momentum, boolean followingOwner) {
+        return followingOwner ? Math.min(momentum, 0.22F) : momentum;
+    }
+
     public static double pounceHorizontalSpeed(double currentSpeed, float passiveStrength) {
         return Math.max(currentSpeed, 0.54D + Math.min(1.55F, passiveStrength) * 0.08D);
     }

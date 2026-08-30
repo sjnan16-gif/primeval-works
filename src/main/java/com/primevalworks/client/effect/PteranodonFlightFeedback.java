@@ -2,6 +2,7 @@ package com.primevalworks.client.effect;
 
 import com.primevalworks.config.PrimevalConfig;
 import com.primevalworks.config.PrimevalTuning;
+import com.primevalworks.client.screen.PrimevalUiCrop;
 import com.primevalworks.network.payload.SpinosaurusLandSprintPayload;
 import com.primevalworks.world.entity.DinosaurSpecies;
 import com.primevalworks.world.entity.FieldDodoEntity;
@@ -199,6 +200,7 @@ public final class PteranodonFlightFeedback {
 
         int labelWidth = Math.round(font.width(label) * labelScale);
         int labelX = x + Math.max(0, (width - labelWidth) / 2);
+        PrimevalUiCrop.darkBubble(graphics, x - 1, barY - 10, width + 2, 10, alpha);
         graphics.pose().pushMatrix();
         graphics.pose().translate(labelX, barY - 8);
         graphics.pose().scale(labelScale, labelScale);
@@ -206,8 +208,7 @@ public final class PteranodonFlightFeedback {
         graphics.pose().popMatrix();
 
         int borderAlpha = Math.round(alpha * 0.72F);
-        graphics.fill(x - 1, barY - 1, x + width + 1, barY + 6,
-                (borderAlpha << 24) | 0x241A18);
+        PrimevalUiCrop.darkTrack(graphics, x - 1, barY - 1, width + 2, 7, borderAlpha);
         graphics.fill(x, barY, x + width, barY + 5,
                 (Math.round(alpha * 0.42F) << 24) | 0x120D0C);
         int fill = Math.round((width - 2) * ratio);

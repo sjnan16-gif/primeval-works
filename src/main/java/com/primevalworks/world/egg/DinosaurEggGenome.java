@@ -54,6 +54,12 @@ public record DinosaurEggGenome(
         );
     }
 
+    public DinosaurHatching.Genome hatchingGenome() {
+        return origin == Origin.INCUBATED
+                ? DinosaurHatching.Genome.incubated(species, quality, mutationMask, hueVariant)
+                : DinosaurHatching.Genome.bred(species, quality, mutationMask, hueVariant);
+    }
+
     public static void repairGeneratedName(ItemStack stack) {
         read(stack).ifPresent(genome -> {
             Component customName = stack.get(DataComponents.CUSTOM_NAME);

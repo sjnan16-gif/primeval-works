@@ -56,7 +56,7 @@ Quarry size scales with the chosen dinosaur's level. A selection beyond its curr
 
 Only compatible field specialists can accept each order. The server checks ownership, active crew membership, follower limits, distance, loaded chunks, level capacity, block safety, permissions, `mobGriefing`, and NeoForge break events before allowing the action. The whistle cannot be used to mine machines, inventories, protected blocks, or unbreakable blocks, and the client never gets to decide whether a block is valid.
 
-Home, Stay, and Follow are saved companion commands. You begin with one follower slot and can unlock three. Followers keep up using the movement that belongs to their species. Land dinosaurs run when needed, Pteranodon flies, and Spinosaurus swims rather than repeatedly teleporting beside the player.
+Home, Stay, and Follow are saved companion commands. The balanced defaults begin with one follower slot and unlock three, while server owners can tune the starting slots, Field Command gain, and final cap up to four. Followers keep up using the movement that belongs to their species. Land dinosaurs run when needed, Pteranodon flies, and Spinosaurus swims rather than repeatedly teleporting beside the player.
 
 ## **A BASE THAT ACTUALLY RUNS**
 
@@ -76,7 +76,9 @@ A worked Water Turbine can also turn its two nearest available submerged neighbo
 
 The Processor handles ancient refinement, compression, Magic Shards, and turbine upgrades. The Ancient Furnace trades higher energy draw for faster processing through its physical throttle. The Premium Egg Incubator improves hatch quality and mutation odds while showing the real egg inside its glass chamber.
 
-The Laser Observer watches up to five blocks and sends a redstone pulse when its clear beam detects an update. The Dart Turret uses physical darts. The late game Laser Turret tracks visible hostiles and fires a synchronized beam with several damage contacts. Neither laser can see or continue through a wall.
+The Laser Observer watches up to five blocks and sends a redstone pulse when its clear beam detects an update. The late game Laser Turret tracks visible hostiles and fires a synchronized beam with several damage contacts. Neither laser can see or continue through a wall.
+
+The Ancient Spell Stone is a silent powered ward that prevents hostile spawn checks within twenty blocks. It has no separate menu; right clicking only explains a missing energy connection, while assignment stays in the Command Table Energy Map.
 
 Machines only request power while they have real work. An empty furnace or idle defense does not quietly drain the reserve.
 
@@ -88,11 +90,13 @@ Spinosaurus is the underwater counterpart. It has smooth pitch and bank steering
 
 Both mounts support the Huge mutation without applying their rider offset twice.
 
+Mounting either companion automatically commits Follow through the normal follower system. It uses a real follower slot and remains active after dismount, so a dinosaur ridden away from Home never turns around or teleports back to base when the player gets off.
+
 ## **LIVING COMPANIONS**
 
 Dinosaurs have hunger, mood, health, level, diet, sleep, combat, and recovery. Their head begins a turn before the body follows. Compatible action animations keep locomotion in the legs. Idle dinosaurs look around, blink, and roam without abandoning the base.
 
-Large companions search for stable ground before sleeping. Heavy footsteps use the authored animation contacts. Combat damage lands at the matching attack moment. Hostile mobs do not naturally choose companions as targets, while capable combat dinosaurs still defend their base or owner when a threat appears.
+Large companions search for stable ground before sleeping. Heavy footsteps use the authored animation contacts. Combat damage lands at the matching attack moment. Hostile mobs do not naturally choose companions as targets. An idle Tyrannosaurus or Spinosaurus proactively defends its owner, while other combat-capable followers join only after their owner attacks. Assigned base and Whistle duties always take priority over autonomous combat.
 
 An ordinary defeat sends an owned dinosaur to recovery. An intentional player kill is permanent and awards the matching materials. Recovery, expedition, depot, and active world states are kept separate.
 
@@ -100,11 +104,9 @@ An ordinary defeat sends an owned dinosaur to recovery. An intentional player ki
 
 Small, Big, and Large eggs use different weighted species pools. Larger eggs are rarer, and some species can appear in more than one size at different odds. Right clicking hatches the egg and awards a size weighted stack of Fossil Fragments. Silk Touch preserves the block for incubation.
 
-Nesting Treats allow two healthy dinosaurs of the same species to breed. Once both are fed, they walk together, produce hearts, and leave the new egg on the ground between them. The egg averages and slightly improves the parents' quality, receives a small bonus to fresh mutation odds, and strongly favors a mutation carried by either parent.
+Nesting Treats allow two healthy dinosaurs of the same species to breed. Once both are fed, they walk together, produce hearts, and place the new egg on supported ground beside them. The egg inherits the parents' average birth quality with a small improvement. Every parent carrying Huge or Albino gets an independent 9% base chance to pass it, scaling with that parent's level and birth quality.
 
 Expeditions supply materials that do not belong in an ordinary recipe, including Hardwood, Silk, Sulfur, Fossil Fragments, Ancient Cores, Raw Ancient Metal, Magic Shard Fragments, and rare species trophies. Finished and compressed materials still need their proper machines. Expeditions never hand out processed metal, meat, or bones as a shortcut around the rest of the mod.
-
-The complete current content and progression rules are recorded in [CONTENT_CATALOG.md](docs/CONTENT_CATALOG.md).
 
 ## **MULTIPLAYER AND SAVES**
 

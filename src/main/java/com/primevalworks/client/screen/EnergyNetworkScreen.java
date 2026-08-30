@@ -57,8 +57,6 @@ public final class EnergyNetworkScreen extends Screen {
             PrimevalWorks.MOD_ID, "textures/gui/energy_top.png");
     private static final Identifier ENERGY_ICON = Identifier.fromNamespaceAndPath(
             PrimevalWorks.MOD_ID, "textures/gui/energy_above_block_icon.png");
-    private static final Identifier SPACE = Identifier.fromNamespaceAndPath(
-            PrimevalWorks.MOD_ID, "textures/gui/space.png");
     private static final int CANVAS_WIDTH = 427;
     private static final int CANVAS_HEIGHT = 240;
     private static final int DEFAULT_BASE_RADIUS = 50;
@@ -235,8 +233,7 @@ public final class EnergyNetworkScreen extends Screen {
     }
 
     private void drawRateDivider(GuiGraphicsExtractor graphics) {
-        graphics.fill(39, 22, 42, 35, 0x805B443A);
-        graphics.fill(40, 23, 41, 34, 0xFFDBC29E);
+        PrimevalUiCrop.paperVerticalRule(graphics, 39, 22, 3, 13, 255);
     }
 
     private void drawAuthoredTooltip(GuiGraphicsExtractor graphics, String title, String detail,
@@ -253,21 +250,7 @@ public final class EnergyNetworkScreen extends Screen {
     }
 
     private void drawSpaceBubble(GuiGraphicsExtractor graphics, Rect rect) {
-        int border = 2;
-        blitSpace(graphics, new Rect(rect.x, rect.y, border, border), 0, 0, 2, 2);
-        blitSpace(graphics, new Rect(rect.x + border, rect.y, rect.width - 4, border), 2, 0, 82, 2);
-        blitSpace(graphics, new Rect(rect.right() - border, rect.y, border, border), 84, 0, 2, 2);
-        blitSpace(graphics, new Rect(rect.x, rect.y + border, border, rect.height - 4), 0, 2, 2, 10);
-        blitSpace(graphics, new Rect(rect.x + border, rect.y + border, rect.width - 4, rect.height - 4), 2, 2, 82, 10);
-        blitSpace(graphics, new Rect(rect.right() - border, rect.y + border, border, rect.height - 4), 84, 2, 2, 10);
-        blitSpace(graphics, new Rect(rect.x, rect.bottom() - border, border, border), 0, 12, 2, 2);
-        blitSpace(graphics, new Rect(rect.x + border, rect.bottom() - border, rect.width - 4, border), 2, 12, 82, 2);
-        blitSpace(graphics, new Rect(rect.right() - border, rect.bottom() - border, border, border), 84, 12, 2, 2);
-    }
-
-    private void blitSpace(GuiGraphicsExtractor graphics, Rect target, int sx, int sy, int sw, int sh) {
-        graphics.blit(SPACE, target.x, target.y, target.right(), target.bottom(),
-                sx / 86.0F, (sx + sw) / 86.0F, sy / 14.0F, (sy + sh) / 14.0F);
+        PrimevalUiCrop.paperBubble(graphics, rect.x, rect.y, rect.width, rect.height);
     }
 
     private void blitRegion(GuiGraphicsExtractor graphics, Rect target, int sx, int sy, int sw, int sh) {

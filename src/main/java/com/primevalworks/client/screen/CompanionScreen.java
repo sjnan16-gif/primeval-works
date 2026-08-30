@@ -48,7 +48,6 @@ public final class CompanionScreen extends Screen {
     private static final int ACTION_EXTENSION_WIDTH = 66;
 
     private static final Identifier MENU_TEXTURE = texture("dino_menu.png");
-    private static final Identifier SPACE_TEXTURE = texture("space.png");
     private static final Identifier HUNGER_BAR_TEXTURE = texture("hunger_bar.png");
     private static final Identifier HEALTH_BAR_TEXTURE = texture("health_bar.png");
     private static final Identifier MOOD_BAR_TEXTURE = texture("mood_bar.png");
@@ -67,11 +66,6 @@ public final class CompanionScreen extends Screen {
     private static final int MUTED_INK = 0xFF6E6764;
     private static final int LABEL = 0xFFC74F43;
     private static final int TITLE_END = 0xFFF19A54;
-    private static final int EDGE_DARK = 0xFF6D4E3B;
-    private static final int EDGE = 0xFF88664F;
-    private static final int PAPER_DARK = 0xFFB99472;
-    private static final int PAPER = 0xFFD7B392;
-    private static final int PAPER_LIGHT = 0xFFE7C9AA;
     private static final String[] SPECIALTIES = {
             "Transport", "Fire", "Energy", "Crafting", "Expedition"
     };
@@ -224,12 +218,7 @@ public final class CompanionScreen extends Screen {
             return true;
         }
         if (global(layout, COMMAND).contains(event.x(), event.y())) {
-            DinosaurCommandMode next = nextCommandMode(state.commandMode);
-            if (next == DinosaurCommandMode.FOLLOW && state.followers >= state.followerLimit) {
-                state.notice = "Follower slots are full. Upgrade Field Command first.";
-                playUiClick(0.72F);
-                return true;
-            }
+            DinosaurCommandMode next = nextCommandMode(state.commandMode, followSlotAvailable());
             requestCommandMode(next);
             playUiClick(next == DinosaurCommandMode.HOME ? 0.92F
                     : next == DinosaurCommandMode.STAY ? 0.98F : 1.08F);
@@ -521,7 +510,7 @@ public final class CompanionScreen extends Screen {
 
     private void drawCommandAction(GuiGraphicsExtractor graphics, Rect rect, int mouseX, int mouseY, float time) {
         DinosaurCommandMode mode = state.commandMode;
-        DinosaurCommandMode next = nextCommandMode(mode);
+        DinosaurCommandMode next = nextCommandMode(mode, followSlotAvailable());
         int accent = commandColor(mode);
         boolean locked = next == DinosaurCommandMode.FOLLOW && state.followers >= state.followerLimit;
         drawAction(graphics, rect, mode.title().toUpperCase(), 0xFF766F68,
@@ -551,8 +540,12 @@ public final class CompanionScreen extends Screen {
         }
         if (global(layout, COMMAND).contains(mouseX, mouseY)) {
             DinosaurCommandMode current = state.commandMode;
-            DinosaurCommandMode next = nextCommandMode(current);
+            boolean followSlotAvailable = followSlotAvailable();
+            DinosaurCommandMode next = nextCommandMode(current, followSlotAvailable);
             String detail = current.description() + " Click to switch to " + next.title() + ".";
+            if (current == DinosaurCommandMode.STAY && !followSlotAvailable) {
+                detail += " Follow is full, so this click returns Home instead.";
+            }
             if (next == DinosaurCommandMode.FOLLOW) {
                 detail += " Followers: " + state.followers + "/" + state.followerLimit + ".";
                 if (state.followers >= state.followerLimit) {
@@ -724,8 +717,7 @@ public final class CompanionScreen extends Screen {
         boolean hovered = !locked && row.contains(mouseX, mouseY);
         int color = SPECIALTY_COLORS[index];
 
-        graphics.fill(row.x(), row.y(), row.right(), row.bottom(), EDGE_DARK);
-        graphics.fill(row.x() + 1, row.y() + 1, row.right() - 1, row.bottom() - 1, hovered ? PAPER_LIGHT : PAPER_DARK);
+        PrimevalUiCrop.paperBubble(graphics, row.x(), row.y(), row.width(), row.height());
         graphics.fill(row.x() + 2, row.y() + 2, row.x() + 6, row.bottom() - 2, color);
         if (selected) {
             graphics.fill(row.x() + 6, row.y() + 2, row.right() - 2, row.bottom() - 2, withAlpha(color, 35));
@@ -990,9 +982,7 @@ public final class CompanionScreen extends Screen {
             float time,
             int index
     ) {
-        graphics.fill(rect.x(), rect.y(), rect.right(), rect.bottom(), EDGE_DARK);
-        graphics.fill(rect.x() + 1, rect.y() + 1, rect.right() - 1, rect.bottom() - 1, PAPER_DARK);
-        graphics.fill(rect.x() + 2, rect.y() + 2, rect.right() - 2, rect.bottom() - 2, PAPER_LIGHT);
+        PrimevalUiCrop.paperSlot(graphics, rect.x(), rect.y(), rect.width(), rect.height(), 255);
         if (edible) {
             int alpha = 72 + Math.round((Mth.sin(time * 0.14F + index) + 1.0F) * 35.0F);
             outline(graphics, new Rect(rect.x() - 1, rect.y() - 1, rect.width() + 2, rect.height() + 2), withAlpha(0xFFFFFFFF, alpha));
@@ -1034,33 +1024,11 @@ public final class CompanionScreen extends Screen {
 
     private void drawPaperPanel(GuiGraphicsExtractor graphics, Rect panel) {
         graphics.fill(panel.x() + 4, panel.y() + 5, panel.right() + 4, panel.bottom() + 5, 0x46000000);
-        graphics.fill(panel.x(), panel.y(), panel.right(), panel.bottom(), EDGE_DARK);
-        graphics.fill(panel.x() + 2, panel.y() + 2, panel.right() - 2, panel.bottom() - 2, EDGE);
-        graphics.fill(panel.x() + 4, panel.y() + 4, panel.right() - 4, panel.bottom() - 4, PAPER);
-        for (int y = panel.y() + 7; y < panel.bottom() - 5; y += 7) {
-            graphics.fill(panel.x() + 5, y, panel.right() - 5, y + 1, 0x12FFFFFF);
-        }
-        graphics.fill(panel.x() + 2, panel.y() + 2, panel.x() + 10, panel.y() + 4, PAPER_LIGHT);
-        graphics.fill(panel.right() - 10, panel.y() + 2, panel.right() - 2, panel.y() + 4, PAPER_LIGHT);
-        graphics.fill(panel.x() + 2, panel.bottom() - 4, panel.x() + 10, panel.bottom() - 2, PAPER_DARK);
-        graphics.fill(panel.right() - 10, panel.bottom() - 4, panel.right() - 2, panel.bottom() - 2, PAPER_DARK);
+        PrimevalUiCrop.paperPanel(graphics, panel.x(), panel.y(), panel.width(), panel.height());
     }
 
     private void drawBubble(GuiGraphicsExtractor graphics, Rect rect, int border) {
-        int safeBorder = Math.max(1, Math.min(border, Math.min(rect.width(), rect.height()) / 2));
-        int sourceBorder = 2;
-        int middleWidth = rect.width() - safeBorder * 2;
-        int middleHeight = rect.height() - safeBorder * 2;
-
-        blitRegion(graphics, SPACE_TEXTURE, new Rect(rect.x(), rect.y(), safeBorder, safeBorder), 0, 0, sourceBorder, sourceBorder, 86, 14);
-        blitRegion(graphics, SPACE_TEXTURE, new Rect(rect.x() + safeBorder, rect.y(), middleWidth, safeBorder), sourceBorder, 0, 82, sourceBorder, 86, 14);
-        blitRegion(graphics, SPACE_TEXTURE, new Rect(rect.right() - safeBorder, rect.y(), safeBorder, safeBorder), 84, 0, sourceBorder, sourceBorder, 86, 14);
-        blitRegion(graphics, SPACE_TEXTURE, new Rect(rect.x(), rect.y() + safeBorder, safeBorder, middleHeight), 0, sourceBorder, sourceBorder, 10, 86, 14);
-        blitRegion(graphics, SPACE_TEXTURE, new Rect(rect.x() + safeBorder, rect.y() + safeBorder, middleWidth, middleHeight), sourceBorder, sourceBorder, 82, 10, 86, 14);
-        blitRegion(graphics, SPACE_TEXTURE, new Rect(rect.right() - safeBorder, rect.y() + safeBorder, safeBorder, middleHeight), 84, sourceBorder, sourceBorder, 10, 86, 14);
-        blitRegion(graphics, SPACE_TEXTURE, new Rect(rect.x(), rect.bottom() - safeBorder, safeBorder, safeBorder), 0, 12, sourceBorder, sourceBorder, 86, 14);
-        blitRegion(graphics, SPACE_TEXTURE, new Rect(rect.x() + safeBorder, rect.bottom() - safeBorder, middleWidth, safeBorder), sourceBorder, 12, 82, sourceBorder, 86, 14);
-        blitRegion(graphics, SPACE_TEXTURE, new Rect(rect.right() - safeBorder, rect.bottom() - safeBorder, safeBorder, safeBorder), 84, 12, sourceBorder, sourceBorder, 86, 14);
+        PrimevalUiCrop.paperBubble(graphics, rect.x(), rect.y(), rect.width(), rect.height());
     }
 
     private void glow(GuiGraphicsExtractor graphics, Rect rect, float time) {
@@ -1100,12 +1068,12 @@ public final class CompanionScreen extends Screen {
         ClientPacketDistributor.sendToServer(new DinosaurCommandPayload(dodo.getId(), mode.ordinal()));
     }
 
-    private static DinosaurCommandMode nextCommandMode(DinosaurCommandMode mode) {
-        return switch (mode) {
-            case HOME -> DinosaurCommandMode.STAY;
-            case STAY -> DinosaurCommandMode.FOLLOW;
-            case FOLLOW -> DinosaurCommandMode.HOME;
-        };
+    private boolean followSlotAvailable() {
+        return state.followers < state.followerLimit;
+    }
+
+    private static DinosaurCommandMode nextCommandMode(DinosaurCommandMode mode, boolean followSlotAvailable) {
+        return mode.next(followSlotAvailable);
     }
 
     private static int commandColor(DinosaurCommandMode mode) {
@@ -1450,33 +1418,6 @@ public final class CompanionScreen extends Screen {
                 rect.width(),
                 rect.height(),
                 color
-        );
-    }
-
-    private void blitRegion(
-            GuiGraphicsExtractor graphics,
-            Identifier texture,
-            Rect target,
-            int sourceX,
-            int sourceY,
-            int sourceWidth,
-            int sourceHeight,
-            int textureWidth,
-            int textureHeight
-    ) {
-        if (target.width() <= 0 || target.height() <= 0) {
-            return;
-        }
-        graphics.blit(
-                texture,
-                target.x(),
-                target.y(),
-                target.right(),
-                target.bottom(),
-                sourceX / (float) textureWidth,
-                (sourceX + sourceWidth) / (float) textureWidth,
-                sourceY / (float) textureHeight,
-                (sourceY + sourceHeight) / (float) textureHeight
         );
     }
 

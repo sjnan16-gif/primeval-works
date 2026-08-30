@@ -8,7 +8,6 @@ import com.primevalworks.world.block.entity.FoodBoxBlockEntity;
 import com.primevalworks.world.block.entity.TurbineBlockEntity;
 import com.primevalworks.world.block.entity.PremiumEggIncubatorBlockEntity;
 import com.primevalworks.world.block.entity.ProcessorBlockEntity;
-import com.primevalworks.world.block.entity.DartTurretBlockEntity;
 import com.primevalworks.world.block.entity.LaserTurretBlockEntity;
 import com.primevalworks.world.block.entity.LaserObserverBlockEntity;
 import com.primevalworks.world.block.entity.SpinosaurusHeadBlockEntity;
@@ -68,11 +67,6 @@ public final class ModBlockEntities {
             BLOCK_ENTITIES.register("processor", () -> new BlockEntityType<>(
                     ProcessorBlockEntity::new,
                     ModBlocks.PROCESSOR.get()
-            ));
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<DartTurretBlockEntity>> DART_TURRET =
-            BLOCK_ENTITIES.register("dart_turret", () -> new BlockEntityType<>(
-                    DartTurretBlockEntity::new,
-                    ModBlocks.DART_TURRET.get()
             ));
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<LaserTurretBlockEntity>> LASER_TURRET =
             BLOCK_ENTITIES.register("laser_turret", () -> new BlockEntityType<>(

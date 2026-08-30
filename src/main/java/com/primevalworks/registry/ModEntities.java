@@ -3,7 +3,6 @@ package com.primevalworks.registry;
 import com.primevalworks.PrimevalWorks;
 import com.primevalworks.world.entity.FieldDodoEntity;
 import com.primevalworks.world.entity.DinosaurSpecies;
-import com.primevalworks.world.entity.DartProjectileEntity;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
@@ -31,15 +30,6 @@ public final class ModEntities {
     public static final DeferredHolder<EntityType<?>, EntityType<FieldDodoEntity>> PTERANODON = registerDinosaur(DinosaurSpecies.PTERANODON);
     public static final DeferredHolder<EntityType<?>, EntityType<FieldDodoEntity>> FIELD_DODO = registerDinosaur(DinosaurSpecies.DODO);
     public static final DeferredHolder<EntityType<?>, EntityType<FieldDodoEntity>> SPINOSAURUS = registerDinosaur(DinosaurSpecies.SPINOSAURUS);
-    public static final DeferredHolder<EntityType<?>, EntityType<DartProjectileEntity>> DART_PROJECTILE =
-            ENTITIES.register("dart_projectile", () -> EntityType.Builder.<DartProjectileEntity>of(
-                            DartProjectileEntity::new, MobCategory.MISC)
-                    .sized(0.5F, 0.5F)
-                    .clientTrackingRange(4)
-                    .updateInterval(10)
-                    .build(ResourceKey.create(Registries.ENTITY_TYPE,
-                            Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "dart_projectile"))));
-
     public static final List<DeferredHolder<EntityType<?>, EntityType<FieldDodoEntity>>> DINOSAURS = List.of(
             TYRANNOSAURUS, TRICERATOPS, VELOCIRAPTOR, STEGOSAURUS,
             PARASAUROLOPHUS, PTERANODON, FIELD_DODO, SPINOSAURUS

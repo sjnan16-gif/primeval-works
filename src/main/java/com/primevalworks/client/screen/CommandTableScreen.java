@@ -79,7 +79,6 @@ public final class CommandTableScreen extends Screen {
     private static final Identifier CONTROL_TABLE = texture("control_table.png");
     private static final Identifier LEVELS_BACK = texture("levels_back.png");
     private static final Identifier HOTBAR = texture("hotbar.png");
-    private static final Identifier SPACE = texture("space.png");
 
     private static final Rect TREE_VIEW = new Rect(112, 123, 191, 69);
     private static final Rect ROSTER_PAGE = new Rect(252, 31, 53, 14);
@@ -501,7 +500,7 @@ public final class CommandTableScreen extends Screen {
         int width = Math.max(28, Math.round(34 * layout().scale));
         int height = Math.max(8, Math.round(9 * layout().scale));
         Rect badge = new Rect(slot.centerX() - width / 2, slot.y - height - 2, width, height);
-        blit(graphics, SPACE, badge);
+        paperBubble(graphics, badge);
         centeredBold(graphics, "LEVEL " + level, inset(badge, 2), GOLD, 0.66F);
     }
 
@@ -514,7 +513,7 @@ public final class CommandTableScreen extends Screen {
         boolean hovered = button.contains(mouseX, mouseY);
         withMotion(graphics, button, 0.0F, (1.0F - progress) * 2.0F, pop, () -> {
             graphics.fill(button.x + 2, button.y + 3, button.right() + 2, button.bottom() + 3, 0x62000000);
-            blit(graphics, SPACE, button);
+            paperBubble(graphics, button);
             if (hovered) {
                 graphics.fill(button.x + 2, button.y + 2, button.right() - 2, button.bottom() - 2, 0x30FFF0B3);
                 drawSlotEdgeGlow(graphics, button, time, 0.72F);
@@ -558,7 +557,7 @@ public final class CommandTableScreen extends Screen {
         boolean hovered = button.contains(mouseX, mouseY);
         withMotion(graphics, button, 0.0F, (1.0F - progress) * 2.0F, pop, () -> {
             graphics.fill(button.x + 2, button.y + 3, button.right() + 2, button.bottom() + 3, 0x62000000);
-            blit(graphics, SPACE, button);
+            paperBubble(graphics, button);
             graphics.fill(button.x + 2, button.y + 2, button.right() - 2, button.bottom() - 2,
                     hovered ? 0x42E16A62 : 0x20E16A62);
             if (hovered) drawSlotEdgeGlow(graphics, button, time, 0.72F);
@@ -709,8 +708,8 @@ public final class CommandTableScreen extends Screen {
         Rect card = new Rect(x, y, width, height);
         Rect top = new Rect(card.x, card.y, card.width, Math.max(11, Math.round(13 * layout().scale)));
         Rect body = new Rect(card.x, top.bottom() - 1, card.width, card.height - top.height + 1);
-        blit(graphics, SPACE, top);
-        blit(graphics, SPACE, body);
+        paperBubble(graphics, top);
+        paperBubble(graphics, body);
         thickButtonText(graphics, entry.name().toUpperCase(), inset(top, 3), GOLD);
         int health = Math.round(100.0F * entry.health() / Math.max(1.0F, entry.maxHealth()));
         int rowHeight = Math.max(8, (body.height - 4) / 3);
@@ -925,7 +924,7 @@ public final class CommandTableScreen extends Screen {
         if (hovered == null) {
             Rect crewTag = new Rect(viewport.right() - Math.round(57 * layout.scale), viewport.y + 3,
                     Math.round(53 * layout.scale), Math.round(11 * layout.scale));
-            blit(graphics, SPACE, crewTag);
+            paperBubble(graphics, crewTag);
             centeredBold(graphics, "CREW SLOTS " + clientActiveCapacity(), crewTag, GOLD, 0.68F);
             Rect hint = new Rect(viewport.x + 4, viewport.bottom() - Math.round(11 * layout.scale),
                     Math.round(65 * layout.scale), Math.round(9 * layout.scale));
@@ -941,8 +940,8 @@ public final class CommandTableScreen extends Screen {
         float pop = 0.96F + dwell * 0.04F;
         withMotion(graphics, new Rect(top.x, top.y, top.width, top.height + bottom.height), 0.0F,
                 -dwell * 1.2F, pop, () -> {
-                    blit(graphics, SPACE, top);
-                    blit(graphics, SPACE, bottom);
+                    paperBubble(graphics, top);
+                    paperBubble(graphics, bottom);
                     int rank = level(hovered);
                     String right = rank >= hovered.maxLevel() ? "MASTERED"
                             : prerequisiteMet(hovered) ? "ITEM COST"
@@ -1980,6 +1979,10 @@ public final class CommandTableScreen extends Screen {
 
     private void blit(GuiGraphicsExtractor graphics, Identifier texture, Rect rect) {
         graphics.blit(texture, rect.x, rect.y, rect.right(), rect.bottom(), 0.0F, 1.0F, 0.0F, 1.0F);
+    }
+
+    private void paperBubble(GuiGraphicsExtractor graphics, Rect rect) {
+        PrimevalUiCrop.paperBubble(graphics, rect.x, rect.y, rect.width, rect.height);
     }
 
     private void blitRegion(GuiGraphicsExtractor graphics, Identifier texture, Rect target,
