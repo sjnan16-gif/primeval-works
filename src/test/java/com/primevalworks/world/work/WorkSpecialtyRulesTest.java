@@ -132,6 +132,7 @@ final class WorkSpecialtyRulesTest {
             assertTrue(strongJobs >= 1 && strongJobs <= 2, profile.name());
         }
         assertArrayEquals(new int[]{1, 4, 1, 1, 4}, DinoSpeciesWorkProfile.TYRANNOSAURUS.specialtyStars());
+        assertArrayEquals(new int[]{3, 1, 1, 2, 3}, DinoSpeciesWorkProfile.TRICERATOPS.specialtyStars());
         assertArrayEquals(new int[]{1, 2, 4, 1, 4}, DinoSpeciesWorkProfile.SPINOSAURUS.specialtyStars());
         assertArrayEquals(new int[]{4, 1, 1, 2, 2}, DinoSpeciesWorkProfile.VELOCIRAPTOR.specialtyStars());
         assertArrayEquals(new int[]{1, 1, 3, 3, 1}, DinoSpeciesWorkProfile.PARASAUROLOPHUS.specialtyStars());

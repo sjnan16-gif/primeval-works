@@ -170,6 +170,15 @@ public final class PrimevalGameTests {
             TEST_FUNCTIONS.register("stegosaurus_tends_furnace", () -> PrimevalGameTests::stegosaurusTendsFurnace);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> DINOSAUR_CRAFTS_FROM_BASE_STORAGE =
             TEST_FUNCTIONS.register("dinosaur_crafts_from_base_storage", () -> PrimevalGameTests::dinosaurCraftsFromBaseStorage);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> TRICERATOPS_CRAFTS_FROM_OWNER_INVENTORY =
+            TEST_FUNCTIONS.register("triceratops_crafts_from_owner_inventory",
+                    () -> PrimevalGameTests::triceratopsCraftsFromOwnerInventory);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> FIRE_WORK_PULLS_FROM_OWNER_INVENTORY =
+            TEST_FUNCTIONS.register("fire_work_pulls_from_owner_inventory",
+                    () -> PrimevalGameTests::fireWorkPullsFromOwnerInventory);
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> PROCESSOR_WORK_PULLS_FROM_OWNER_INVENTORY =
+            TEST_FUNCTIONS.register("processor_work_pulls_from_owner_inventory",
+                    () -> PrimevalGameTests::processorWorkPullsFromOwnerInventory);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> CRAFTING_CANCELS_IF_INGREDIENTS_CHANGE =
             TEST_FUNCTIONS.register("crafting_cancels_if_ingredients_change", () -> PrimevalGameTests::craftingCancelsIfIngredientsChange);
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> EXPEDITION_POOLS_GATE_ANCIENT_METAL =
@@ -443,6 +452,21 @@ public final class PrimevalGameTests {
         event.registerTest(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "dinosaur_crafts_from_base_storage"),
                 new FunctionGameTestInstance(DINOSAUR_CRAFTS_FROM_BASE_STORAGE.getKey(), isolatedTestData(event, "crafting_work"))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "triceratops_crafts_from_owner_inventory"),
+                new FunctionGameTestInstance(TRICERATOPS_CRAFTS_FROM_OWNER_INVENTORY.getKey(),
+                        isolatedTestData(event, "triceratops_remote_crafting"))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "fire_work_pulls_from_owner_inventory"),
+                new FunctionGameTestInstance(FIRE_WORK_PULLS_FROM_OWNER_INVENTORY.getKey(),
+                        isolatedTestData(event, "remote_fire_supply"))
+        );
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "processor_work_pulls_from_owner_inventory"),
+                new FunctionGameTestInstance(PROCESSOR_WORK_PULLS_FROM_OWNER_INVENTORY.getKey(),
+                        isolatedTestData(event, "remote_processor_supply"))
         );
         event.registerTest(
                 Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "crafting_cancels_if_ingredients_change"),
@@ -1699,6 +1723,8 @@ public final class PrimevalGameTests {
                 .thenWaitUntil(() -> helper.assertTrue(dinosaur.isOnExpedition(),
                         "The expedition assignment never entered its away state"))
                 .thenExecute(() -> {
+                    helper.assertTrue(!dinosaur.isPickable() && !dinosaur.isPushable(),
+                            "An invisible expedition dinosaur still accepted targeting or collision");
                     TagValueOutput output = TagValueOutput.createWithContext(
                             ProblemReporter.DISCARDING, helper.getLevel().registryAccess());
                     dinosaur.saveWithoutId(output);
@@ -3552,6 +3578,144 @@ public final class PrimevalGameTests {
             zombie.discard();
             dinosaur.discard();
                 })
+                .thenSucceed();
+    }
+
+    private static void triceratopsCraftsFromOwnerInventory(GameTestHelper helper) {
+        BlockPos tableRelative = new BlockPos(1, 1, 1);
+        BlockPos craftingRelative = new BlockPos(15, 1, 1);
+        BlockPos dinosaurRelative = new BlockPos(3, 1, 6);
+        forceTicking(helper, tableRelative, craftingRelative, dinosaurRelative);
+        for (int x = 0; x <= 18; x++) for (int z = 0; z <= 8; z++) {
+            helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+        }
+        helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
+        helper.setBlock(craftingRelative, Blocks.CRAFTING_TABLE);
+
+        ServerPlayer player = isolatedPlayer(helper);
+        player.getInventory().setItem(0, new ItemStack(Items.OAK_PLANKS, 2));
+        BlockPos remote = helper.absolutePos(tableRelative).offset(96, 0, 0);
+        player.setPos(remote.getX() + 0.5D, remote.getY(), remote.getZ() + 0.5D);
+
+        FieldDodoEntity crafter = helper.spawn(ModEntities.TRICERATOPS.get(), dinosaurRelative);
+        crafter.setDinosaurOwner(player.getUUID());
+        crafter.feed(100);
+        Vec3 startingPosition = crafter.position();
+        BlockPos station = helper.absolutePos(craftingRelative);
+        crafter.assignWork(3, helper.absolutePos(tableRelative), List.of(), List.of(station), List.of(),
+                null, List.of(), List.of("minecraft:stick"), List.of(), Map.of(station, 3),
+                0, 3, 1, 0, 0, 0, 2, 1, true, true);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(crafter.getWorkAction() == 4,
+                        "The Triceratops could not approach or begin its crafting job"))
+                .thenExecute(() -> helper.assertTrue(crafter.position().distanceToSqr(startingPosition) > 36.0D,
+                        "The Triceratops crafting check did not exercise real workstation navigation"))
+                .thenWaitUntil(() -> {
+                    int looseSticks = helper.getLevel().getEntitiesOfClass(ItemEntity.class,
+                                    new AABB(station).inflate(2.0D), ItemEntity::isAlive)
+                            .stream().filter(item -> item.getItem().is(Items.STICK))
+                            .mapToInt(item -> item.getItem().getCount()).sum();
+                    helper.assertTrue(looseSticks == 4,
+                            "Remote owner inventory crafting did not produce four sticks; output=" + looseSticks);
+                })
+                .thenExecute(() -> helper.assertTrue(player.getInventory().countItem(Items.OAK_PLANKS) == 0,
+                        "Crafting did not atomically consume the owner's two remote planks"))
+                .thenSucceed();
+    }
+
+    private static void fireWorkPullsFromOwnerInventory(GameTestHelper helper) {
+        helper.getLevel().clockManager().setTotalTicks(
+                helper.getLevel().dimensionType().defaultClock().orElseThrow(), 1_000L);
+        BlockPos tableRelative = new BlockPos(1, 1, 1);
+        BlockPos furnaceRelative = new BlockPos(15, 1, 1);
+        BlockPos dinosaurRelative = new BlockPos(3, 1, 6);
+        forceTicking(helper, tableRelative, furnaceRelative, dinosaurRelative);
+        for (int x = 0; x <= 18; x++) for (int z = 0; z <= 8; z++) {
+            helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+        }
+        helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
+        helper.setBlock(furnaceRelative, Blocks.FURNACE);
+        AbstractFurnaceBlockEntity furnace = helper.getBlockEntity(
+                furnaceRelative, AbstractFurnaceBlockEntity.class);
+
+        ServerPlayer player = isolatedPlayer(helper);
+        player.getInventory().setItem(0, new ItemStack(Items.RAW_IRON));
+        player.getInventory().setItem(1, new ItemStack(Items.COAL));
+        BlockPos remote = helper.absolutePos(tableRelative).offset(96, 0, 0);
+        player.setPos(remote.getX() + 0.5D, remote.getY(), remote.getZ() + 0.5D);
+
+        FieldDodoEntity worker = helper.spawn(ModEntities.TRICERATOPS.get(), dinosaurRelative);
+        worker.setDinosaurOwner(player.getUUID());
+        worker.feed(100);
+        BlockPos station = helper.absolutePos(furnaceRelative);
+        worker.assignWork(1, helper.absolutePos(tableRelative), List.of(), List.of(station), List.of(),
+                null, List.of(), List.of("minecraft:raw_iron"), List.of("minecraft:coal"), Map.of(station, 3),
+                0, 3, 1, 0, 0, 0, 0, 1, true, true);
+
+        helper.startSequence()
+                .thenExecuteAfter(8, () -> helper.assertTrue(
+                        player.getInventory().getItem(0).is(Items.RAW_IRON)
+                                && player.getInventory().getItem(1).is(Items.COAL)
+                                && furnace.getItem(0).isEmpty() && furnace.getItem(1).isEmpty(),
+                        "The furnace loaded or began cooking before its Fire worker arrived"))
+                .thenWaitUntil(() -> helper.assertTrue(player.getInventory().getItem(0).isEmpty()
+                                && player.getInventory().getItem(1).isEmpty(),
+                        "The Fire worker did not pull input and fuel from its remote owner; workEnabled="
+                                + worker.isWorkEnabled() + ", action=" + worker.getWorkAction()
+                                + ", cooldown=" + worker.getWorkActionProgress()
+                                + ", position=" + worker.position() + ", input=" + furnace.getItem(0)
+                                + ", fuel=" + furnace.getItem(1) + ", ownerInput="
+                                + player.getInventory().getItem(0) + ", ownerFuel="
+                                + player.getInventory().getItem(1)))
+                .thenWaitUntil(() -> helper.assertTrue(furnace.countItem(Items.IRON_INGOT) == 1,
+                        "The remotely supplied Fire job did not finish smelting"))
+                .thenSucceed();
+    }
+
+    private static void processorWorkPullsFromOwnerInventory(GameTestHelper helper) {
+        BlockPos tableRelative = new BlockPos(1, 1, 1);
+        BlockPos processorRelative = new BlockPos(15, 1, 1);
+        BlockPos dinosaurRelative = new BlockPos(3, 1, 6);
+        forceTicking(helper, tableRelative, processorRelative, dinosaurRelative);
+        for (int x = 0; x <= 18; x++) for (int z = 0; z <= 8; z++) {
+            helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+        }
+        helper.setBlock(tableRelative, ModBlocks.COMMAND_TABLE.get());
+        helper.setBlock(processorRelative, ModBlocks.PROCESSOR.get());
+        ProcessorBlockEntity processor = helper.getBlockEntity(processorRelative, ProcessorBlockEntity.class);
+
+        ServerPlayer player = isolatedPlayer(helper);
+        player.getInventory().setItem(0, new ItemStack(ModItems.RAW_ANCIENT_METAL_INGOT.get()));
+        player.getInventory().setItem(1, new ItemStack(ModItems.SULFUR.get()));
+        player.getInventory().setItem(2, new ItemStack(Items.COAL));
+        BlockPos remote = helper.absolutePos(tableRelative).offset(96, 0, 0);
+        player.setPos(remote.getX() + 0.5D, remote.getY(), remote.getZ() + 0.5D);
+
+        FieldDodoEntity worker = helper.spawn(ModEntities.TRICERATOPS.get(), dinosaurRelative);
+        worker.setDinosaurOwner(player.getUUID());
+        worker.feed(100);
+        BlockPos station = helper.absolutePos(processorRelative);
+        worker.assignWork(1, helper.absolutePos(tableRelative), List.of(), List.of(station), List.of(),
+                null, List.of(), List.of(), List.of(), Map.of(station, 3),
+                0, 3, 1, 0, 0, 0, 0, 1, true, true);
+
+        helper.startSequence()
+                .thenExecuteAfter(8, () -> helper.assertTrue(
+                        player.getInventory().getItem(0).is(ModItems.RAW_ANCIENT_METAL_INGOT.get())
+                                && player.getInventory().getItem(1).is(ModItems.SULFUR.get())
+                                && player.getInventory().getItem(2).is(Items.COAL)
+                                && processor.getItem(ProcessorBlockEntity.INPUT_SLOT).isEmpty()
+                                && processor.getItem(ProcessorBlockEntity.CATALYST_SLOT).isEmpty()
+                                && processor.getItem(ProcessorBlockEntity.FUEL_SLOT).isEmpty(),
+                        "The Processor loaded or began processing before its Fire worker arrived"))
+                .thenWaitUntil(() -> helper.assertTrue(
+                                processor.getItem(ProcessorBlockEntity.INPUT_SLOT)
+                                        .is(ModItems.RAW_ANCIENT_METAL_INGOT.get())
+                                        && processor.getItem(ProcessorBlockEntity.CATALYST_SLOT)
+                                        .is(ModItems.SULFUR.get())
+                                        && processor.getItem(ProcessorBlockEntity.FUEL_SLOT).is(Items.COAL),
+                        "The Fire worker did not load a complete Processor recipe from its remote owner"))
                 .thenSucceed();
     }
 

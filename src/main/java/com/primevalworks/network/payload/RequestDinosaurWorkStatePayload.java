@@ -12,7 +12,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-public record RequestDinosaurWorkStatePayload(int entityId, BlockPos commandTablePos)
+public record RequestDinosaurWorkStatePayload(int entityId, BlockPos commandTablePos, long requestId)
         implements CustomPacketPayload {
     public static final Type<RequestDinosaurWorkStatePayload> TYPE = new Type<>(
             Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "request_dinosaur_work_state")
@@ -21,9 +21,15 @@ public record RequestDinosaurWorkStatePayload(int entityId, BlockPos commandTabl
             (buffer, payload) -> {
                 buffer.writeVarInt(payload.entityId);
                 buffer.writeLong(payload.commandTablePos.asLong());
+                buffer.writeLong(payload.requestId);
             },
-            buffer -> new RequestDinosaurWorkStatePayload(buffer.readVarInt(), BlockPos.of(buffer.readLong()))
+            buffer -> new RequestDinosaurWorkStatePayload(
+                    buffer.readVarInt(), BlockPos.of(buffer.readLong()), buffer.readLong())
     );
+
+    public RequestDinosaurWorkStatePayload(int entityId, BlockPos commandTablePos) {
+        this(entityId, commandTablePos, 0L);
+    }
 
     public static void handle(RequestDinosaurWorkStatePayload payload, IPayloadContext context) {
         if (!(context.player() instanceof ServerPlayer player)
@@ -34,7 +40,7 @@ public record RequestDinosaurWorkStatePayload(int entityId, BlockPos commandTabl
                 || dinosaur.getCommandTablePos().filter(payload.commandTablePos::equals).isEmpty()) return;
         var table = CommandTableBlock.tableEntity(player.level(), payload.commandTablePos);
         if (table == null || !table.isOwnedBy(player.getUUID())) return;
-        PacketDistributor.sendToPlayer(player, DinosaurWorkStatePayload.from(dinosaur));
+        PacketDistributor.sendToPlayer(player, DinosaurWorkStatePayload.from(dinosaur, payload.requestId));
     }
 
     @Override

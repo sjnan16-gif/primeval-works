@@ -36,7 +36,7 @@ A new base begins with seven active companion slots. Upgrades eventually open a 
 
 There are five base jobs. Transport moves physical item stacks between inventories. Fire operates furnaces and processing machines. Energy works turbines. Crafting uses real ingredients at Crafting Tables. Expedition sends a companion away on a timed route with its own danger and reward pool.
 
-These jobs are meant to work together. A Fire worker does not magically create fuel. A Transport worker supplies it. A Crafting dinosaur can bring ingredients to its table, but logistics still handles the finished result. The same transport system can keep Food Boxes stocked while feeding every other production route.
+These jobs are meant to work together. Fire workers and Crafting dinosaurs can draw real ingredients from the owner's inventory even across the base, but they only load or craft after physically reaching the assigned workstation. Fire workers then accelerate the Furnace, Ancient Furnace, or Processor they are actively tending. Transport remains the permanent logistics layer for unattended stock, finished output, Food Boxes, and routes between machines.
 
 Transport can use chosen sources, destinations, item filters, exact item or tag matching, source reserves, destination targets, batch sizes, priorities, fallback rules, double chests, Ancient Barrels, Food Boxes, vanilla furnaces, the Processor, and the rest of the compatible machines. The item and stack count remain visible while a dinosaur carries them.
 

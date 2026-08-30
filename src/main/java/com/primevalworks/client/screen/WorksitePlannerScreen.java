@@ -77,6 +77,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
 
 public final class WorksitePlannerScreen extends Screen {
     private static final Identifier PLANNER_TEXTURE = Identifier.fromNamespaceAndPath("primevalworks", "textures/gui/worksite_planner.png");
@@ -144,11 +145,13 @@ public final class WorksitePlannerScreen extends Screen {
     private static WorksitePlannerScreen active;
     private static WorksitePlannerScreen pendingMachineMenuReturn;
     private static long pendingMachineMenuDeadline;
+    private static final AtomicLong REQUEST_IDS = new AtomicLong();
 
     private final FieldDodoEntity dodo;
     private final BlockPos tablePos;
     private int jobIndex;
     private final Screen parent;
+    private final long workStateRequestId;
     private Entity previousCamera;
     private CameraType previousCameraType;
     private ArmorStand cameraAnchor;
@@ -255,6 +258,7 @@ public final class WorksitePlannerScreen extends Screen {
         this.tablePos = tablePos.immutable();
         this.jobIndex = Mth.clamp(jobIndex, 0, 4);
         this.parent = parent;
+        this.workStateRequestId = REQUEST_IDS.incrementAndGet();
         this.sourcePositions.addAll(dodo.getWorkSourcePositions());
         this.workstationPositions.addAll(dodo.getWorkWorkstationPositions());
         this.destinationPositions.addAll(dodo.getWorkDestinationPositions());
@@ -355,7 +359,8 @@ public final class WorksitePlannerScreen extends Screen {
         ClientPacketDistributor.sendToServer(new RequestCraftingCataloguePayload(tablePos));
         ClientPacketDistributor.sendToServer(new RequestBaseInventoryPayload(tablePos));
         if (!resumeDraft) {
-            ClientPacketDistributor.sendToServer(new RequestDinosaurWorkStatePayload(dodo.getId(), tablePos));
+            ClientPacketDistributor.sendToServer(new RequestDinosaurWorkStatePayload(
+                    dodo.getId(), tablePos, workStateRequestId));
         }
     }
 
@@ -390,7 +395,13 @@ public final class WorksitePlannerScreen extends Screen {
         AssignDodoWorkPayload saved = payload.assignment();
         if (screen == null
                 || screen.dodo.getId() != saved.entityId()
-                || !screen.tablePos.equals(saved.commandTablePos())) return;
+                || !screen.tablePos.equals(saved.commandTablePos())
+                || screen.workStateRequestId != saved.requestId()) return;
+        if (!payload.accepted()) {
+            screen.savePending = false;
+            screen.feedback(payload.message());
+            return;
+        }
         screen.workStateReceived = true;
         int receivedRadius = Mth.clamp(payload.baseRadius(), 8, 128);
         if (screen.baseRadius != receivedRadius) {
@@ -1916,7 +1927,9 @@ public final class WorksitePlannerScreen extends Screen {
                     filterPurpose(),
                     "CLICK THIS TOOL TO PIN THE ITEM PICKER.",
                     jobIndex == 1 ? "FUEL AND SMELTING INPUTS HAVE SEPARATE SLOTS." : "NO SELECTED ITEMS MEANS ANY VALID ITEM.",
-                    jobIndex == 3 ? "THE DINO FINDS RECIPE INGREDIENTS ACROSS THE BASE." : "THE SEARCH INDEX COMES FROM BASE STORAGE."
+                    jobIndex == 3 ? "THE DINO USES BASE STORAGE, THEN YOUR INVENTORY FROM ANY DISTANCE."
+                            : jobIndex == 1 ? "THE DINO LOADS THESE SUPPLIES FROM YOUR INVENTORY AT ANY DISTANCE."
+                            : "THE SEARCH INDEX COMES FROM BASE STORAGE."
             ), AMBER);
             case BATCH -> new HelpContent((jobIndex == 3 ? "CRAFT BATCH  ·  " : "TRIP SIZE  ·  ") + batchSize, List.of(
                     jobIndex == 3 ? "MAXIMUM RECIPE CRAFTS COMPLETED IN ONE WORK CYCLE." : "MAXIMUM ITEMS THIS DINO TAKES PER TRIP.",
@@ -3309,7 +3322,8 @@ public final class WorksitePlannerScreen extends Screen {
                 repeatMode,
                 routePolicy,
                 exactItemMatch,
-                avoidDanger
+                avoidDanger,
+                workStateRequestId
         );
         savePending = true;
         saveRequestedNanos = Util.getNanos();

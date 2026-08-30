@@ -71,9 +71,9 @@ public final class CompanionScreen extends Screen {
     };
     private static final String[] SPECIALTY_NOTES = {
             "Carries loose items between storage and workstations.",
-            "Fuels furnaces and operates heat-based machines.",
+            "Loads supplies from your inventory and runs heat-based machines.",
             "Produces power and keeps the base network supplied.",
-            "Operates dinosaur workbenches and queued recipes.",
+            "Crafts from base storage and your inventory.",
             "Leaves the base on timed routes and returns with expedition rewards."
     };
     private static final int[] SPECIALTY_COLORS = {

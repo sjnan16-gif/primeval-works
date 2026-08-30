@@ -31,6 +31,8 @@ import com.primevalworks.world.block.entity.CommandTableBlockEntity;
 import com.primevalworks.world.block.entity.TurbineBlockEntity;
 import com.primevalworks.world.block.entity.ProcessorBlockEntity;
 import com.primevalworks.world.block.entity.AncientFurnaceBlockEntity;
+import com.primevalworks.world.processor.ProcessorRecipe;
+import com.primevalworks.world.processor.ProcessorRecipes;
 import com.primevalworks.world.block.CommandTableBlock;
 import com.primevalworks.world.block.TurbinePartBlock;
 import com.primevalworks.world.block.TurbineBlock;
@@ -69,6 +71,7 @@ import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.ai.util.DefaultRandomPos;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Input;
 import net.minecraft.world.Container;
 import net.minecraft.world.WorldlyContainer;
@@ -125,6 +128,7 @@ import java.util.EnumSet;
 import java.util.UUID;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Predicate;
 import org.jetbrains.annotations.Nullable;
 
 public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
@@ -3479,9 +3483,19 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             workerCooldown = 30;
             return;
         }
-        ItemStack input = station.getItem(0);
         boolean ancient = station instanceof AncientFurnaceBlockEntity;
+        if (!closeTo(stationPos)) {
+            moveTo(stationPos);
+            return;
+        }
+        refillFurnaceFromOwner(station, ancient);
+        ItemStack input = station.getItem(0);
         ItemStack fuel = ancient ? ItemStack.EMPTY : station.getItem(1);
+        if (input.isEmpty() || !ancient && fuel.isEmpty()) {
+            cancelWorkAction();
+            workerCooldown = 20;
+            return;
+        }
         if (ancient) {
             CommandTableBlockEntity table = commandTableEntity();
             if (table == null || !table.isEnergyConsumerPowered(stationPos)) {
@@ -3496,20 +3510,17 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             workerCooldown = 30;
             return;
         }
-        if (!closeTo(stationPos)) {
-            moveTo(stationPos);
-            return;
-        }
-        if (level() instanceof ServerLevel serverLevel
-                && advanceWorkAction(stationPos, WorkSpecialtyRules.FIRE_TENDING_TICKS)) {
+        if (!(level() instanceof ServerLevel serverLevel)) return;
+        boolean completed = advanceWorkAction(stationPos, WorkSpecialtyRules.FIRE_TENDING_TICKS);
+        if (tickCount % fireWorkerBoostInterval() == 0) {
             if (station instanceof AncientFurnaceBlockEntity ancientFurnace) {
-                ancientFurnace.addWorkerProgress(20);
+                ancientFurnace.addWorkerProgress(1);
             } else {
-                for (int tick = 0; tick < 20; tick++) {
-                    AbstractFurnaceBlockEntity.serverTick(serverLevel, stationPos,
-                            level().getBlockState(stationPos), station);
-                }
+                AbstractFurnaceBlockEntity.serverTick(serverLevel, stationPos,
+                        level().getBlockState(stationPos), station);
             }
+        }
+        if (completed) {
             serverLevel.sendParticles(ParticleTypes.FLAME,
                     stationPos.getX() + 0.5D, stationPos.getY() + 1.08D, stationPos.getZ() + 0.5D,
                     5, 0.22D, 0.10D, 0.22D, 0.01D);
@@ -3519,11 +3530,29 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         }
     }
 
+    private int fireWorkerBoostInterval() {
+        return switch (Mth.clamp(getSpecialtyStars(1), 0, 4)) {
+            case 4 -> 1;
+            case 3 -> 2;
+            case 2 -> 3;
+            default -> 5;
+        };
+    }
+
     private void runProcessorWork(BlockPos stationPos) {
-        if (!(level().getBlockEntity(stationPos) instanceof ProcessorBlockEntity processor)
-                || !processor.canBeTended()) {
+        if (!(level().getBlockEntity(stationPos) instanceof ProcessorBlockEntity processor)) {
             cancelWorkAction();
             workerCooldown = 30;
+            return;
+        }
+        if (!closeTo(stationPos)) {
+            moveTo(stationPos);
+            return;
+        }
+        refillProcessorFromOwner(processor);
+        if (!processor.canBeTended()) {
+            cancelWorkAction();
+            workerCooldown = 20;
             return;
         }
         ItemStack input = processor.getItem(ProcessorBlockEntity.INPUT_SLOT);
@@ -3534,12 +3563,11 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             workerCooldown = 30;
             return;
         }
-        if (!closeTo(stationPos)) {
-            moveTo(stationPos);
-            return;
+        boolean completed = advanceWorkAction(stationPos, WorkSpecialtyRules.ORE_PROCESSING_TICKS);
+        if (tickCount % fireWorkerBoostInterval() == 0) {
+            processor.addWorkerProgress(1);
         }
-        if (advanceWorkAction(stationPos, WorkSpecialtyRules.ORE_PROCESSING_TICKS)
-                && processor.addWorkerProgress(80)) {
+        if (completed) {
             if (level() instanceof ServerLevel serverLevel) {
                 serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK,
                         stationPos.getX() + 0.5D, stationPos.getY() + 1.05D, stationPos.getZ() + 0.5D,
@@ -3973,7 +4001,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     private CraftingOrder buildCraftingOrder(ServerLevel serverLevel, String outputIdentifier, int maximumCrafts) {
         Identifier wanted = Identifier.tryParse(outputIdentifier);
         if (wanted == null) return null;
-        List<ContainerTarget> containers = baseContainers();
+        List<ContainerTarget> containers = craftingIngredientSources();
         var context = SlotDisplayContext.fromLevel(serverLevel);
         for (RecipeHolder<CraftingRecipe> holder : serverLevel.getServer().getRecipeManager().recipeMap().byType(RecipeType.CRAFTING)) {
             CraftingRecipe recipe = holder.value();
@@ -4013,7 +4041,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     private SlotTake findIngredient(List<ContainerTarget> containers, Ingredient ingredient, List<SlotTake> planned) {
         for (ContainerTarget target : containers) {
             Container container = target.container;
-            for (int slot = 0; slot < container.getContainerSize(); slot++) {
+            for (int slot = 0; slot < target.slotLimit; slot++) {
                 ItemStack stack = container.getItem(slot);
                 if (stack.isEmpty() || !ingredient.test(stack) || !canExtract(container, slot, stack)) continue;
                 int alreadyPlanned = 0;
@@ -4409,7 +4437,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         Identifier wanted = Identifier.tryParse(itemIdentifier);
         if (wanted == null) return false;
         for (ContainerTarget target : baseContainers()) {
-            for (int slot = 0; slot < target.container.getContainerSize(); slot++) {
+            for (int slot = 0; slot < target.slotLimit; slot++) {
                 ItemStack stack = target.container.getItem(slot);
                 if (!stack.isEmpty() && BuiltInRegistries.ITEM.getKey(stack.getItem()).equals(wanted)) return true;
             }
@@ -4422,6 +4450,99 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         return BaseInventoryIndex.scan(serverLevel, commandTablePos, baseRadius()).stream()
                 .map(entry -> new ContainerTarget(entry.pos(), entry.container()))
                 .toList();
+    }
+
+    private List<ContainerTarget> craftingIngredientSources() {
+        List<ContainerTarget> sources = new ArrayList<>(baseContainers());
+        ContainerTarget ownerInventory = ownerInventoryTarget();
+        if (ownerInventory != null) sources.add(ownerInventory);
+        return sources;
+    }
+
+    private @Nullable ContainerTarget ownerInventoryTarget() {
+        ServerPlayer owner = commandOwner();
+        return owner == null ? null : new ContainerTarget(
+                owner.blockPosition(), owner.getInventory(), Inventory.INVENTORY_SIZE);
+    }
+
+    private void refillFurnaceFromOwner(AbstractFurnaceBlockEntity furnace, boolean ancient) {
+        if (furnace.getItem(0).isEmpty()) {
+            transferOwnerItem(furnace, 0, workItemFilters, stack -> furnace.canPlaceItem(0, stack), workBatchSize);
+        }
+        if (!ancient && furnace.getItem(1).isEmpty()) {
+            transferOwnerItem(furnace, 1, workFuelFilters,
+                    stack -> level().fuelValues().isFuel(stack) && furnace.canPlaceItem(1, stack), workBatchSize);
+        }
+    }
+
+    private void refillProcessorFromOwner(ProcessorBlockEntity processor) {
+        ProcessorRecipe recipe = ProcessorRecipes.find(
+                processor.getItem(ProcessorBlockEntity.INPUT_SLOT),
+                processor.getItem(ProcessorBlockEntity.CATALYST_SLOT)).orElse(null);
+        if (recipe == null) {
+            recipe = chooseProcessorRecipe(processor);
+        }
+        if (recipe == null) return;
+        if (processor.getItem(ProcessorBlockEntity.INPUT_SLOT).isEmpty()) {
+            transferSpecificOwnerItem(processor, ProcessorBlockEntity.INPUT_SLOT, recipe.input(), workBatchSize);
+        }
+        if (processor.getItem(ProcessorBlockEntity.CATALYST_SLOT).isEmpty()) {
+            transferSpecificOwnerItem(processor, ProcessorBlockEntity.CATALYST_SLOT, recipe.catalyst(), workBatchSize);
+        }
+        if (processor.getItem(ProcessorBlockEntity.FUEL_SLOT).isEmpty()) {
+            transferOwnerItem(processor, ProcessorBlockEntity.FUEL_SLOT, workFuelFilters,
+                    stack -> level().fuelValues().isFuel(stack), workBatchSize);
+        }
+    }
+
+    private @Nullable ProcessorRecipe chooseProcessorRecipe(ProcessorBlockEntity processor) {
+        ItemStack currentInput = processor.getItem(ProcessorBlockEntity.INPUT_SLOT);
+        ItemStack currentCatalyst = processor.getItem(ProcessorBlockEntity.CATALYST_SLOT);
+        ContainerTarget owner = ownerInventoryTarget();
+        if (owner == null) return null;
+        for (ProcessorRecipe recipe : ProcessorRecipes.all()) {
+            if (!currentInput.isEmpty() && !currentInput.is(recipe.input())) continue;
+            if (!currentCatalyst.isEmpty() && !currentCatalyst.is(recipe.catalyst())) continue;
+            ItemStack inputTemplate = new ItemStack(recipe.input());
+            if (!matchesIdentifiers(workItemFilters, inputTemplate)) continue;
+            if (currentInput.isEmpty() && !containerHasItem(owner, recipe.input())) continue;
+            if (currentCatalyst.isEmpty() && !containerHasItem(owner, recipe.catalyst())) continue;
+            return recipe;
+        }
+        return null;
+    }
+
+    private boolean containerHasItem(ContainerTarget target, net.minecraft.world.item.Item item) {
+        for (int slot = 0; slot < target.slotLimit; slot++) {
+            if (target.container.getItem(slot).is(item)) return true;
+        }
+        return false;
+    }
+
+    private boolean transferSpecificOwnerItem(Container destination, int destinationSlot,
+                                              net.minecraft.world.item.Item item, int maximum) {
+        return transferOwnerItem(destination, destinationSlot, List.of(), stack -> stack.is(item), maximum);
+    }
+
+    private boolean transferOwnerItem(Container destination, int destinationSlot, List<String> filters,
+                                      Predicate<ItemStack> accepted, int maximum) {
+        if (!destination.getItem(destinationSlot).isEmpty()) return true;
+        ContainerTarget owner = ownerInventoryTarget();
+        if (owner == null) return false;
+        for (int slot = 0; slot < owner.slotLimit; slot++) {
+            ItemStack source = owner.container.getItem(slot);
+            if (source.isEmpty() || !matchesIdentifiers(filters, source) || !accepted.test(source)
+                    || !destination.canPlaceItem(destinationSlot, source)) continue;
+            int amount = Math.min(source.getCount(), Math.max(1, maximum));
+            amount = Math.min(amount, Math.min(destination.getMaxStackSize(source), source.getMaxStackSize()));
+            ItemStack moved = owner.container.removeItem(slot, amount);
+            if (moved.isEmpty()) return false;
+            destination.setItem(destinationSlot, moved);
+            owner.container.setChanged();
+            destination.setChanged();
+            return true;
+        }
+        return false;
     }
 
     private @Nullable CommandTableBlockEntity commandTableEntity() {
@@ -4599,6 +4720,35 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         return approach;
     }
 
+    private boolean beginWorkNavigation(BlockPos target, double speed) {
+        Path path = createWorkApproachPath(target);
+        if (path != null && navigation.moveTo(path, speed)) return true;
+        Vec3 approach = workApproachPoint(target);
+        return navigation.moveTo(approach.x, approach.y, approach.z, speed);
+    }
+
+    private @Nullable Path createWorkApproachPath(BlockPos target) {
+        int minimumRadius = Math.max(1, Mth.ceil(getBbWidth() * 0.5D + 0.55D));
+        int maximumRadius = Math.max(minimumRadius,
+                Math.min(minimumRadius + 3, Mth.floor(workInteractionDistance() - 0.20D)));
+        Set<BlockPos> candidates = new LinkedHashSet<>();
+        for (int radius = minimumRadius; radius <= maximumRadius; radius++) {
+            for (int x = -radius; x <= radius; x++) {
+                for (int z = -radius; z <= radius; z++) {
+                    if (Math.max(Math.abs(x), Math.abs(z)) != radius) continue;
+                    for (int yOffset : new int[]{0, -1, 1, -2, 2}) {
+                        BlockPos candidate = target.offset(x, yOffset, z);
+                        if (isSafeTeleportDestination(candidate, false)) {
+                            candidates.add(candidate.immutable());
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        return candidates.isEmpty() ? null : navigation.createPath(candidates, 0);
+    }
+
     private void moveTo(BlockPos pos) {
         if (pos == null) return;
         cancelWorkAction();
@@ -4626,9 +4776,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             lastNavigationSamplePosition = position();
             stalledNavigationTicks = 0;
             recoveryWaypointTicks = 0;
-            Vec3 approach = workApproachPoint(pos);
-            boolean pathStarted = navigation.moveTo(
-                    approach.x, approach.y, approach.z, movementSpeedForWork());
+            boolean pathStarted = beginWorkNavigation(pos, movementSpeedForWork());
             if (!pathStarted && getSpecies() == DinosaurSpecies.PTERANODON
                     && isAutonomousPteranodonFlightAllowed() && !isVehicle()) {
                 tickAutonomousTransportFlight(pos);
@@ -4662,8 +4810,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         }
         if (DinosaurFollowRules.shouldTryLocalRecovery(stalledNavigationTicks)) {
             navigation.stop();
-            Vec3 approach = workApproachPoint(pos);
-            if (!navigation.moveTo(approach.x, approach.y, approach.z, speed)) {
+            if (!beginWorkNavigation(pos, speed)) {
                 navigation.recomputePath();
             }
             recoveryWaypointTicks = 16;
@@ -4671,8 +4818,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
             return;
         }
         if (navigation.isDone() || navigation.isStuck()) {
-            Vec3 approach = workApproachPoint(pos);
-            boolean pathStarted = navigation.moveTo(approach.x, approach.y, approach.z, speed);
+            boolean pathStarted = beginWorkNavigation(pos, speed);
             if (!pathStarted) stalledNavigationTicks = Math.min(220, stalledNavigationTicks + 10);
             if (!pathStarted && getSpecies() == DinosaurSpecies.PTERANODON
                     && isAutonomousPteranodonFlightAllowed() && !isVehicle()) {
@@ -5187,6 +5333,7 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
 
     @Override
     protected InteractionResult mobInteract(Player player, InteractionHand hand) {
+        if (onExpedition || isInvisible()) return InteractionResult.PASS;
         if (hand != InteractionHand.MAIN_HAND) return super.mobInteract(player, hand);
         ItemStack held = player.getItemInHand(hand);
         if (held.is(ModItems.NESTING_TREAT.get())) {
@@ -5356,8 +5503,13 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
     }
 
     @Override
+    public boolean isPickable() {
+        return !onExpedition && !isInvisible() && super.isPickable();
+    }
+
+    @Override
     public boolean isPushable() {
-        return !getSpecies().heavyweight() && super.isPushable();
+        return !onExpedition && !getSpecies().heavyweight() && super.isPushable();
     }
 
     @Override
@@ -6403,7 +6555,14 @@ public final class FieldDodoEntity extends PathfinderMob implements GeoEntity {
         return animationCache;
     }
 
-    private record ContainerTarget(BlockPos pos, Container container) {
+    private record ContainerTarget(BlockPos pos, Container container, int slotLimit) {
+        private ContainerTarget(BlockPos pos, Container container) {
+            this(pos, container, container == null ? 0 : container.getContainerSize());
+        }
+
+        private ContainerTarget {
+            slotLimit = container == null ? 0 : Mth.clamp(slotLimit, 0, container.getContainerSize());
+        }
     }
 
     private record SlotTake(Container container, int slot, ItemStack expected) {

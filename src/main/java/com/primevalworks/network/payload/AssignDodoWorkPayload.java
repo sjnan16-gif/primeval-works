@@ -53,7 +53,8 @@ public record AssignDodoWorkPayload(
         int repeatMode,
         int routePolicy,
         boolean exactItemMatch,
-        boolean avoidDanger
+        boolean avoidDanger,
+        long requestId
 ) implements CustomPacketPayload {
     public static final Type<AssignDodoWorkPayload> TYPE = new Type<>(
             Identifier.fromNamespaceAndPath(PrimevalWorks.MOD_ID, "assign_dodo_work")
@@ -62,6 +63,35 @@ public record AssignDodoWorkPayload(
             AssignDodoWorkPayload::encode,
             AssignDodoWorkPayload::decode
     );
+
+    public AssignDodoWorkPayload(
+            int entityId,
+            int jobIndex,
+            BlockPos commandTablePos,
+            List<BlockPos> sourcePositions,
+            List<BlockPos> workstationPositions,
+            List<BlockPos> destinationPositions,
+            Optional<BlockPos> areaEndPos,
+            List<BlockPos> fallbackPositions,
+            List<String> itemFilters,
+            List<String> fuelFilters,
+            Map<BlockPos, Integer> blockPriorities,
+            int expeditionTier,
+            int priority,
+            int batchSize,
+            int schedule,
+            int sourceReserve,
+            int destinationTarget,
+            int repeatMode,
+            int routePolicy,
+            boolean exactItemMatch,
+            boolean avoidDanger
+    ) {
+        this(entityId, jobIndex, commandTablePos, sourcePositions, workstationPositions,
+                destinationPositions, areaEndPos, fallbackPositions, itemFilters, fuelFilters,
+                blockPriorities, expeditionTier, priority, batchSize, schedule, sourceReserve,
+                destinationTarget, repeatMode, routePolicy, exactItemMatch, avoidDanger, 0L);
+    }
 
     static void encode(RegistryFriendlyByteBuf buffer, AssignDodoWorkPayload payload) {
         buffer.writeVarInt(payload.entityId);
@@ -89,6 +119,7 @@ public record AssignDodoWorkPayload(
         buffer.writeVarInt(payload.routePolicy);
         buffer.writeBoolean(payload.exactItemMatch);
         buffer.writeBoolean(payload.avoidDanger);
+        buffer.writeLong(payload.requestId);
     }
 
     static AssignDodoWorkPayload decode(RegistryFriendlyByteBuf buffer) {
@@ -113,7 +144,8 @@ public record AssignDodoWorkPayload(
                 buffer.readVarInt(),
                 buffer.readVarInt(),
                 buffer.readBoolean(),
-                buffer.readBoolean()
+                buffer.readBoolean(),
+                buffer.readLong()
         );
     }
 
@@ -183,6 +215,7 @@ public record AssignDodoWorkPayload(
         String error = validationError(player, payload);
         if (error != null) {
             player.sendOverlayMessage(Component.literal(error));
+            PacketDistributor.sendToPlayer(player, DinosaurWorkStatePayload.rejected(payload, error));
             return;
         }
         FieldDodoEntity dodo = (FieldDodoEntity) player.level().getEntity(payload.entityId);
@@ -215,7 +248,7 @@ public record AssignDodoWorkPayload(
                 payload.exactItemMatch,
                 payload.avoidDanger
         );
-        PacketDistributor.sendToPlayer(player, DinosaurWorkStatePayload.from(dodo));
+        PacketDistributor.sendToPlayer(player, DinosaurWorkStatePayload.from(dodo, payload.requestId));
         player.sendOverlayMessage(Component.literal("Work order saved: " + jobName(payload.jobIndex) + "."));
     }
 
